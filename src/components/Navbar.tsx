@@ -633,11 +633,17 @@ const StyledButton = styled(Button)<{ isDarkMode: boolean; variant: 'text' | 'co
   }),
 }));
 
+// --- Konštanty pre cesty k logám v public adresári ---
+const logoLightPath = "/AESA black.svg"; // Alebo /logo.png ak existuje
+const logoDarkPath = "/AESA white.svg";  // Alebo /logo-dark.png ak existuje
+const logoMiniLightPath = "/favicon.png"; // Nahraďte správnou cestou k mini logu
+const logoMiniDarkPath = "/AESA white favicon.png"; // Nahraďte správnou cestou k mini tmavému logu
+
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, userData } = useAuth();
@@ -699,14 +705,17 @@ const Navbar = () => {
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 2,
-                  transition: 'opacity 0.2s ease-in-out',
-                  '&:hover': {
-                    opacity: 0.8
-                  }
+                  flexGrow: 1, 
                 }}
               >
-                <LogoImage src={isDarkMode ? "/AESA white.svg" : "/AESA black.svg"} alt="AESA Logo" isDarkMode={isDarkMode} />
+                <LogoImage 
+                  src={isDarkMode ? logoMiniDarkPath : logoMiniLightPath} 
+                  alt="AESA Logo Mini" 
+                  sx={{ 
+                      height: '28px',
+                      width: 'auto'
+                  }}
+                 />
               </Box>
               <MenuButton
                 edge="end"
@@ -738,7 +747,7 @@ const Navbar = () => {
                     }
                   }}
                 >
-                  <LogoImage src={isDarkMode ? "/AESA white.svg" : "/AESA black.svg"} alt="AESA Logo" isDarkMode={isDarkMode} />
+                  <LogoImage src={isDarkMode ? logoDarkPath : logoLightPath} alt="AESA Logo" sx={{ height: '32px' }} />
                   <Typography 
                     variant="h6" 
                     noWrap 
@@ -763,8 +772,20 @@ const Navbar = () => {
                 {menuItems.map((item) => (
                   <NavListItem key={item.text} disablePadding isDarkMode={isDarkMode}>
                     <ListItemButton
-                      onClick={() => item.path && handleNavigation(item.path)}
+                      component={Link}
+                      to={item.path ?? '#'}
+                      selected={location.pathname === item.path}
+                      onClick={item.onClick}
                       sx={{
+                         borderRadius: '6px',
+                        padding: '8px 12px',
+                        margin: '0 2px',
+                        minWidth: 'auto',
+                        color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                        '&:hover': {
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                          color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                        },
                         '&.Mui-selected': {
                           backgroundColor: isDarkMode 
                             ? 'rgba(99, 102, 241, 0.15)' 
@@ -776,44 +797,45 @@ const Navbar = () => {
                         }
                       }}
                     >
-                      <ListItemIconStyled>
+                      <ListItemIconStyled sx={{ minWidth: '20px', mr: 1.5 }}>
                         {item.icon}
                       </ListItemIconStyled>
-                      <ListItemText primary={item.text} />
                     </ListItemButton>
                   </NavListItem>
                 ))}
                 <Box sx={{ 
                   display: 'flex',
-                  gap: 1,
+                  gap: 0.5,
                   alignItems: 'center',
-                  marginLeft: 'auto'
+                  marginLeft: 2
                 }}>
-                  <IconButton
-                    onClick={handleLogoutClick}
-                    sx={{
-                      padding: '8px',
-                      color: '#ef4444',
-                      '&:hover': {
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                      },
-                    }}
-                  >
-                    <LogoutIcon sx={{ fontSize: '20px' }} />
-                  </IconButton>
-                  <IconButton
+                   <IconButton
                     onClick={toggleTheme}
-                    sx={{
-                      padding: '8px',
-                      color: isDarkMode ? '#ffffff' : '#000000',
-                      '&:hover': {
-                        backgroundColor: isDarkMode 
-                          ? 'rgba(99, 102, 241, 0.1)' 
-                          : 'rgba(99, 102, 241, 0.05)',
-                      },
+                    sx={{ 
+                         padding: '8px', 
+                         color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                        '&:hover': {
+                            color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                            backgroundColor: isDarkMode 
+                            ? 'rgba(99, 102, 241, 0.1)' 
+                            : 'rgba(99, 102, 241, 0.05)',
+                         }
                     }}
                   >
                     {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+                  </IconButton>
+                   <IconButton
+                    onClick={handleLogoutClick}
+                    sx={{ 
+                        padding: '8px', 
+                        color: isDarkMode ? '#f87171' : '#ef4444',
+                        '&:hover': {
+                            backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+                            color: isDarkMode ? '#ef4444' : '#dc2626'
+                        },
+                    }}
+                  >
+                    <LogoutIcon sx={{ fontSize: '20px' }} />
                   </IconButton>
                 </Box>
               </Box>
@@ -831,11 +853,7 @@ const Navbar = () => {
         <Box sx={{ 
           display: { xs: 'flex', sm: 'none' },
           justifyContent: 'flex-end',
-          padding: '16px',
-          position: 'sticky',
-          top: 0,
-          backgroundColor: 'transparent',
-          zIndex: 1,
+          padding: '8px 8px 0 8px',
         }}>
           <IconButton
             onClick={handleMobileMenuClose}
@@ -852,48 +870,74 @@ const Navbar = () => {
             <CloseIcon />
           </IconButton>
         </Box>
-        {menuItems.map((item) => (
-          <MenuItem
-            key={item.text}
-            onClick={() => item.path && handleNavigation(item.path)}
-            sx={{
-              padding: 0,
-              margin: '4px 0',
-              width: '100%'
-            }}
-          >
-            <MenuItemWrapper isDarkMode={isDarkMode}>
-              <MenuItemIcon>
-                {item.icon}
-              </MenuItemIcon>
-              <MenuItemContent>
-                <Typography 
-                  component="div"
-                  sx={{ 
-                    fontSize: '0.95rem',
-                    fontWeight: 500,
-                    color: isDarkMode ? colors.text.primary : '#000000',
-                    lineHeight: 1.2
-                  }}
-                >
-                  {item.text}
-                </Typography>
-                {item.description && (
-                  <Typography 
-                    component="div"
-                    sx={{ 
-                      fontSize: '0.75rem',
-                      color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-                      lineHeight: 1.2
+        <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
+            {menuItems.map((item) => (
+              <MenuItem
+                key={item.text}
+                onClick={() => item.path && handleNavigation(item.path)}
+                sx={{
+                  padding: 0,
+                  margin: '4px 0',
+                  width: '100%'
+                }}
+              >
+                <MenuItemWrapper 
+                    isDarkMode={isDarkMode}
+                    selected={location.pathname === item.path}
+                    sx={{
+                        '&.Mui-selected': {
+                          backgroundColor: isDarkMode 
+                            ? 'rgba(99, 102, 241, 0.15)' 
+                            : 'rgba(99, 102, 241, 0.1)',
+                           '& .MuiListItemIcon-root': {
+                                color: colors.primary.main,
+                           },
+                           '& .menu-item-text': {
+                               color: colors.primary.main,
+                               fontWeight: 'bold',
+                           }
+                        },
+                        '&:hover': {
+                           backgroundColor: isDarkMode 
+                            ? 'rgba(99, 102, 241, 0.1)' 
+                            : 'rgba(99, 102, 241, 0.05)',
+                           transform: 'translateX(4px)',
+                        }
                     }}
-                  >
-                    {item.description}
-                  </Typography>
-                )}
-              </MenuItemContent>
-            </MenuItemWrapper>
-          </MenuItem>
-        ))}
+                >
+                  <MenuItemIcon sx={{ color: location.pathname === item.path ? colors.primary.main : 'inherit' }}>
+                    {item.icon}
+                  </MenuItemIcon>
+                  <MenuItemContent>
+                    <Typography 
+                      component="div"
+                      className="menu-item-text"
+                      sx={{ 
+                        fontSize: '0.95rem',
+                        fontWeight: location.pathname === item.path ? 'bold' : 500,
+                        color: location.pathname === item.path ? colors.primary.main : (isDarkMode ? colors.text.primary : '#000000'),
+                        lineHeight: 1.2
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
+                    {item.description && (
+                      <Typography 
+                        component="div"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+                          lineHeight: 1.2
+                        }}
+                      >
+                        {item.description}
+                      </Typography>
+                    )}
+                  </MenuItemContent>
+                </MenuItemWrapper>
+              </MenuItem>
+            ))}
+        </Box>
         <Divider sx={{ 
           margin: '16px 0', 
           backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' 
@@ -960,11 +1004,12 @@ const Navbar = () => {
             Ste si istí, že sa chcete odhlásiť?
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ padding: '16px 24px' }}>
           <StyledButton
             onClick={handleLogoutCancel}
             variant="text"
             isDarkMode={isDarkMode}
+            sx={{ mr: 1 }}
           >
             Zrušiť
           </StyledButton>
@@ -972,6 +1017,13 @@ const Navbar = () => {
             onClick={handleLogoutConfirm}
             variant="contained"
             isDarkMode={isDarkMode}
+            sx={{ 
+                 backgroundColor: '#ef4444',
+                 color: '#ffffff',
+                '&:hover': {
+                    backgroundColor: '#dc2626',
+                }
+             }}
           >
             Odhlásiť sa
           </StyledButton>

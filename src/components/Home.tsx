@@ -9,6 +9,7 @@ import {
   styled,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 // Styled komponenty
 const LogoContainer = styled(Box)({
@@ -26,6 +27,7 @@ const LogoImage = styled('img')<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   width: '100%',
   height: 'auto',
   filter: isDarkMode ? 'brightness(0) invert(1)' : 'brightness(0)',
+  cursor: 'pointer',
 }));
 
 const GradientButton = styled(Button)(({ theme }) => ({
@@ -92,6 +94,13 @@ function Home() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
+  const { currentUser } = useAuth();
+
+  const handleLogoClick = () => {
+    if (currentUser) {
+      navigate('/dashboard');
+    }
+  };
 
   return (
     <Container maxWidth="lg">
@@ -116,7 +125,12 @@ function Home() {
             }}
           >
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-              <LogoImage src="/AESA black.svg" alt="AESA Logo" isDarkMode={isDarkMode} />
+              <LogoImage 
+                src="/AESA black.svg" 
+                alt="AESA Logo" 
+                isDarkMode={isDarkMode} 
+                onClick={handleLogoClick}
+              />
             </Box>
             <Typography
               variant="h4"

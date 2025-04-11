@@ -3,7 +3,11 @@ import { CallableContext } from 'firebase-functions/v1/https';
 import * as admin from 'firebase-admin';
 import * as nodemailer from 'nodemailer';
 
+// Inicializácia Firebase Admin
 admin.initializeApp();
+
+// Import API proxy funkcií
+import * as apiProxy from './api-proxy';
 
 const REGION = 'europe-west1';
 
@@ -689,4 +693,10 @@ export const sendTestReminder = functions
         'Nastala chyba pri odosielaní testovacej pripomienky'
       );
     }
-  }); 
+  });
+
+// Export API proxy funkcií
+export const googleMapsProxy = apiProxy.googleMapsProxy;
+
+// Prípadné ďalšie funkcie
+// export const otherApiProxy = apiProxy.otherApiProxy; 

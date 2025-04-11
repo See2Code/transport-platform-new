@@ -16,6 +16,7 @@ import Home from './components/Home';
 import PrivateRoute from './components/PrivateRoute';
 import RegisterUser from './components/RegisterUser';
 import OrdersForm from './components/Orders';
+import NewOrderForm from './components/NewOrderForm';
 import InvoicesPage from './components/Invoices';
 import VehicleMap from './components/VehicleMap';
 import { useThemeMode } from './contexts/ThemeContext';
@@ -177,6 +178,14 @@ const AppContent: React.FC = () => {
               <PageContent isDarkMode={isDarkMode}>
                 <Navbar />
                 <OrdersForm />
+              </PageContent>
+            </PrivateRoute>
+          } />
+          <Route path="/nova-objednavka" element={
+            <PrivateRoute>
+              <PageContent isDarkMode={isDarkMode}>
+                <Navbar />
+                <NewOrderForm />
               </PageContent>
             </PrivateRoute>
           } />

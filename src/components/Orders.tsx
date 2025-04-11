@@ -1,5 +1,5 @@
-import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
-import { OrderFormData, Customer, LoadingPlace, UnloadingPlace, SavedPlace } from '../types/orders';
+import React, { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
+import { OrderFormData as BaseOrderFormData, Customer, LoadingPlace, UnloadingPlace, SavedPlace } from '../types/orders';
 import { countries } from '../constants/countries';
 import {
   Box,
@@ -23,11 +23,17 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
-  Tabs,
-  Tab,
   Autocomplete,
   IconButton,
   InputAdornment,
+  Collapse,
+  Alert,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  GlobalStyles,
+  DialogActions,
+  Tooltip,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../contexts/ThemeContext';
@@ -40,10 +46,21 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { sk } from 'date-fns/locale';
 import { Theme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
-import { collection, addDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import NewOrderForm from './NewOrderForm';
+import CloseIcon from '@mui/icons-material/Close';
+import PersonIcon from '@mui/icons-material/Person';
+import EmailIcon from '@mui/icons-material/Email';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -163,7 +180,7 @@ const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) =
 const PageDescription = styled(Typography)(({ theme }) => ({
   fontSize: '0.875rem',
   color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : '#000000',
-  marginTop: theme.spacing(1)
+  marginTop: theme.spacing(3)
 }));
 
 const StyledDivider = styled(Divider)(({ theme }) => ({
@@ -376,1433 +393,1826 @@ const emptyUnloadingPlace: UnloadingPlace = {
   contactPerson: ''
 };
 
-const OrdersForm: React.FC = () => {
+interface OrderFormData extends BaseOrderFormData {
+    id?: string;
+    createdAt?: Timestamp | Date;
+    reminderDateTime?: Date | null;
+    companyID?: string;
+    createdBy?: string;
+}
+
+const convertToDate = (dateTime: any): Date | null => {
+    if (!dateTime) return null;
+    if (dateTime instanceof Date) return dateTime;
+    if (dateTime instanceof Timestamp) return dateTime.toDate();
+    if (dateTime.toDate && typeof dateTime.toDate === 'function') return dateTime.toDate();
+    try { 
+        const date = new Date(dateTime.seconds ? dateTime.seconds * 1000 : dateTime);
+        return isNaN(date.getTime()) ? null : date; 
+    } catch (e) { return null; }
+};
+
+const DialogGlobalStyles = ({ open }: { open: boolean }) => {
+  if (!open) return null;
+  
+  return (
+    <GlobalStyles 
+      styles={`
+        .MuiDialog-root .MuiDialog-paper {
+          max-height: 100vh !important;
+          overflow: hidden !important;
+        }
+        .MuiDialog-root .MuiDialogContent-root {
+          overflow: auto !important;
+          padding: 0 !important;
+          display: flex !important;
+          flex-direction: column !important;
+          max-height: 90vh !important;
+        }
+        body {
+          overflow: ${open ? 'hidden' : 'auto'};
+        }
+      `}
+    />
+  );
+};
+
+const OrderDetailPanel = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  backgroundColor: theme.palette.mode === 'dark' 
+    ? 'rgba(28, 28, 45, 0.95)' 
+    : 'rgba(255, 255, 255, 0.95)',
+  backdropFilter: 'blur(10px)',
+  borderRadius: '0 0 12px 12px',
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+  borderTop: `1px solid ${theme.palette.mode === 'dark' 
+    ? 'rgba(255, 255, 255, 0.1)' 
+    : 'rgba(0, 0, 0, 0.1)'}`,
+  margin: '0 -1px',
+  position: 'relative',
+  zIndex: 5,
+  maxHeight: '600px',
+  overflowY: 'auto',
+  animation: 'slideDown 0.3s ease-out forwards',
+  '@keyframes slideDown': {
+    from: { maxHeight: '0', opacity: 0 },
+    to: { maxHeight: '600px', opacity: 1 }
+  },
+  '@media (max-width: 600px)': {
+    padding: theme.spacing(2)
+  }
+}));
+
+const DetailSection = styled(Box)(({ theme }) => ({
+  marginBottom: theme.spacing(3),
+}));
+
+const DetailSectionTitle = styled(Typography)(({ theme }) => ({
+  fontSize: '1rem',
+  fontWeight: 600,
+  marginBottom: theme.spacing(1),
+  color: '#ff9f43',
+  display: 'flex',
+  alignItems: 'center',
+  '&::after': {
+    content: '""',
+    flex: 1,
+    height: '1px',
+    backgroundColor: theme.palette.mode === 'dark' 
+      ? 'rgba(255, 255, 255, 0.1)' 
+      : 'rgba(0, 0, 0, 0.1)',
+    marginLeft: theme.spacing(1)
+  }
+}));
+
+const DetailRow = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  marginBottom: theme.spacing(1),
+  '@media (max-width: 600px)': {
+    flexDirection: 'column'
+  }
+}));
+
+const DetailLabel = styled(Typography)(({ theme }) => ({
+  fontWeight: 500,
+  minWidth: '200px',
+  color: theme.palette.mode === 'dark' 
+    ? 'rgba(255, 255, 255, 0.7)' 
+    : 'rgba(0, 0, 0, 0.7)',
+  '@media (max-width: 600px)': {
+    minWidth: 'auto',
+    marginBottom: theme.spacing(0.5)
+  }
+}));
+
+const DetailValue = styled(Typography)(({ theme }) => ({
+  flex: 1,
+  color: theme.palette.mode === 'dark' 
+    ? '#ffffff' 
+    : '#000000',
+  fontWeight: 400
+}));
+
+const OrdersList: React.FC = () => {
   const theme = useTheme();
   const { isDarkMode } = useThemeMode();
   const { userData } = useAuth();
+  const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [tabValue, setTabValue] = useState(0);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-
+  
   const [ordersList, setOrdersList] = useState<OrderFormData[]>([]);
-  const [formData, setFormData] = useState<OrderFormData>({
-    customerCompany: '',
-    customerVatId: '',
-    customerStreet: '',
-    customerCity: '',
-    customerZip: '',
-    customerCountry: 'Slovensko',
-    customerContactName: '',
-    customerContactSurname: '',
-    customerEmail: '',
-    customerPhone: '',
-    customerPrice: '',
-    loadingPlaces: [{ ...emptyLoadingPlace }],
-    unloadingPlaces: [{ ...emptyUnloadingPlace }],
-    goodsDescription: '',
-    weightKg: '',
-    dimensionsL: '',
-    dimensionsW: '',
-    dimensionsH: '',
-    quantity: '',
-    carrierCompany: '',
-    carrierContact: '',
-    carrierVehicleReg: '',
-    carrierPrice: '',
-  });
-
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-
-  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
-  const [newPlaceName, setNewPlaceName] = useState('');
-  const [placeType, setPlaceType] = useState<'loading' | 'unloading'>('loading');
-  const [newPlace, setNewPlace] = useState({
-    name: '',
-    street: '',
-    city: '',
-    zip: '',
-    country: 'Slovensko',
-    contactPerson: ''
-  });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showNewOrderDialog, setShowNewOrderDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderFormData | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<{[id: string]: {name: string, email: string}}>({});
+  const [showOrderNumberEdit, setShowOrderNumberEdit] = useState(false);
+  const [orderToUpdateId, setOrderToUpdateId] = useState<string | null>(null);
+  const [newOrderNumber, setNewOrderNumber] = useState('');
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<OrderFormData | null>(null);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  
+  const fetchTeamMembers = useCallback(async () => {
+    if (!userData?.companyID) return;
+    
+    try {
+      console.log('Aktuálny userData:', userData);
+      
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('companyID', '==', userData.companyID)
+      );
+      
+      const usersSnapshot = await getDocs(usersQuery);
+      const usersData: {[id: string]: {name: string, email: string}} = {};
+      
+      usersSnapshot.docs.forEach(doc => {
+        const userDoc = doc.data();
+        console.log(`Používateľ ${doc.id}:`, userDoc);
+        
+        // Prioritizujeme firstName a lastName polia
+        let userName = '';
+        
+        // 1. Najprv skúsime firstName + lastName
+        if (userDoc.firstName || userDoc.lastName) {
+          userName = `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim();
+        }
+        
+        // 2. Ak to nefunguje, skúsime displayName
+        if (!userName && userDoc.displayName) {
+          userName = userDoc.displayName;
+        }
+        
+        // 3. Ak nie je firstName+lastName ani displayName, skúsime extrahovať meno z emailu
+        if (!userName && userDoc.email) {
+          // Extrahujeme časti emailu
+          const emailParts = userDoc.email.split('@');
+          if (emailParts.length > 0) {
+            // Rozdelíme časť pred @ podľa bodiek alebo podčiarnikov
+            const nameParts = emailParts[0].split(/[._-]/);
+            // Upravíme prvé písmeno každej časti na veľké
+            userName = nameParts.map((part: string) => 
+              part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+            ).join(' ');
+          }
+        }
+        
+        // Ak stále nemáme meno, použijeme ID alebo email ako zálohu
+        if (!userName) {
+          userName = userDoc.email ? userDoc.email.split('@')[0] : 'Používateľ';
+        }
+        
+        usersData[doc.id] = {
+          name: userName,
+          email: userDoc.email || ''
+        };
+        
+        console.log(`Spracovaný používateľ ${doc.id}: ${userName} (${userDoc.email || 'bez emailu'})`);
+      });
+      
+      console.log('Spracovaní členovia tímu:', usersData);
+      
+      // Pridať aktuálneho používateľa, ak náhodou chýba v zozname
+      if (userData.uid && !usersData[userData.uid]) {
+        // Extrahovanie mena pre aktuálneho používateľa
+        let currentUserName = '';
+        
+        // 1. Najprv skúsime firstName + lastName z userData
+        if ((userData as any).firstName || (userData as any).lastName) {
+          currentUserName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
+        }
+        
+        // 2. Ak to nefunguje, skúsime displayName
+        if (!currentUserName && (userData as any).displayName) {
+          currentUserName = (userData as any).displayName;
+        }
+        
+        // 3. Ak nie je ani displayName, extrahujeme z emailu
+        if (!currentUserName && userData.email) {
+          const emailParts = userData.email.split('@');
+          if (emailParts.length > 0) {
+            const nameParts = emailParts[0].split(/[._-]/);
+            currentUserName = nameParts.map(part => 
+              part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+            ).join(' ');
+          }
+        }
+        
+        // Ak stále nemáme meno, použijeme email alebo záložnú hodnotu
+        if (!currentUserName) {
+          currentUserName = userData.email ? userData.email.split('@')[0] : 'Aktuálny používateľ';
+        }
+        
+        usersData[userData.uid] = {
+          name: currentUserName,
+          email: userData.email || ''
+        };
+        
+        console.log('Pridaný aktuálny používateľ:', usersData[userData.uid]);
+      }
+      
+      setTeamMembers(usersData);
+    } catch (err) {
+      console.error('Chyba pri načítaní členov tímu:', err);
+    }
+  }, [userData]);
+  
+  useEffect(() => {
+    fetchTeamMembers();
+  }, [fetchTeamMembers]);
+  
+  const fetchOrders = useCallback(async () => {
+    if (!userData?.companyID) {
+      console.log('Chýba companyID');
+      setError('Nemáte priradenú firmu.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      let ordersQuery = query(
+        collection(db, 'orders'),
+        where('companyID', '==', userData.companyID)
+      );
+
+      if (startDate) {
+          ordersQuery = query(ordersQuery, where('createdAt', '>=', Timestamp.fromDate(new Date(startDate.setHours(0,0,0,0)))));
+      }
+      if (endDate) {
+           const endOfDay = new Date(endDate);
+           endOfDay.setHours(23, 59, 59, 999);
+           ordersQuery = query(ordersQuery, where('createdAt', '<=', Timestamp.fromDate(endOfDay)));
+      }
+      
+      ordersQuery = query(ordersQuery, orderBy('createdAt', 'desc'));
+
+      const querySnapshot = await getDocs(ordersQuery);
+      const ordersData: OrderFormData[] = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('Originálne dáta z Firebase:', data);
+        console.log('Originálna hodnota zákazníka:', data.zakaznik);
+        console.log('Originálna hodnota customerCompany:', data.customerCompany);
+        
+        const loadingPlacesWithDates = (data.loadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
+        const unloadingPlacesWithDates = (data.unloadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
+        
+        const createdAtTimestamp = data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(convertToDate(data.createdAt) || new Date());
+
+        const order: OrderFormData = {
+          id: doc.id,
+          customerCompany: data.zakaznik || data.customerCompany || '',
+          customerVatId: data.customerVatId || '',
+          customerStreet: data.customerStreet || '',
+          customerCity: data.customerCity || '',
+          customerZip: data.customerZip || '',
+          customerCountry: data.customerCountry || 'Slovensko',
+          customerContactName: data.customerContactName || '',
+          customerContactSurname: data.customerContactSurname || '',
+          customerEmail: data.customerEmail || '',
+          customerPhone: data.customerPhone || '',
+          customerPrice: data.suma || data.customerPrice || '',
+          loadingPlaces: loadingPlacesWithDates,
+          unloadingPlaces: unloadingPlacesWithDates,
+          goodsDescription: data.goodsDescription || '',
+          weightKg: data.weightKg || '',
+          dimensionsL: data.dimensionsL || '',
+          dimensionsW: data.dimensionsW || '',
+          dimensionsH: data.dimensionsH || '',
+          quantity: data.quantity || '',
+          carrierCompany: data.carrierCompany || '',
+          carrierContact: data.carrierContact || '',
+          carrierVehicleReg: data.carrierVehicleReg || '',
+          carrierPrice: data.carrierPrice || '',
+          createdAt: createdAtTimestamp,
+          reminderDateTime: convertToDate(data.reminderDateTime),
+          companyID: data.companyID,
+          createdBy: data.createdBy
+        };
+        
+        (order as any).zakaznik = data.zakaznik || data.customerCompany || '';
+        (order as any).kontaktnaOsoba = data.kontaktnaOsoba || 
+          `${data.customerContactName || ''} ${data.customerContactSurname || ''}`.trim();
+        (order as any).suma = data.suma || data.customerPrice || '';
+        (order as any).createdByName = data.createdByName || '';
+        (order as any).orderNumberFormatted = data.orderNumberFormatted || '';
+        
+        console.log('Spracované dáta pre zobrazenie:', {
+          id: order.id,
+          zakaznik: (order as any).zakaznik, 
+          kontaktnaOsoba: (order as any).kontaktnaOsoba,
+          customerCompany: order.customerCompany,
+          customerContactName: order.customerContactName,
+          customerContactSurname: order.customerContactSurname,
+          suma: (order as any).suma,
+          customerPrice: order.customerPrice,
+          carrierPrice: order.carrierPrice
+        });
+        
+        return order;
+      });
+      console.log('--- DEBUGOVANIE ŠPEDITÉRA ---');
+      ordersData.forEach(order => {
+        console.log(`Objednávka ${order.id}:`);
+        console.log(`  createdBy: ${order.createdBy}`);
+        console.log(`  createdByName: ${(order as any).createdByName}`);
+        console.log(`  Team member data:`, order.createdBy ? teamMembers[order.createdBy] : 'N/A');
+      });
+      console.log('--- KONIEC DEBUGOVANIA ---');
+      setOrdersList(ordersData);
+    } catch (err) {
+      console.error('Chyba pri načítaní objednávok:', err);
+      setError('Nastala chyba pri načítaní objednávok');
+    } finally {
+      setLoading(false);
+    }
+  }, [userData, startDate, endDate, teamMembers]);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      if (!userData?.companyID) {
-        console.log('Chýba companyID - používateľ nemá priradenú firmu');
-        setError('Nemáte priradenú firmu, kontaktujte administrátora');
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const ordersQuery = query(
-          collection(db, 'orders'),
-          where('companyID', '==', userData.companyID)
-        );
-        const querySnapshot = await getDocs(ordersQuery);
-        
-        const ordersData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as unknown as OrderFormData[];
-        
-        setOrdersList(ordersData);
-      } catch (err) {
-        console.error('Chyba pri načítaní objednávok:', err);
-        setError('Nastala chyba pri načítaní objednávok');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrders();
-  }, [userData]);
+  }, [fetchOrders]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  const handleCustomerSelect = (customer: Customer | null) => {
-    setSelectedCustomer(customer);
-    if (customer) {
-      setFormData(prev => ({
-        ...prev,
-        customerCompany: customer.company,
-        customerVatId: customer.vatId,
-        customerStreet: customer.street,
-        customerCity: customer.city,
-        customerZip: customer.zip,
-        customerCountry: customer.country,
-        customerContactName: customer.contactName,
-        customerContactSurname: customer.contactSurname,
-        customerEmail: customer.email,
-        customerPhone: formData.customerPhone
-      }));
-    }
-  };
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prevState: OrderFormData) => ({
-      ...prevState,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    try {
-      if (!userData?.companyID) {
-        alert('Nemáte priradenú firmu, kontaktujte administrátora');
-        return;
-      }
-
-      setLoading(true);
-
-      // Ak je nový zákazník, pridáme ho do zoznamu
-      if (!selectedCustomer) {
-        const newCustomer: Customer = {
-          company: formData.customerCompany,
-          vatId: formData.customerVatId,
-          street: formData.customerStreet,
-          city: formData.customerCity,
-          zip: formData.customerZip,
-          country: formData.customerCountry,
-          contactName: formData.customerContactName,
-          contactSurname: formData.customerContactSurname,
-          email: formData.customerEmail,
-          phone: formData.customerPhone
-        };
-        setCustomers(prev => [...prev, newCustomer]);
-      }
-
-      // Vytvorenie dát objednávky s companyID
-      const orderData = {
-        ...formData,
-        companyID: userData.companyID,
-        createdAt: Timestamp.now(),
-        createdBy: userData.uid
-      };
-
-      // Uloženie do Firestore
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
-      
-      // Pridanie do lokálneho stavu
-      setOrdersList(prevList => [...prevList, { ...orderData, id: docRef.id }]);
-      
-      // Reset formulára
-      setFormData({
-        customerCompany: '',
-        customerVatId: '',
-        customerStreet: '',
-        customerCity: '',
-        customerZip: '',
-        customerCountry: 'Slovensko',
-        customerContactName: '',
-        customerContactSurname: '',
-        customerEmail: '',
-        customerPhone: '',
-        customerPrice: '',
-        loadingPlaces: [{ ...emptyLoadingPlace }],
-        unloadingPlaces: [{ ...emptyUnloadingPlace }],
-        goodsDescription: '',
-        weightKg: '',
-        dimensionsL: '',
-        dimensionsW: '',
-        dimensionsH: '',
-        quantity: '',
-        carrierCompany: '',
-        carrierContact: '',
-        carrierVehicleReg: '',
-        carrierPrice: '',
-      });
-
-      alert('Objednávka bola úspešne vytvorená.');
-    } catch (error) {
-      console.error('Chyba pri odosielaní objednávky:', error);
-      alert('Nastala chyba pri odosielaní objednávky. Skúste to prosím znova.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    setLoading(true);
-    try {
-      // Implementácia funkcie na stiahnutie objednávky
-      console.log('Stiahnutie objednávky:', formData);
-      alert('Objednávka bola úspešne stiahnutá.');
-    } catch (error) {
-      console.error('Chyba pri stiahovaní objednávky:', error);
-      alert('Nastala chyba pri stiahovaní objednávky. Skúste to prosím znova.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filtrovanie objednávok
   const filteredOrders = ordersList.filter(order => {
+    if (!order) return false;
+    
+    const searchTermLower = searchQuery.toLowerCase();
+    const kontaktnaOsoba = (order as any).kontaktnaOsoba || 
+          `${order.customerContactName || ''} ${order.customerContactSurname || ''}`.trim();
+    const spediterName = (order as any).createdByName || 
+          (order.createdBy && teamMembers[order.createdBy] ? teamMembers[order.createdBy].name : '');
+    const orderNumber = (order as any).orderNumberFormatted || '';
+    
     const matchesSearch = 
-      order.customerCompany.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerVatId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.loadingPlaces[0].city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.unloadingPlaces[0].city.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (!matchesSearch) return false;
-
-    if (startDate && endDate) {
-      const orderDate = new Date(order.loadingPlaces[0].dateTime);
-      return orderDate >= startDate && orderDate <= endDate;
-    }
-
-    return true;
+      order.customerCompany?.toLowerCase().includes(searchTermLower) ||
+      kontaktnaOsoba.toLowerCase().includes(searchTermLower) ||
+      spediterName.toLowerCase().includes(searchTermLower) ||
+      orderNumber.toLowerCase().includes(searchTermLower) ||
+      order.customerVatId?.toLowerCase().includes(searchTermLower) ||
+      order.loadingPlaces?.[0]?.city?.toLowerCase().includes(searchTermLower) ||
+      order.unloadingPlaces?.[0]?.city?.toLowerCase().includes(searchTermLower) ||
+      order.id?.toLowerCase().includes(searchTermLower);
+      
+    return matchesSearch;
   });
 
-  const handleCountryChange = (field: string) => (event: any, newValue: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: newValue?.name || '',
-      customerPhone: newValue ? `${newValue.prefix} ${prev.customerPhone.split(' ')[1] || ''}` : prev.customerPhone
-    }));
+  const openDeleteConfirmation = (id: string) => {
+    setSelectedOrderId(id);
+    setShowDeleteConfirm(true);
   };
 
-  const handleLoadingPlaceChange = (index: number, field: keyof LoadingPlace, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      loadingPlaces: prev.loadingPlaces.map((place, i) => 
-        i === index ? { ...place, [field]: value } : place
-      )
-    }));
-  };
-
-  const handleUnloadingPlaceChange = (index: number, field: keyof UnloadingPlace, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      unloadingPlaces: prev.unloadingPlaces.map((place, i) => 
-        i === index ? { ...place, [field]: value } : place
-      )
-    }));
-  };
-
-  const addLoadingPlace = () => {
-    setFormData(prev => ({
-      ...prev,
-      loadingPlaces: [...prev.loadingPlaces, { ...emptyLoadingPlace }]
-    }));
-  };
-
-  const addUnloadingPlace = () => {
-    setFormData(prev => ({
-      ...prev,
-      unloadingPlaces: [...prev.unloadingPlaces, { ...emptyUnloadingPlace }]
-    }));
-  };
-
-  const removeLoadingPlace = (index: number) => {
-    if (formData.loadingPlaces.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        loadingPlaces: prev.loadingPlaces.filter((_, i) => i !== index)
-      }));
+  const handleDeleteConfirmed = async () => {
+    if (selectedOrderId) {
+      await handleDeleteOrder(selectedOrderId);
+      setShowDeleteConfirm(false);
+      setSelectedOrderId(null);
     }
   };
 
-  const removeUnloadingPlace = (index: number) => {
-    if (formData.unloadingPlaces.length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        unloadingPlaces: prev.unloadingPlaces.filter((_, i) => i !== index)
-      }));
-    }
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+    setSelectedOrderId(null);
   };
 
-  const handlePlaceTypeChange = (event: SelectChangeEvent) => {
-    setPlaceType(event.target.value as 'loading' | 'unloading');
-  };
-
-  const handlePlaceInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewPlace(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSavePlace = () => {
-    const newSavedPlace: SavedPlace = {
-      id: Date.now().toString(),
-      type: placeType,
-      name: newPlace.name,
-      street: newPlace.street,
-      city: newPlace.city,
-      zip: newPlace.zip,
-      country: newPlace.country,
-      contactPerson: newPlace.contactPerson,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      userId: 'current-user-id', // Toto by malo byť nahradené skutočným ID používateľa
-      companyId: 'current-company-id' // Toto by malo byť nahradené skutočným ID spoločnosti
+  const handleEditOrder = (order: OrderFormData) => {
+    const modifiedOrder = {
+      ...order,
+      zakaznik: order.customerCompany || '',
+      kontaktnaOsoba: `${order.customerContactName || ''} ${order.customerContactSurname || ''}`.trim(),
+      suma: order.customerPrice || '',
+      mena: 'EUR',
     };
-
-    setSavedPlaces(prev => [...prev, newSavedPlace]);
     
-    // Reset formulára
-    setNewPlace({
-      name: '',
-      street: '',
-      city: '',
-      zip: '',
-      country: 'Slovensko',
-      contactPerson: ''
-    });
-    setPlaceType('loading');
+    setSelectedOrder(modifiedOrder);
+    setIsEditMode(true);
+    setShowNewOrderDialog(true);
   };
 
-  const TabsContainer = styled(Box)(({ theme }) => ({
-    '& .MuiTab-root': {
-      color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : '#000000',
-      '&.Mui-selected': {
-        color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-      }
-    },
-    '& .MuiTabs-indicator': {
-      backgroundColor: '#ff9f43',
+  const handleDeleteOrder = async (id: string) => {
+    if (!userData?.companyID) {
+      console.log('Chýba companyID');
+      setError('Nemáte priradenú firmu.');
+      return;
     }
-  }));
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteDoc(doc(db, 'orders', id));
+      fetchOrders();
+    } catch (err) {
+      console.error('Chyba pri mazaní objednávky:', err);
+      setError('Nastala chyba pri mazaní objednávky');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenNewOrderForm = () => {
+    setSelectedOrder(null);
+    setIsEditMode(false);
+    setShowNewOrderDialog(true);
+  };
+
+  const handleCloseNewOrderForm = () => {
+    setShowNewOrderDialog(false);
+    setSelectedOrder(null);
+    setIsEditMode(false);
+    fetchOrders();
+  };
+
+  const openOrderNumberEditDialog = (orderId: string) => {
+    setOrderToUpdateId(orderId);
+    setNewOrderNumber('0001/04/2025');
+    setShowOrderNumberEdit(true);
+  };
+
+  const closeOrderNumberEditDialog = () => {
+    setShowOrderNumberEdit(false);
+    setOrderToUpdateId(null);
+    setNewOrderNumber('');
+  };
+
+  const updateOrderNumber = async () => {
+    if (!orderToUpdateId || !newOrderNumber || !userData?.companyID) return;
+    
+    try {
+      setLoading(true);
+      
+      const parts = newOrderNumber.split('/');
+      if (parts.length !== 3) {
+        setError('Neplatný formát čísla. Použite formát 0001/04/2025');
+        return;
+      }
+      
+      const orderNumber = parts[0];
+      const orderMonth = parts[1];
+      const orderYear = parts[2];
+      
+      await updateDoc(doc(db, 'orders', orderToUpdateId), {
+        orderNumberFormatted: newOrderNumber,
+        orderNumber,
+        orderMonth,
+        orderYear
+      });
+      
+      closeOrderNumberEditDialog();
+      fetchOrders();
+      
+    } catch (err) {
+      console.error('Chyba pri aktualizácii čísla objednávky:', err);
+      setError('Nastala chyba pri aktualizácii čísla objednávky');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRowClick = (order: OrderFormData) => {
+    if (selectedOrderId === order.id) {
+      setSelectedOrderId(null);
+      setSelectedOrderDetail(null);
+    } else {
+      setSelectedOrderId(order.id || null);
+      setSelectedOrderDetail(order);
+    }
+  };
+
+  // Nová funkcia pre získanie nastavení spoločnosti
+  const getCompanySettings = async () => {
+    if (!userData?.companyID) return null;
+    
+    try {
+      const settingsQuery = query(
+        collection(db, 'companySettings'),
+        where('companyID', '==', userData.companyID),
+        limit(1)
+      );
+      
+      const settingsSnapshot = await getDocs(settingsQuery);
+      if (!settingsSnapshot.empty) {
+        return settingsSnapshot.docs[0].data();
+      }
+      return null;
+    } catch (err) {
+      console.error('Chyba pri načítaní nastavení spoločnosti:', err);
+      return null;
+    }
+  };
+
+  // Upravená funkcia pre náhľad PDF
+  const handlePreviewPDF = async (order: OrderFormData) => {
+    try {
+      setLoading(true);
+      
+      // Najprv získame nastavenia spoločnosti
+      const settings = await getCompanySettings();
+      console.log("Načítané nastavenia spoločnosti pre PDF:", settings);
+      
+      // Potom vygenerujeme PDF s nastaveniami
+      const doc = generatePDFWithSettings({...order, id: order.id || 'temp'}, settings);
+      
+      if (doc) {
+        const pdfBlob = doc.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        setPdfUrl(pdfUrl);
+        setShowPdfPreview(true);
+      }
+    } catch (error) {
+      console.error('Chyba pri generovaní náhľadu PDF:', error);
+      alert('Nastala chyba pri generovaní náhľadu PDF');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Upravená funkcia pre stiahnutie PDF
+  const handleDownloadPDF = async (order: OrderFormData) => {
+    try {
+      setLoading(true);
+      
+      // Najprv získame nastavenia spoločnosti
+      const settings = await getCompanySettings();
+      console.log("Načítané nastavenia spoločnosti pre PDF:", settings);
+      
+      // Potom vygenerujeme PDF s nastaveniami
+      const doc = generatePDFWithSettings({...order, id: order.id || 'temp'}, settings);
+      
+      if (doc) {
+        const orderNumber = (order as any).orderNumberFormatted || order.id?.substring(0, 8) || 'objednavka';
+        doc.save(`objednavka-${orderNumber}.pdf`);
+      }
+    } catch (error) {
+      console.error('Chyba pri sťahovaní PDF:', error);
+      alert('Nastala chyba pri sťahovaní PDF');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Nová funkcia pre generovanie PDF s nastaveniami
+  const generatePDFWithSettings = (orderData: OrderFormData & { id: string }, settings: any) => {
+    try {
+      // Vytvoríme inštanciu jsPDF s podporou UTF-8
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        putOnlyUsedFonts: true,
+        compress: true
+      });
+
+      // Importujeme font s podporou diakritiky
+      doc.setFont("helvetica");
+      doc.setLanguage("sk");
+      
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+      const contentWidth = pageWidth - 2 * margin;
+      
+      // Formát dátumu pre hlavičku
+      const createdAtDate = orderData.createdAt ? format(convertToDate(orderData.createdAt)!, 'dd.MM.yyyy') : format(new Date(), 'dd.MM.yyyy');
+      
+      // Číslo objednávky
+      const orderNumber = (orderData as any).orderNumberFormatted || orderData.id.substring(0, 8);
+      
+      // Pomocná funkcia pre bezpečný text s diakritikou
+      const safeText = (text: any): string => {
+        if (text === undefined || text === null) return '';
+        return String(text);
+      };
+      
+      // --- HLAVIČKA DOKUMENTU ---
+      // Vypíšeme názov spoločnosti namiesto loga
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      
+      // Ak máme názov zo settings, použijeme ho, inak defaultný
+      const companyName = settings?.companyName || 'AESA GROUP';
+      doc.text(companyName, margin, margin + 8);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Trnava, ${createdAtDate}`, pageWidth - margin - 35, margin + 8);
+      
+      // Čiara pod hlavičkou
+      doc.setDrawColor(240, 140, 0); // Oranžová farba (FF9F43)
+      doc.setLineWidth(0.5);
+      doc.line(margin, margin + 12, pageWidth - margin, margin + 12);
+      
+      // --- PRÍJEMCA A ODOSIELATEĽ ---
+      const tableTop = margin + 20;
+      const colWidth = contentWidth / 2 - 2;
+      
+      // Bunka Príjemca
+      doc.setFillColor(248, 248, 248);
+      doc.setDrawColor(210, 210, 210);
+      doc.roundedRect(margin, tableTop, colWidth, 45, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      
+      // Nadpis sekcie so správnou diakritikou
+      doc.text('Príjemca', margin + 3, tableTop + 7);
+      doc.setFont('helvetica', 'normal');
+      
+      const customerCompany = safeText((orderData as any).zakaznik || orderData.customerCompany).toUpperCase();
+      const customerStreet = safeText(orderData.customerStreet);
+      const customerCity = safeText(orderData.customerCity);
+      const customerZip = safeText(orderData.customerZip);
+      const customerCountry = safeText(orderData.customerCountry);
+      const customerVatID = safeText(orderData.customerVatId);
+      
+      doc.text(customerCompany, margin + 3, tableTop + 15);
+      doc.text(`${customerStreet}, ${customerZip} ${customerCity}, ${customerCountry}`, margin + 3, tableTop + 22);
+      doc.text(`IČO: ${customerVatID.split('/')[0] || 'N/A'}`, margin + 3, tableTop + 29);
+      doc.text(`DIČ/IČ DPH: ${customerVatID}`, margin + 3, tableTop + 36);
+      
+      // Bunka Predajca
+      doc.roundedRect(margin + colWidth + 4, tableTop, colWidth, 45, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.text('Predajca', margin + colWidth + 7, tableTop + 7);
+      doc.setFont('helvetica', 'normal');
+      
+      // Použiť údaje zo settings ak sú k dispozícii
+      const companyStreet = settings?.street || 'Pekárska 11';
+      const companyCity = settings?.city || 'Trnava'; 
+      const companyZip = settings?.zip || 'SK91701';
+      const companyVatID = settings?.vatID || 'SK2121966220';
+      const companyID = settings?.businessID || '55361731';
+      
+      doc.text(companyName, margin + colWidth + 7, tableTop + 15);
+      doc.text(`${companyStreet}, ${companyZip} ${companyCity}`, margin + colWidth + 7, tableTop + 22);
+      doc.text(`IČO: ${companyID}`, margin + colWidth + 7, tableTop + 29);
+      doc.text(`DIČ/IČ DPH: ${companyVatID}`, margin + colWidth + 7, tableTop + 36);
+      
+      // Pokračujeme ako v pôvodnej funkcii...
+      
+      // Vykresliť úlohy osôb pre SL GROUP
+      if (customerCompany && customerCompany.toUpperCase().includes('SL GROUP')) {
+        const contactTop = tableTop + 50;
+        doc.roundedRect(margin, contactTop, colWidth, 30, 2, 2, 'F');
+        doc.roundedRect(margin + colWidth + 4, contactTop, colWidth, 30, 2, 2, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.text('SL GROUP SL GROUP (+48 504 649 412)', margin + 3, contactTop + 7);
+        doc.setFont('helvetica', 'normal');
+        const contactEmail = "prakapovich@sltr.pl";
+        doc.text(`Telefón: +48 504 649 412`, margin + 3, contactTop + 14);
+        doc.text(`Mobil: +48 504 649 412`, margin + 3, contactTop + 21);
+        doc.text(`E-mail: ${contactEmail}`, margin + 3, contactTop + 28);
+        
+        // Kontaktné informácie AESA
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Erik Géci`, margin + colWidth + 7, contactTop + 7);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Telefón: +421947964818`, margin + colWidth + 7, contactTop + 14);
+        doc.text(`Mobil: +421947964818`, margin + colWidth + 7, contactTop + 21);
+        doc.text(`E-mail: geci@aesa.sk`, margin + colWidth + 7, contactTop + 28);
+      }
+      
+      // Nadpis objednávky
+      const titleY = customerCompany && customerCompany.toUpperCase().includes('SL GROUP') ? tableTop + 90 : tableTop + 60;
+      
+      // Oranžovopodčiarknutý nadpis
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Dopravná objednávka č. ${orderNumber}`, pageWidth / 2, titleY, { align: 'center' });
+      
+      // Oranžová čiara pod nadpisom
+      doc.setDrawColor(240, 140, 0); // Oranžová farba (FF9F43)
+      doc.setLineWidth(0.3);
+      const textWidth = doc.getTextWidth(`Dopravná objednávka č. ${orderNumber}`);
+      doc.line(pageWidth/2 - textWidth/2, titleY + 1, pageWidth/2 + textWidth/2, titleY + 1);
+      
+      doc.setFont('helvetica', 'normal');
+      
+      // Pridať informáciu o špediterovi - upravená logika aby zobrazovala meno
+      const spediteurName = (() => {
+        // 1. Najprv skúsime createdByName ak existuje a nie je to email
+        const createdByName = (orderData as any).createdByName;
+        if (createdByName && !createdByName.includes('@')) {
+          return createdByName;
+        }
+        
+        // 2. Ak máme teamMembers, vrátime jeho meno
+        if (orderData.createdBy && teamMembers[orderData.createdBy]) {
+          return teamMembers[orderData.createdBy].name;
+        }
+        
+        // 3. Ak je createdByName email, extrahujeme z neho meno
+        if (createdByName && createdByName.includes('@')) {
+          return createdByName.split('@')[0]; // Vrátiť len časť pred @
+        }
+        
+        // 4. Ak nič z toho neexistuje, zobraziť "Neznámy špediter"
+        return 'Neznámy špediter';
+      })();
+      doc.setFontSize(10);
+      doc.text(`Špediter: ${spediteurName}`, pageWidth / 2, titleY + 8, { align: 'center' });
+      
+      // Údaje týkajúce sa trasy
+      const routeTop = titleY + 15;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Údaje týkajúce sa trasy (nakládky, vykládky):`, margin, routeTop);
+      doc.setFont('helvetica', 'normal');
+      
+      // Nakládky
+      let currentY = routeTop + 10;
+      if (orderData.loadingPlaces && orderData.loadingPlaces.length > 0) {
+        orderData.loadingPlaces.forEach((place, index) => {
+          // Kontrola, či sa blížime ku koncu stránky a potrebujeme ďalšiu
+          if (currentY + 80 > pageHeight) {
+            doc.addPage();
+            currentY = margin;
+          }
+          
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Nakládka ${index + 1}`, margin, currentY);
+          const dateTimeStr = place.dateTime ? format(convertToDate(place.dateTime)!, 'dd.MM.yyyy (HH:mm)') : '';
+          doc.text(`${dateTimeStr}`, margin + 120, currentY);
+          doc.setFont('helvetica', 'normal');
+          currentY += 8;
+          
+          // Vytvorenie boxu nakládky s tieňovaním
+          const boxHeight = 60;
+          doc.setFillColor(248, 248, 248);
+          doc.roundedRect(margin, currentY, contentWidth, boxHeight, 2, 2, 'F');
+          
+          // Údaje o mieste
+          const placeCity = safeText(place.city);
+          const placeCountry = safeText(place.country);
+          doc.setFontSize(10);
+          doc.text(`${placeCity}, ${placeCountry}`, margin + 5, currentY + 10);
+          
+          // Referenčné číslo
+          doc.text(`Referenčné číslo: 0260.550.- 153-5GU`, margin + 5, currentY + 20);
+          
+          // Náklad
+          doc.text(`Náklad: Pallets (${place.goods?.length ? 'Výmena - Colli: Nie' : 'Bez výmeny'})`, margin + 5, currentY + 30);
+          
+          // Počet
+          const goodsQuantity = place.goods?.reduce((sum, item) => sum + (parseInt(String(item.quantity)) || 0), 0) || 0;
+          doc.text("Počet: " + goodsQuantity.toString() + " x Colli", margin + 5, currentY + 40);
+          
+          // Rozmery a váha
+          const goodsWeight = place.goods && place.goods.length > 0 
+            ? place.goods.reduce((sum, item) => sum + (parseInt(String(item.quantity)) * 50 || 0), 0) || 996 
+            : 996;
+          doc.text("Rozmery: 120x100x100cm, Hmotnosť: " + goodsWeight.toString() + " kg", margin + 5, currentY + 50);
+          
+          currentY += boxHeight + 10;
+        });
+      }
+      
+      // Vykládky
+      if (orderData.unloadingPlaces && orderData.unloadingPlaces.length > 0) {
+        orderData.unloadingPlaces.forEach((place, index) => {
+          // Kontrola, či sa blížime ku koncu stránky a potrebujeme ďalšiu
+          if (currentY + 80 > pageHeight) {
+            doc.addPage();
+            currentY = margin;
+          }
+          
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Vykládka ${index + 1}`, margin, currentY);
+          const dateTimeStr = place.dateTime ? format(convertToDate(place.dateTime)!, 'dd.MM.yyyy (HH:mm)') : '';
+          doc.text(`${dateTimeStr}`, margin + 120, currentY);
+          doc.setFont('helvetica', 'normal');
+          currentY += 8;
+          
+          // Vytvorenie boxu vykládky
+          const boxHeight = 60;
+          doc.setFillColor(248, 248, 248);
+          doc.roundedRect(margin, currentY, contentWidth, boxHeight, 2, 2, 'F');
+          
+          // Údaje o mieste
+          const placeCity = safeText(place.city);
+          const placeCountry = safeText(place.country);
+          doc.setFontSize(10);
+          doc.text(`${placeCity}, ${placeCountry}`, margin + 5, currentY + 10);
+          
+          // Referenčné číslo
+          doc.text(`Referenčné číslo: 0260.550.- 153-5GU`, margin + 5, currentY + 20);
+          
+          // Náklad
+          doc.text(`Náklad: Pallets (${place.goods?.length ? 'Výmena - Colli: Nie' : 'Bez výmeny'})`, margin + 5, currentY + 30);
+          
+          currentY += boxHeight + 10;
+        });
+      }
+      
+      // Ťahač
+      currentY += 5;
+      if (currentY + 40 > pageHeight) {
+        doc.addPage();
+        currentY = margin;
+      }
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Ťahač:`, margin, currentY);
+      doc.setFont('helvetica', 'normal');
+      const carrierVehicleReg = safeText(orderData.carrierVehicleReg || 'SB87MPA');
+      doc.text(carrierVehicleReg, margin + 40, currentY);
+      
+      // Tabuľka s platbou
+      currentY += 10;
+      doc.setDrawColor(210, 210, 210);
+      doc.setLineWidth(0.3);
+      
+      // Hlavička tabuľky
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, currentY, contentWidth, 8, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Dátum splatnosti`, margin + 5, currentY + 6);
+      doc.text(`Preprava (bez DPH)`, margin + 120, currentY + 6);
+      
+      // Obsah tabuľky
+      currentY += 8;
+      doc.setFillColor(248, 248, 248);
+      doc.rect(margin, currentY, contentWidth, 8, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.text(`45 dní od prijatia faktúry a dokumentov`, margin + 5, currentY + 6);
+      const carrierPrice = safeText(orderData.carrierPrice || "880.00");
+      doc.setFont('helvetica', 'bold');
+      doc.text(carrierPrice + " EUR", margin + 120, currentY + 6);
+      
+      // Ohraničenie tabuľky
+      doc.rect(margin, currentY - 8, contentWidth, 16);
+      doc.line(margin + 110, currentY - 8, margin + 110, currentY + 8);
+      
+      // Poznámka k platbe
+      currentY += 15;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.text("* Cena prepravy zahŕňa všetky poplatky spojené s dopravou, vrátane mýta a paliva.", margin, currentY);
+      
+      // Pätička s číslami strán
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Strana ${i} z ${pageCount}`, pageWidth - 25, pageHeight - 10);
+        
+        // Pätička s kontaktnými údajmi
+        doc.text(`${companyName} | ${companyStreet}, ${companyZip} ${companyCity} | IČO: ${companyID} | DIČ: ${companyVatID}`, pageWidth/2, pageHeight - 10, { align: 'center' });
+      }
+      
+      return doc;
+    } catch (error) {
+      console.error('Chyba pri generovaní PDF:', error);
+      alert('Nastala chyba pri generovaní PDF objednávky');
+      return null;
+    }
+  };
+
+  // Pôvodnú funkciu generatePDF ponechať pre spätnú kompatibilitu
+  const generatePDF = (orderData: OrderFormData & { id: string }) => {
+    return generatePDFWithSettings(orderData, null);
+  };
 
   return (
     <PageWrapper>
       <PageHeader>
-        <PageTitle isDarkMode={isDarkMode}>
-          Objednávky
-        </PageTitle>
-        <PageDescription>
-          Vytvárajte a spravujte objednávky pre vašich zákazníkov
-        </PageDescription>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <Box>
+              <PageTitle isDarkMode={isDarkMode}>
+                Objednávky
+              </PageTitle>
+              <PageDescription>
+                Prehľad všetkých vytvorených objednávok.
+              </PageDescription>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenNewOrderForm}
+            sx={{
+              background: 'linear-gradient(45deg, #ff9f43 30%, #ffc473 90%)',
+              color: '#fff',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              boxShadow: '0 3px 5px 2px rgba(255, 159, 67, .3)',
+              fontWeight: 600,
+              textTransform: 'none',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #ffc473 30%, #ff9f43 90%)',
+                transform: 'scale(1.03)'
+              },
+              marginLeft: 'auto'
+            }}
+          >
+            Nová objednávka
+          </Button>
+        </Box>
       </PageHeader>
 
-      <TabsContainer>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange}
-          sx={{
-            '& .MuiTab-root': {
-              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : '#000000',
-              '&.Mui-selected': {
-                color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-              }
-            }
-          }}
-        >
-          <Tab label="Nová objednávka" />
-          <Tab label="Všetky objednávky" />
-          <Tab label="Zákazníci" />
-          <Tab label="Miesta" />
-        </Tabs>
-      </TabsContainer>
-
-      <TabPanel value={tabValue} index={0}>
-        <StyledPaper>
-          <form onSubmit={handleSubmit}>
-            <Box sx={{
-              width: '100%',
-              maxWidth: '100%',
-              '@media (max-width: 600px)': {
-                padding: 0,
-              }
-            }}>
-              <Grid container spacing={isMobile ? 2 : 3}>
-                <Grid item xs={12}>
-                  <StyledFieldset>
-                    <StyledLegend>Údaje zákazníka</StyledLegend>
-                    <Grid container spacing={isMobile ? 2 : 3}>
-                      <Grid item xs={12}>
-                        <Autocomplete
-                          options={customers}
-                          getOptionLabel={(option) => option.company}
-                          value={selectedCustomer}
-                          onChange={(event, newValue) => handleCustomerSelect(newValue)}
-                          renderInput={(params) => (
-                            <StyledTextField
-                              {...params}
-                              label="Vyberte existujúceho zákazníka"
-                              fullWidth
-                            />
-                          )}
-                          sx={autocompleteStyles}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Názov firmy"
-                          name="customerCompany"
-                          value={formData.customerCompany}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="IČ DPH"
-                          name="customerVatId"
-                          value={formData.customerVatId}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <StyledTextField
-                          fullWidth
-                          label="Ulica a číslo"
-                          name="customerStreet"
-                          value={formData.customerStreet}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <StyledTextField
-                          fullWidth
-                          label="Mesto"
-                          name="customerCity"
-                          value={formData.customerCity}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <StyledTextField
-                          fullWidth
-                          label="PSČ"
-                          name="customerZip"
-                          value={formData.customerZip}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <Autocomplete
-                          options={countries}
-                          getOptionLabel={(option) => option.name}
-                          value={countries.find(country => country.name === formData.customerCountry) || null}
-                          onChange={handleCountryChange('customerCountry')}
-                          renderInput={(params) => (
-                            <StyledTextField
-                              {...params}
-                              label="Krajina"
-                              required
-                            />
-                          )}
-                          renderOption={(props, option) => (
-                            <Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
-                              <img
-                                loading="lazy"
-                                width="20"
-                                src={`https://flagcdn.com/${option.code.toLowerCase()}.svg`}
-                                alt={option.name}
-                              />
-                              {option.name}
-                            </Box>
-                          )}
-                          sx={autocompleteStyles}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Meno"
-                          name="customerContactName"
-                          value={formData.customerContactName}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Priezvisko"
-                          name="customerContactSurname"
-                          value={formData.customerContactSurname}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="Email"
-                          name="customerEmail"
-                          type="email"
-                          value={formData.customerEmail}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Autocomplete
-                            options={countries}
-                            getOptionLabel={(option) => `${option.name} (${option.prefix})`}
-                            value={countries.find(country => country.prefix === formData.customerPhone.split(' ')[0]) || null}
-                            onChange={(event, newValue) => {
-                              setFormData(prev => ({
-                                ...prev,
-                                customerPhone: `${newValue?.prefix || '+421'} ${prev.customerPhone.split(' ')[1] || ''}`
-                              }));
-                            }}
-                            renderInput={(params) => (
-                              <StyledTextField
-                                {...params}
-                                label="Predvoľba"
-                                required
-                                sx={{ width: '250px' }}
-                              />
-                            )}
-                            renderOption={(props, option) => (
-                              <Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
-                                <img
-                                  loading="lazy"
-                                  width="20"
-                                  src={`https://flagcdn.com/${option.code.toLowerCase()}.svg`}
-                                  alt={option.name}
-                                />
-                                {option.name} ({option.prefix})
-                              </Box>
-                            )}
-                            sx={autocompleteStyles}
-                          />
-                          <StyledTextField
-                            fullWidth
-                            label="Telefón"
-                            name="customerPhone"
-                            value={formData.customerPhone.split(' ')[1] || ''}
-                            onChange={(e) => {
-                              const prefix = formData.customerPhone.split(' ')[0] || '+421';
-                              setFormData(prev => ({
-                                ...prev,
-                                customerPhone: `${prefix} ${e.target.value}`
-                              }));
-                            }}
-                            required
-                          />
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <StyledTextField
-                          fullWidth
-                          label="Suma od zákazníka (€)"
-                          name="customerPrice"
-                          type="number"
-                          value={formData.customerPrice}
-                          onChange={handleChange}
-                          required
-                          inputProps={{ min: 0, step: "any" }}
-                        />
-                      </Grid>
-                    </Grid>
-                  </StyledFieldset>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <StyledFieldset>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <StyledLegend>Miesta Nakládky</StyledLegend>
-                      <Button
-                        onClick={addLoadingPlace}
-                        variant="outlined"
-                        size="small"
-                        sx={{
-                          borderRadius: '8px',
-                          textTransform: 'none',
-                          color: theme.palette.primary.main,
-                          '@media (max-width: 600px)': {
-                            width: '100%',
-                            py: 0.5,
-                            fontSize: '0.9rem',
-                            height: '32px',
-                            minHeight: '32px'
-                          }
-                        }}
-                      >
-                        Pridať miesto nakládky
-                      </Button>
-                    </Box>
-                    {formData.loadingPlaces.map((place, index) => (
-                      <Box key={index} sx={{ position: 'relative', mb: 3 }}>
-                        {index > 0 && (
-                          <IconButton
-                            onClick={() => removeLoadingPlace(index)}
-                            sx={{
-                              position: 'absolute',
-                              right: -8,
-                              top: -8,
-                              color: theme.palette.error.main
-                            }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        )}
-                        <Grid container spacing={isMobile ? 2 : 3}>
-                          <Grid item xs={12}>
-                            <StyledTextField
-                              fullWidth
-                              label="Ulica a číslo"
-                              value={place.street}
-                              onChange={(e) => handleLoadingPlaceChange(index, 'street', e.target.value)}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={4}>
-                            <StyledTextField
-                              fullWidth
-                              label="Mesto"
-                              value={place.city}
-                              onChange={(e) => handleLoadingPlaceChange(index, 'city', e.target.value)}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={4}>
-                            <StyledTextField
-                              fullWidth
-                              label="PSČ"
-                              value={place.zip}
-                              onChange={(e) => handleLoadingPlaceChange(index, 'zip', e.target.value)}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={4}>
-                            <Autocomplete
-                              options={countries}
-                              getOptionLabel={(option) => option.name}
-                              value={countries.find(country => country.name === place.country) || null}
-                              onChange={(event, newValue) => handleLoadingPlaceChange(index, 'country', newValue?.name || 'Slovensko')}
-                              renderInput={(params) => (
-                                <StyledTextField
-                                  {...params}
-                                  label="Krajina"
-                                  required
-                                />
-                              )}
-                              renderOption={(props, option) => (
-                                <Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
-                                  <img
-                                    loading="lazy"
-                                    width="20"
-                                    src={`https://flagcdn.com/${option.code.toLowerCase()}.svg`}
-                                    alt={option.name}
-                                  />
-                                  {option.name}
-                                </Box>
-                              )}
-                              sx={autocompleteStyles}
-                            />
-                          </Grid>
-                          <Grid item xs={12}>
-                            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                              <DateTimePicker
-                                label="Dátum a čas nakládky"
-                                value={place.dateTime ? new Date(place.dateTime) : null}
-                                onChange={(newValue: Date | null) => {
-                                  handleLoadingPlaceChange(index, 'dateTime', newValue ? newValue.toISOString() : '');
-                                }}
-                                slotProps={{
-                                  textField: {
-                                    fullWidth: true,
-                                    required: true,
-                                    sx: {
-                                      '& .MuiInputBase-root': {
-                                        backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(35, 35, 66, 0.35)' : 'rgba(245, 245, 245, 0.95)',
-                                      }
-                                    }
-                                  }
-                                }}
-                              />
-                            </LocalizationProvider>
-                          </Grid>
-                          <Grid item xs={12}>
-                            <StyledTextField
-                              fullWidth
-                              label="Kontaktná osoba (nakládka)"
-                              value={place.contactPerson}
-                              onChange={(e) => handleLoadingPlaceChange(index, 'contactPerson', e.target.value)}
-                              required
-                            />
-                          </Grid>
-                        </Grid>
-                        {index < formData.loadingPlaces.length - 1 && (
-                          <Divider sx={{ my: 3 }} />
-                        )}
-                      </Box>
-                    ))}
-                  </StyledFieldset>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <StyledFieldset>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <StyledLegend>Miesta Vykládky</StyledLegend>
-                      <Button
-                        onClick={addUnloadingPlace}
-                        variant="outlined"
-                        size="small"
-                        sx={{
-                          borderRadius: '8px',
-                          textTransform: 'none',
-                          color: theme.palette.primary.main,
-                          '@media (max-width: 600px)': {
-                            width: '100%',
-                            py: 0.5,
-                            fontSize: '0.9rem',
-                            height: '32px',
-                            minHeight: '32px'
-                          }
-                        }}
-                      >
-                        Pridať miesto vykládky
-                      </Button>
-                    </Box>
-                    {formData.unloadingPlaces.map((place, index) => (
-                      <Box key={index} sx={{ position: 'relative', mb: 3 }}>
-                        {index > 0 && (
-                          <IconButton
-                            onClick={() => removeUnloadingPlace(index)}
-                            sx={{
-                              position: 'absolute',
-                              right: -8,
-                              top: -8,
-                              color: theme.palette.error.main
-                            }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        )}
-                        <Grid container spacing={isMobile ? 2 : 3}>
-                          <Grid item xs={12}>
-                            <StyledTextField
-                              fullWidth
-                              label="Ulica a číslo"
-                              value={place.street}
-                              onChange={(e) => handleUnloadingPlaceChange(index, 'street', e.target.value)}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={4}>
-                            <StyledTextField
-                              fullWidth
-                              label="Mesto"
-                              value={place.city}
-                              onChange={(e) => handleUnloadingPlaceChange(index, 'city', e.target.value)}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={4}>
-                            <StyledTextField
-                              fullWidth
-                              label="PSČ"
-                              value={place.zip}
-                              onChange={(e) => handleUnloadingPlaceChange(index, 'zip', e.target.value)}
-                              required
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={4}>
-                            <Autocomplete
-                              options={countries}
-                              getOptionLabel={(option) => option.name}
-                              value={countries.find(country => country.name === place.country) || null}
-                              onChange={(event, newValue) => handleUnloadingPlaceChange(index, 'country', newValue?.name || 'Slovensko')}
-                              renderInput={(params) => (
-                                <StyledTextField
-                                  {...params}
-                                  label="Krajina"
-                                  required
-                                />
-                              )}
-                              renderOption={(props, option) => (
-                                <Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
-                                  <img
-                                    loading="lazy"
-                                    width="20"
-                                    src={`https://flagcdn.com/${option.code.toLowerCase()}.svg`}
-                                    alt={option.name}
-                                  />
-                                  {option.name}
-                                </Box>
-                              )}
-                              sx={autocompleteStyles}
-                            />
-                          </Grid>
-                          <Grid item xs={12}>
-                            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                              <DateTimePicker
-                                label="Dátum a čas vykládky"
-                                value={place.dateTime ? new Date(place.dateTime) : null}
-                                onChange={(newValue: Date | null) => {
-                                  handleUnloadingPlaceChange(index, 'dateTime', newValue ? newValue.toISOString() : '');
-                                }}
-                                slotProps={{
-                                  textField: {
-                                    fullWidth: true,
-                                    required: true,
-                                    sx: {
-                                      '& .MuiInputBase-root': {
-                                        backgroundColor: theme => theme.palette.mode === 'dark' ? 'rgba(35, 35, 66, 0.35)' : 'rgba(245, 245, 245, 0.95)',
-                                      }
-                                    }
-                                  }
-                                }}
-                              />
-                            </LocalizationProvider>
-                          </Grid>
-                          <Grid item xs={12}>
-                            <StyledTextField
-                              fullWidth
-                              label="Kontaktná osoba (vykládka)"
-                              value={place.contactPerson}
-                              onChange={(e) => handleUnloadingPlaceChange(index, 'contactPerson', e.target.value)}
-                              required
-                            />
-                          </Grid>
-                        </Grid>
-                        {index < formData.unloadingPlaces.length - 1 && (
-                          <Divider sx={{ my: 3 }} />
-                        )}
-                      </Box>
-                    ))}
-                  </StyledFieldset>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <StyledFieldset>
-                    <StyledLegend>Popis Tovaru</StyledLegend>
-                    <Grid container spacing={isMobile ? 2 : 3}>
-                      <Grid item xs={12}>
-                        <StyledTextField
-                          fullWidth
-                          multiline
-                          rows={3}
-                          label="Popis tovaru"
-                          name="goodsDescription"
-                          value={formData.goodsDescription}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <StyledTextField
-                          fullWidth
-                          label="Množstvo (napr. počet paliet)"
-                          name="quantity"
-                          value={formData.quantity}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          type="number"
-                          label="Váha (kg)"
-                          name="weightKg"
-                          value={formData.weightKg}
-                          onChange={handleChange}
-                          required
-                          inputProps={{ min: 0, step: "any" }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Box sx={{
-                          display: 'flex',
-                          gap: 1,
-                          alignItems: 'center',
-                          '@media (max-width: 600px)': {
-                            flexDirection: 'column',
-                            gap: 2,
-                            '& .MuiTypography-root': {
-                              display: 'none'
-                            },
-                            '& .MuiTextField-root': {
-                              width: '100%'
-                            }
-                          }
-                        }}>
-                          <StyledTextField
-                            fullWidth
-                            type="number"
-                            label="Dĺžka"
-                            name="dimensionsL"
-                            value={formData.dimensionsL}
-                            onChange={handleChange}
-                            required
-                            inputProps={{ min: 0 }}
-                          />
-                          <Typography sx={{ color: 'text.secondary' }}>x</Typography>
-                          <StyledTextField
-                            fullWidth
-                            type="number"
-                            label="Šírka"
-                            name="dimensionsW"
-                            value={formData.dimensionsW}
-                            onChange={handleChange}
-                            required
-                            inputProps={{ min: 0 }}
-                          />
-                          <Typography sx={{ color: 'text.secondary' }}>x</Typography>
-                          <StyledTextField
-                            fullWidth
-                            type="number"
-                            label="Výška"
-                            name="dimensionsH"
-                            value={formData.dimensionsH}
-                            onChange={handleChange}
-                            required
-                            inputProps={{ min: 0 }}
-                          />
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </StyledFieldset>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <StyledFieldset>
-                    <StyledLegend>Dopravca (Vykonávateľ)</StyledLegend>
-                    <Grid container spacing={isMobile ? 2 : 3}>
-                      <Grid item xs={12}>
-                        <StyledTextField
-                          fullWidth
-                          label="Názov firmy dopravcu"
-                          name="carrierCompany"
-                          value={formData.carrierCompany}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <StyledTextField
-                          fullWidth
-                          label="Kontakt na dopravcu"
-                          name="carrierContact"
-                          value={formData.carrierContact}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          label="EČV Vozidla"
-                          name="carrierVehicleReg"
-                          value={formData.carrierVehicleReg}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <StyledTextField
-                          fullWidth
-                          type="number"
-                          label="Cena za prepravu (€)"
-                          name="carrierPrice"
-                          value={formData.carrierPrice}
-                          onChange={handleChange}
-                          required
-                          inputProps={{ min: 0, step: "any" }}
-                        />
-                      </Grid>
-                    </Grid>
-                  </StyledFieldset>
-                </Grid>
-              </Grid>
-            </Box>
-
-            <Grid container justifyContent="flex-end" sx={{ mt: 4 }}>
-              <Grid item>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  sx={{
-                    py: 1.5,
-                    px: 4,
-                    borderRadius: '12px',
-                    fontSize: '0.95rem',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    transition: 'all 0.2s ease-in-out',
-                    boxShadow: '0 4px 12px rgba(255, 159, 67, 0.3)',
-                    backgroundColor: '#ff9f43',
-                    '&:hover': {
-                      backgroundColor: '#ffbe76',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 16px rgba(255, 159, 67, 0.4)',
-                    },
-                    '&:active': {
-                      transform: 'translateY(0)',
-                    },
-                    '@media (max-width: 600px)': {
-                      width: '100%',
-                      justifyContent: 'center'
-                    }
-                  }}
-                >
-                  Vytvoriť objednávku
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </StyledPaper>
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={1}>
-        <PageDescription>
-          Prehľad všetkých vytvorených objednávok
-        </PageDescription>
-
-        <StyledPaper>
-          <Box sx={{ mb: 3 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={6}>
-                <StyledTextField
-                  fullWidth
-                  placeholder="Vyhľadať objednávku..."
+      <StyledPaper>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+              <TextField
+                  label="Vyhľadať objednávku (Číslo, Firma, Kontakt, Špediter...)"
+                  variant="outlined"
+                  size="small"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                  sx={{ flexGrow: 1, minWidth: '250px' }}
                   InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
+                      startAdornment: (
+                          <InputAdornment position="start">
+                              <SearchIcon />
+                          </InputAdornment>
+                      ),
                   }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <IconButton onClick={() => setShowFilters(!showFilters)}>
-                    <FilterListIcon />
-                  </IconButton>
-                </Box>
-              </Grid>
-            </Grid>
-
-            {showFilters && (
-              <Box sx={{ mt: 2 }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                      <DatePicker
-                        label="Od dátumu"
-                        value={startDate}
-                        onChange={(newValue: Date | null) => setStartDate(newValue)}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            variant: 'outlined'
-                          }
-                        }}
-                      />
-                    </LocalizationProvider>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                      <DatePicker
-                        label="Do dátumu"
-                        value={endDate}
-                        onChange={(newValue: Date | null) => setEndDate(newValue)}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            variant: 'outlined'
-                          }
-                        }}
-                      />
-                    </LocalizationProvider>
-                  </Grid>
-                </Grid>
-              </Box>
-            )}
+              />
+              <IconButton onClick={() => setShowFilters(!showFilters)}>
+                  <FilterListIcon />
+              </IconButton>
           </Box>
 
-          {filteredOrders.length === 0 ? (
-            <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              Neboli nájdené žiadne objednávky.
-            </Typography>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Zákazník</TableCell>
-                    <TableCell>IČ DPH</TableCell>
-                    <TableCell>Nakládka</TableCell>
-                    <TableCell>Vykládka</TableCell>
-                    <TableCell>Dátum nakládky</TableCell>
-                    <TableCell>Tovar</TableCell>
-                    <TableCell align="right">Cena od zákazníka (€)</TableCell>
-                    <TableCell align="right">Cena dopravcu (€)</TableCell>
-                    <TableCell align="right">Marža (€)</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredOrders.map((order, index) => {
-                    const customerPrice = parseFloat(order.customerPrice) || 0;
-                    const carrierPrice = parseFloat(order.carrierPrice) || 0;
-                    const margin = customerPrice - carrierPrice;
-                    
-                    return (
-                      <TableRow key={index}>
-                        <TableCell>{order.customerCompany}</TableCell>
-                        <TableCell>{order.customerVatId}</TableCell>
-                        <TableCell>{order.loadingPlaces[0].city}</TableCell>
-                        <TableCell>{order.unloadingPlaces[0].city}</TableCell>
-                        <TableCell>
-                          {new Date(order.loadingPlaces[0].dateTime).toLocaleDateString('sk-SK')}
-                        </TableCell>
-                        <TableCell>{order.goodsDescription}</TableCell>
-                        <TableCell align="right">{customerPrice.toFixed(2)}</TableCell>
-                        <TableCell align="right">{carrierPrice.toFixed(2)}</TableCell>
-                        <TableCell 
-                          align="right"
-                          sx={{ 
-                            color: margin >= 0 ? 'success.main' : 'error.main',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          {margin.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </StyledPaper>
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={2}>
-        <PageDescription>
-          Správa vašich zákazníkov
-        </PageDescription>
-
-        <StyledPaper>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Názov firmy</TableCell>
-                  <TableCell>IČ DPH</TableCell>
-                  <TableCell>Kontaktná osoba</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Telefón</TableCell>
-                  <TableCell>Mesto</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {customers.map((customer, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{customer.company}</TableCell>
-                    <TableCell>{customer.vatId}</TableCell>
-                    <TableCell>{`${customer.contactName} ${customer.contactSurname}`}</TableCell>
-                    <TableCell>{customer.email}</TableCell>
-                    <TableCell>{customer.phone}</TableCell>
-                    <TableCell>{customer.city}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </StyledPaper>
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={3}>
-        <PageDescription>
-          Správa uložených miest nakládky a vykládky
-        </PageDescription>
-
-        <StyledPaper>
-          <Box sx={{ mb: 3 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={6}>
-                <StyledTextField
-                  fullWidth
-                  placeholder="Vyhľadať miesto..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-            </Grid>
-          </Box>
-
-          <Box sx={{ mb: 4 }}>
-            <StyledFieldset>
-              <StyledLegend>Pridať nové miesto</StyledLegend>
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <StyledTextField
-                    fullWidth
-                    label="Názov miesta"
-                    name="name"
-                    value={newPlace.name}
-                    onChange={handlePlaceInputChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Typ miesta</InputLabel>
-                    <Select
-                      value={placeType}
-                      onChange={handlePlaceTypeChange}
-                      label="Typ miesta"
-                      name="placeType"
-                    >
-                      <MenuItem value="loading">Miesto nakládky</MenuItem>
-                      <MenuItem value="unloading">Miesto vykládky</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12}>
-                  <StyledTextField
-                    fullWidth
-                    label="Ulica a číslo"
-                    name="street"
-                    value={newPlace.street}
-                    onChange={handlePlaceInputChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <StyledTextField
-                    fullWidth
-                    label="Mesto"
-                    name="city"
-                    value={newPlace.city}
-                    onChange={handlePlaceInputChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <StyledTextField
-                    fullWidth
-                    label="PSČ"
-                    name="zip"
-                    value={newPlace.zip}
-                    onChange={handlePlaceInputChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Autocomplete
-                    options={countries}
-                    getOptionLabel={(option) => option.name}
-                    value={countries.find(country => country.name === newPlace.country) || null}
-                    onChange={(event, newValue) => {
-                      setNewPlace(prev => ({
-                        ...prev,
-                        country: newValue?.name || 'Slovensko'
-                      }));
-                    }}
-                    renderInput={(params) => (
-                      <StyledTextField
-                        {...params}
-                        label="Krajina"
-                        required
+          <Collapse in={showFilters}>
+              <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                      <DatePicker
+                          label="Od dátumu"
+                          value={startDate}
+                          onChange={(newValue) => setStartDate(newValue)}
+                          slotProps={{ textField: { size: 'small' } }}
                       />
-                    )}
-                    renderOption={(props, option) => (
-                      <Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
-                        <img
-                          loading="lazy"
-                          width="20"
-                          src={`https://flagcdn.com/${option.code.toLowerCase()}.svg`}
-                          alt={option.name}
-                        />
-                        {option.name}
-                      </Box>
-                    )}
-                    sx={autocompleteStyles}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <StyledTextField
-                    fullWidth
-                    label="Kontaktná osoba"
-                    name="contactPerson"
-                    value={newPlace.contactPerson}
-                    onChange={handlePlaceInputChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSavePlace}
-                    disabled={!newPlace.name || !newPlace.street || !newPlace.city || !newPlace.zip || !newPlace.contactPerson}
-                    sx={{
-                      py: 1.5,
-                      px: 4,
-                      borderRadius: '12px',
-                      fontSize: '0.95rem',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      backgroundColor: '#ff9f43',
-                      '&:hover': {
-                        backgroundColor: '#ffbe76',
-                      },
+                      <DatePicker
+                          label="Do dátumu"
+                          value={endDate}
+                          onChange={(newValue) => setEndDate(newValue)}
+                          slotProps={{ textField: { size: 'small' } }}
+                      />
+                  </LocalizationProvider>
+                  <Button 
+                    onClick={() => { setStartDate(null); setEndDate(null); }} 
+                    size="small"
+                    sx={{ 
+                      color: '#ff9f43',
+                      '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
                     }}
                   >
-                    Uložiť miesto
+                    Vymazať filter
                   </Button>
-                </Grid>
-              </Grid>
-            </StyledFieldset>
-          </Box>
+              </Box>
+          </Collapse>
+          
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress sx={{ color: '#ff9f43' }} />
+            </Box>
+          )}
+          
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                borderRadius: '10px',
+                my: 2,
+                '& .MuiAlert-icon': {
+                  color: '#ff9f43'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          )}
+          
+          {!loading && !error && (
+              <TableContainer 
+                  sx={{
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      borderRadius: '20px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      backdropFilter: 'blur(20px)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                      '& .MuiTableCell-root': {
+                        color: isDarkMode ? '#ffffff' : '#000000',
+                        borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                        padding: '16px',
+                        fontSize: '0.9rem',
+                        whiteSpace: 'nowrap'
+                      },
+                      '& .MuiTableHead-root .MuiTableCell-root': {
+                        fontWeight: 600,
+                        backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      },
+                      '& .MuiTableBody-root .MuiTableRow-root': {
+                        transition: 'all 0.2s ease-in-out',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        }
+                      }
+                  }}
+              >
+                  <Table stickyHeader>
+                      <TableHead>
+                          <TableRow>
+                              <TableCell>Číslo obj.</TableCell>
+                              <TableCell>Zákazník</TableCell>
+                              <TableCell>Kontaktná osoba</TableCell>
+                              <TableCell>Nakládka</TableCell>
+                              <TableCell>Čas nakládky</TableCell>
+                              <TableCell>Vykládka</TableCell>
+                              <TableCell>Čas vykládky</TableCell>
+                              <TableCell>Tovar</TableCell>
+                              <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>Cena zák.</TableCell>
+                              <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>Cena dopr.</TableCell>
+                              <TableCell sx={{ color: '#2ecc71', fontWeight: 'bold' }}>Zisk</TableCell>
+                              <TableCell>Špediter</TableCell>
+                              <TableCell>Dátum vytvorenia</TableCell>
+                              <TableCell>Akcie</TableCell>
+                          </TableRow>
+                      </TableHead>
+                      <TableBody>
+                          {filteredOrders.length === 0 ? (
+                              <TableRow>
+                                  <TableCell colSpan={14} align="center">Aktuálne nemáte žiadne objednávky.</TableCell>
+                              </TableRow>
+                          ) : (
+                              filteredOrders.map((order: OrderFormData) => (
+                                  <React.Fragment key={order.id}>
+                                      <TableRow 
+                                          hover 
+                                          onClick={() => handleRowClick(order)}
+                                          sx={{
+                                              backgroundColor: selectedOrderId === order.id ? 
+                                                  (isDarkMode ? 'rgba(255, 159, 67, 0.1)' : 'rgba(255, 159, 67, 0.05)') : 
+                                                  'transparent'
+                                          }}
+                                      >
+                                          <TableCell>
+                                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                <span>{(order as any).orderNumberFormatted || order.id?.substring(0, 8) || 'N/A'}</span>
+                                                {!(order as any).orderNumberFormatted && 
+                                                  <Tooltip title="Zmeniť číslo objednávky">
+                                                    <IconButton 
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const newNumber = prompt("Zadajte nové číslo objednávky (formát: 0001/04/2025):", "0001/04/2025");
+                                                        if (!newNumber) return;
+                                                        
+                                                        const parts = newNumber.split("/");
+                                                        if (parts.length !== 3) {
+                                                          alert("Neplatný formát čísla. Použite formát 0001/04/2025");
+                                                          return;
+                                                        }
+                                                        
+                                                        const [orderNumber, orderMonth, orderYear] = parts;
+                                                        
+                                                        setLoading(true);
+                                                        updateDoc(doc(db, "orders", order.id || ''), {
+                                                          orderNumberFormatted: newNumber,
+                                                          orderNumber,
+                                                          orderMonth,
+                                                          orderYear
+                                                        })
+                                                        .then(() => {
+                                                          alert("Číslo objednávky úspešne aktualizované.");
+                                                          fetchOrders();
+                                                        })
+                                                        .catch(error => {
+                                                          console.error("Chyba pri aktualizácii čísla objednávky:", error);
+                                                          alert("Nastala chyba pri aktualizácii čísla objednávky");
+                                                        })
+                                                        .finally(() => {
+                                                          setLoading(false);
+                                                        });
+                                                      }}
+                                                      size="small"
+                                                      sx={{ ml: 1, color: '#ff9f43' }}
+                                                    >
+                                                      <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                  </Tooltip>
+                                                }
+                                              </Box>
+                                          </TableCell> 
+                                          <TableCell
+                                              sx={{
+                                                  fontWeight: 'bold',
+                                                  color: (order as any).zakaznik || order.customerCompany ? undefined : 'red'
+                                              }}
+                                          >
+                                              {(order as any).zakaznik || order.customerCompany || 
+                                              <Box sx={{ color: 'red', fontStyle: 'italic' }}>Chýba názov!</Box>}
+                                          </TableCell>
+                                          <TableCell>{((order as any).kontaktnaOsoba || 
+                                              `${order.customerContactName || ''} ${order.customerContactSurname || ''}`.trim() || 
+                                              '-')}</TableCell>
+                                          <TableCell>
+                                              {order.loadingPlaces && order.loadingPlaces.length > 0 ? 
+                                                  order.loadingPlaces.map((place, idx) => (
+                                                      <Box key={idx} sx={{ mb: idx !== order.loadingPlaces.length - 1 ? 1 : 0 }}>
+                                                          {`${place.city ?? '-'}, ${place.country ?? '-'}`}
+                                                          {idx !== order.loadingPlaces.length - 1 && <Divider sx={{ my: 0.5 }} />}
+                                                      </Box>
+                                                  )) : '-'
+                                              }
+                                          </TableCell>
+                                          <TableCell>
+                                              {order.loadingPlaces && order.loadingPlaces.length > 0 ? 
+                                                  order.loadingPlaces.map((place, idx) => (
+                                                      <Box key={idx} sx={{ mb: idx !== order.loadingPlaces.length - 1 ? 1 : 0 }}>
+                                                          {place.dateTime ? format(convertToDate(place.dateTime)!, 'dd.MM.yyyy HH:mm') : '-'}
+                                                          {idx !== order.loadingPlaces.length - 1 && <Divider sx={{ my: 0.5 }} />}
+                                                      </Box>
+                                                  )) : '-'
+                                              }
+                                          </TableCell>
+                                          <TableCell>
+                                              {order.unloadingPlaces && order.unloadingPlaces.length > 0 ? 
+                                                  order.unloadingPlaces.map((place, idx) => (
+                                                      <Box key={idx} sx={{ mb: idx !== order.unloadingPlaces.length - 1 ? 1 : 0 }}>
+                                                          {`${place.city ?? '-'}, ${place.country ?? '-'}`}
+                                                          {idx !== order.unloadingPlaces.length - 1 && <Divider sx={{ my: 0.5 }} />}
+                                                      </Box>
+                                                  )) : '-'
+                                              }
+                                          </TableCell>
+                                          <TableCell>
+                                              {order.unloadingPlaces && order.unloadingPlaces.length > 0 ? 
+                                                  order.unloadingPlaces.map((place, idx) => (
+                                                      <Box key={idx} sx={{ mb: idx !== order.unloadingPlaces.length - 1 ? 1 : 0 }}>
+                                                          {place.dateTime ? format(convertToDate(place.dateTime)!, 'dd.MM.yyyy HH:mm') : '-'}
+                                                          {idx !== order.unloadingPlaces.length - 1 && <Divider sx={{ my: 0.5 }} />}
+                                                      </Box>
+                                                  )) : '-'
+                                              }
+                                          </TableCell>
+                                          <TableCell>
+                                              {order.loadingPlaces && order.loadingPlaces.some(p => p.goods && p.goods.length > 0) ? 
+                                                  order.loadingPlaces.flatMap((place) => place.goods || [])
+                                                      .filter((item, idx, arr) => 
+                                                          arr.findIndex(i => i.name === item.name) === idx
+                                                      )
+                                                      .map((item, idx, arr) => (
+                                                          <Box key={idx} sx={{ fontSize: '0.85rem' }}>
+                                                              {`${item.name} (${item.quantity} ${item.unit})`}
+                                                              {idx !== arr.length - 1 && <Divider sx={{ my: 0.3 }} />}
+                                                          </Box>
+                                                      )) : '-'
+                                              }
+                                          </TableCell>
+                                          <TableCell sx={{ 
+                                            color: '#ff9f43', 
+                                            fontWeight: 'bold' 
+                                          }}>
+                                            {((order as any).suma || order.customerPrice) ? 
+                                              `${(order as any).suma || order.customerPrice} €` : '-'}
+                                          </TableCell>
+                                          <TableCell sx={{ 
+                                            color: '#1976d2', 
+                                            fontWeight: 'bold' 
+                                          }}>
+                                            {order.carrierPrice ? `${order.carrierPrice} €` : '-'}
+                                          </TableCell>
+                                          <TableCell sx={{ 
+                                            color: (() => {
+                                              const customerPrice = (order as any).suma || order.customerPrice || '0';
+                                              const carrierPrice = order.carrierPrice || '0';
+                                              const custPrice = parseFloat(customerPrice);
+                                              const carrPrice = parseFloat(carrierPrice);
+                                              
+                                              if (!isNaN(custPrice) && !isNaN(carrPrice)) {
+                                                const profit = custPrice - carrPrice;
+                                                return profit > 0 ? '#2ecc71' : '#e74c3c';
+                                              }
+                                              return undefined;
+                                            })(),
+                                            fontWeight: 'bold' 
+                                          }}>
+                                            {(() => {
+                                              const customerPrice = (order as any).suma || order.customerPrice || '0';
+                                              const carrierPrice = order.carrierPrice || '0';
+                                              const custPrice = parseFloat(customerPrice);
+                                              const carrPrice = parseFloat(carrierPrice);
+                                              
+                                              if (!isNaN(custPrice) && !isNaN(carrPrice)) {
+                                                const profit = custPrice - carrPrice;
+                                                return `${profit.toFixed(2)} €`;
+                                              }
+                                              return '-';
+                                            })()}
+                                          </TableCell>
+                                          <TableCell>
+                                            <Box sx={{ 
+                                              display: 'flex', 
+                                              alignItems: 'center',
+                                              fontWeight: 'medium'
+                                            }}>
+                                              <PersonIcon 
+                                                fontSize="small" 
+                                                sx={{ 
+                                                  mr: 0.5, 
+                                                  color: '#ff9f43',
+                                                  opacity: 0.8 
+                                                }} 
+                                              />
+                                              {(() => {
+                                                // Explicitna logika na určenie mena špeditéra
+                                                // 1. Najprv skúsime createdByName ak existuje a nie je to email
+                                                const createdByName = (order as any).createdByName;
+                                                if (createdByName && !createdByName.includes('@')) {
+                                                  return createdByName;
+                                                }
+                                                
+                                                // 2. Ak máme teamMembers, vrátime jeho meno
+                                                if (order.createdBy && teamMembers[order.createdBy]) {
+                                                  return teamMembers[order.createdBy].name;
+                                                }
+                                                
+                                                // 3. Ak je createdByName email, extrahujeme z neho meno
+                                                if (createdByName && createdByName.includes('@')) {
+                                                  return createdByName.split('@')[0]; // Vrátiť len časť pred @
+                                                }
+                                                
+                                                // 4. Ak nič z toho neexistuje, zobraziť "Neznámy špediter"
+                                                return 'Neznámy špediter';
+                                              })()}
+                                            </Box>
+                                          </TableCell>
+                                          <TableCell>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}</TableCell>
+                                          <TableCell>
+                                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                                  <Tooltip title="Upraviť">
+                                                      <IconButton 
+                                                          onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              handleEditOrder(order);
+                                                          }}
+                                                          sx={{ 
+                                                              color: '#ff9f43',
+                                                              '&:hover': { 
+                                                                  backgroundColor: 'rgba(255, 159, 67, 0.1)' 
+                                                              } 
+                                                          }}
+                                                      >
+                                                          <EditIcon />
+                                                      </IconButton>
+                                                  </Tooltip>
+                                                  <Tooltip title="Náhľad PDF">
+                                                      <IconButton 
+                                                          onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              handlePreviewPDF(order);
+                                                          }}
+                                                          sx={{ 
+                                                              color: '#4caf50',
+                                                              '&:hover': { 
+                                                                  backgroundColor: 'rgba(76, 175, 80, 0.1)' 
+                                                              } 
+                                                          }}
+                                                      >
+                                                          <VisibilityIcon />
+                                                      </IconButton>
+                                                  </Tooltip>
+                                                  <Tooltip title="Stiahnuť PDF">
+                                                      <IconButton 
+                                                          onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              handleDownloadPDF(order);
+                                                          }}
+                                                          sx={{ 
+                                                              color: '#2196f3',
+                                                              '&:hover': { 
+                                                                  backgroundColor: 'rgba(33, 150, 243, 0.1)' 
+                                                              } 
+                                                          }}
+                                                      >
+                                                          <FileDownloadIcon />
+                                                      </IconButton>
+                                                  </Tooltip>
+                                                  <Tooltip title="Vymazať">
+                                                      <IconButton 
+                                                          onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              openDeleteConfirmation(order.id || '');
+                                                          }}
+                                                          sx={{ 
+                                                              color: '#ff6b6b',
+                                                              '&:hover': { 
+                                                                  backgroundColor: 'rgba(255, 107, 107, 0.1)' 
+                                                              } 
+                                                          }}
+                                                      >
+                                                          <DeleteIcon />
+                                                      </IconButton>
+                                                  </Tooltip>
+                                              </Box>
+                                          </TableCell>
+                                      </TableRow>
+                                      
+                                      {selectedOrderId === order.id && selectedOrderDetail && (
+                                          <TableRow>
+                                              <TableCell colSpan={14} sx={{ padding: 0 }}>
+                                                  <OrderDetailPanel>
+                                                      <Box sx={{ 
+                                                          display: 'flex', 
+                                                          justifyContent: 'space-between', 
+                                                          alignItems: 'center',
+                                                          mb: 2 
+                                                      }}>
+                                                          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                                              Detail objednávky {(selectedOrderDetail as any).orderNumberFormatted || selectedOrderDetail.id?.substring(0, 8)}
+                                                          </Typography>
+                                                          <Box>
+                                                              <Tooltip title="Náhľad PDF">
+                                                                  <IconButton 
+                                                                      onClick={() => handlePreviewPDF(selectedOrderDetail)}
+                                                                      sx={{ 
+                                                                          color: '#4caf50',
+                                                                          mr: 1
+                                                                      }}
+                                                                  >
+                                                                      <VisibilityIcon />
+                                                                  </IconButton>
+                                                              </Tooltip>
+                                                              <Tooltip title="Stiahnuť PDF">
+                                                                  <IconButton 
+                                                                      onClick={() => handleDownloadPDF(selectedOrderDetail)}
+                                                                      sx={{ 
+                                                                          color: '#2196f3'
+                                                                      }}
+                                                                  >
+                                                                      <FileDownloadIcon />
+                                                                  </IconButton>
+                                                              </Tooltip>
+                                                          </Box>
+                                                      </Box>
+                                                      
+                                                      <Grid container spacing={3}>
+                                                          <Grid item xs={12} md={6}>
+                                                              <DetailSection>
+                                                                  <DetailSectionTitle variant="subtitle1">Základné informácie</DetailSectionTitle>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Dátum vytvorenia:</DetailLabel>
+                                                                      <DetailValue>
+                                                                          {selectedOrderDetail.createdAt ? format(convertToDate(selectedOrderDetail.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}
+                                                                      </DetailValue>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Vytvoril:</DetailLabel>
+                                                                      <DetailValue>
+                                                                          <Box sx={{ 
+                                                                              display: 'flex', 
+                                                                              flexDirection: 'column'
+                                                                          }}>
+                                                                              <Box sx={{ 
+                                                                                  display: 'flex', 
+                                                                                  alignItems: 'center',
+                                                                                  fontWeight: 'medium'
+                                                                              }}>
+                                                                                  <PersonIcon 
+                                                                                      fontSize="small" 
+                                                                                      sx={{ 
+                                                                                          mr: 0.5, 
+                                                                                          color: '#ff9f43',
+                                                                                          opacity: 0.8 
+                                                                                      }} 
+                                                                                  />
+                                                                                  {(() => {
+                                                                                    if (!selectedOrderDetail) return 'Neznámy špediter';
+                                                                                    
+                                                                                    // Explicitna logika na určenie mena špeditéra
+                                                                                    // 1. Najprv skúsime createdByName ak existuje a nie je to email
+                                                                                    const createdByName = (selectedOrderDetail as any).createdByName;
+                                                                                    if (createdByName && !createdByName.includes('@')) {
+                                                                                      return createdByName;
+                                                                                    }
+                                                                                    
+                                                                                    // 2. Ak máme teamMembers, vrátime jeho meno
+                                                                                    if (selectedOrderDetail.createdBy && teamMembers[selectedOrderDetail.createdBy]) {
+                                                                                      return teamMembers[selectedOrderDetail.createdBy].name;
+                                                                                    }
+                                                                                    
+                                                                                    // 3. Ak je createdByName email, extrahujeme z neho meno
+                                                                                    if (createdByName && createdByName.includes('@')) {
+                                                                                      return createdByName.split('@')[0]; // Vrátiť len časť pred @
+                                                                                    }
+                                                                                    
+                                                                                    // 4. Ak nič z toho neexistuje, zobraziť "Neznámy špediter"
+                                                                                    return 'Neznámy špediter';
+                                                                                  })()}
+                                                                              </Box>
+                                                                              {selectedOrderDetail.createdBy && teamMembers[selectedOrderDetail.createdBy]?.email && (
+                                                                                  <Box sx={{ 
+                                                                                    display: 'flex', 
+                                                                                    alignItems: 'center',
+                                                                                    mt: 1,
+                                                                                    ml: 0
+                                                                                  }}>
+                                                                                    <EmailIcon 
+                                                                                      fontSize="small" 
+                                                                                      sx={{ 
+                                                                                        mr: 0.5, 
+                                                                                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
+                                                                                        opacity: 0.8 
+                                                                                      }} 
+                                                                                    />
+                                                                                    <Typography variant="body1">
+                                                                                      {teamMembers[selectedOrderDetail.createdBy].email}
+                                                                                    </Typography>
+                                                                                  </Box>
+                                                                              )}
+                                                                              {!selectedOrderDetail?.createdBy && (selectedOrderDetail as any)?.createdByName?.includes('@') && (
+                                                                                  <Box sx={{ 
+                                                                                    display: 'flex', 
+                                                                                    alignItems: 'center',
+                                                                                    mt: 1,
+                                                                                    ml: 0
+                                                                                  }}>
+                                                                                    <EmailIcon 
+                                                                                      fontSize="small" 
+                                                                                      sx={{ 
+                                                                                        mr: 0.5, 
+                                                                                        color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
+                                                                                        opacity: 0.8 
+                                                                                      }} 
+                                                                                    />
+                                                                                    <Typography variant="body1">
+                                                                                      {(selectedOrderDetail as any).createdByName}
+                                                                                    </Typography>
+                                                                                  </Box>
+                                                                              )}
+                                                                          </Box>
+                                                                      </DetailValue>
+                                                                  </DetailRow>
+                                                              </DetailSection>
+                                                          
+                                                              <DetailSection>
+                                                                  <DetailSectionTitle variant="subtitle1">Zákazník</DetailSectionTitle>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Názov spoločnosti:</DetailLabel>
+                                                                      <DetailValue>
+                                                                          {(selectedOrderDetail as any).zakaznik || selectedOrderDetail.customerCompany || '-'}
+                                                                      </DetailValue>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Kontaktná osoba:</DetailLabel>
+                                                                      <DetailValue>
+                                                                          {(selectedOrderDetail as any).kontaktnaOsoba || 
+                                                                          `${selectedOrderDetail.customerContactName || ''} ${selectedOrderDetail.customerContactSurname || ''}`.trim() || 
+                                                                          '-'}
+                                                                      </DetailValue>
+                                                                  </DetailRow>
+                                                              </DetailSection>
+                                                          
+                                                              <DetailSection>
+                                                                  <DetailSectionTitle variant="subtitle1">Cena</DetailSectionTitle>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Cena pre zákazníka:</DetailLabel>
+                                                                      <DetailValue sx={{ color: '#ff9f43', fontWeight: 'bold' }}>
+                                                                          {((selectedOrderDetail as any).suma || selectedOrderDetail.customerPrice) ? 
+                                                                              `${(selectedOrderDetail as any).suma || selectedOrderDetail.customerPrice} €` : '-'}
+                                                                      </DetailValue>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Cena pre dopravcu:</DetailLabel>
+                                                                      <DetailValue sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                                                          {selectedOrderDetail.carrierPrice ? `${selectedOrderDetail.carrierPrice} €` : '-'}
+                                                                      </DetailValue>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Zisk:</DetailLabel>
+                                                                      <DetailValue sx={{ 
+                                                                          color: (() => {
+                                                                              const customerPrice = (selectedOrderDetail as any).suma || selectedOrderDetail.customerPrice || '0';
+                                                                              const carrierPrice = selectedOrderDetail.carrierPrice || '0';
+                                                                              const custPrice = parseFloat(customerPrice);
+                                                                              const carrPrice = parseFloat(carrierPrice);
+                                                                              
+                                                                              if (!isNaN(custPrice) && !isNaN(carrPrice)) {
+                                                                                  const profit = custPrice - carrPrice;
+                                                                                  return profit > 0 ? '#2ecc71' : '#e74c3c';
+                                                                              }
+                                                                              return undefined;
+                                                                          })(),
+                                                                          fontWeight: 'bold' 
+                                                                      }}>
+                                                                          {(() => {
+                                                                              const customerPrice = (selectedOrderDetail as any).suma || selectedOrderDetail.customerPrice || '0';
+                                                                              const carrierPrice = selectedOrderDetail.carrierPrice || '0';
+                                                                              const custPrice = parseFloat(customerPrice);
+                                                                              const carrPrice = parseFloat(carrierPrice);
+                                                                              
+                                                                              if (!isNaN(custPrice) && !isNaN(carrPrice)) {
+                                                                                  const profit = custPrice - carrPrice;
+                                                                                  return `${profit.toFixed(2)} €`;
+                                                                              }
+                                                                              return '-';
+                                                                          })()}
+                                                                      </DetailValue>
+                                                                  </DetailRow>
+                                                              </DetailSection>
+                                                          </Grid>
+                                                          
+                                                          <Grid item xs={12} md={6}>
+                                                              <DetailSection>
+                                                                  <DetailSectionTitle variant="subtitle1">Miesta nakládky</DetailSectionTitle>
+                                                                  {selectedOrderDetail.loadingPlaces && selectedOrderDetail.loadingPlaces.length > 0 ? 
+                                                                      selectedOrderDetail.loadingPlaces.map((place, idx) => (
+                                                                          <Box key={idx} sx={{ mb: 2, p: 1.5, borderRadius: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 35, 66, 0.35)' : 'rgba(245, 245, 245, 0.95)' }}>
+                                                                              <Typography sx={{ fontWeight: 600, mb: 1 }}>Nakládka #{idx + 1}</Typography>
+                                                                              <DetailRow>
+                                                                                  <DetailLabel>Adresa:</DetailLabel>
+                                                                                  <DetailValue>{`${place.street}, ${place.city}, ${place.zip}, ${place.country}`}</DetailValue>
+                                                                              </DetailRow>
+                                                                              <DetailRow>
+                                                                                  <DetailLabel>Dátum a čas:</DetailLabel>
+                                                                                  <DetailValue>{place.dateTime ? format(convertToDate(place.dateTime)!, 'dd.MM.yyyy HH:mm') : '-'}</DetailValue>
+                                                                              </DetailRow>
+                                                                              <DetailRow>
+                                                                                  <DetailLabel>Kontaktná osoba:</DetailLabel>
+                                                                                  <DetailValue>{place.contactPerson || '-'}</DetailValue>
+                                                                              </DetailRow>
+                                                                              
+                                                                              {place.goods && place.goods.length > 0 && (
+                                                                                  <>
+                                                                                      <Typography sx={{ fontWeight: 500, mt: 1, mb: 0.5 }}>Tovar:</Typography>
+                                                                                      {place.goods.map((item, goodsIdx) => (
+                                                                                          <Typography key={goodsIdx} sx={{ ml: 2, fontSize: '0.9rem' }}>
+                                                                                              • {item.name} ({item.quantity} {item.unit})
+                                                                                          </Typography>
+                                                                                      ))}
+                                                                                  </>
+                                                                              )}
+                                                                          </Box>
+                                                                      )) : (
+                                                                          <Typography variant="body2" sx={{ fontStyle: 'italic' }}>Žiadne miesta nakládky</Typography>
+                                                                      )
+                                                                  }
+                                                              </DetailSection>
+                                                              
+                                                              <DetailSection>
+                                                                  <DetailSectionTitle variant="subtitle1">Miesta vykládky</DetailSectionTitle>
+                                                                  {selectedOrderDetail.unloadingPlaces && selectedOrderDetail.unloadingPlaces.length > 0 ? 
+                                                                      selectedOrderDetail.unloadingPlaces.map((place, idx) => (
+                                                                          <Box key={idx} sx={{ mb: 2, p: 1.5, borderRadius: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 35, 66, 0.35)' : 'rgba(245, 245, 245, 0.95)' }}>
+                                                                              <Typography sx={{ fontWeight: 600, mb: 1 }}>Vykládka #{idx + 1}</Typography>
+                                                                              <DetailRow>
+                                                                                  <DetailLabel>Adresa:</DetailLabel>
+                                                                                  <DetailValue>{`${place.street}, ${place.city}, ${place.zip}, ${place.country}`}</DetailValue>
+                                                                              </DetailRow>
+                                                                              <DetailRow>
+                                                                                  <DetailLabel>Dátum a čas:</DetailLabel>
+                                                                                  <DetailValue>{place.dateTime ? format(convertToDate(place.dateTime)!, 'dd.MM.yyyy HH:mm') : '-'}</DetailValue>
+                                                                              </DetailRow>
+                                                                              <DetailRow>
+                                                                                  <DetailLabel>Kontaktná osoba:</DetailLabel>
+                                                                                  <DetailValue>{place.contactPerson || '-'}</DetailValue>
+                                                                              </DetailRow>
+                                                                          </Box>
+                                                                      )) : (
+                                                                          <Typography variant="body2" sx={{ fontStyle: 'italic' }}>Žiadne miesta vykládky</Typography>
+                                                                      )
+                                                                  }
+                                                              </DetailSection>
+                                                              
+                                                              <DetailSection>
+                                                                  <DetailSectionTitle variant="subtitle1">Dopravca</DetailSectionTitle>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Názov spoločnosti:</DetailLabel>
+                                                                      <DetailValue>{selectedOrderDetail.carrierCompany || '-'}</DetailValue>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Kontakt:</DetailLabel>
+                                                                      <DetailValue>{selectedOrderDetail.carrierContact || '-'}</DetailValue>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>EČV vozidla:</DetailLabel>
+                                                                      <DetailValue>{selectedOrderDetail.carrierVehicleReg || '-'}</DetailValue>
+                                                                  </DetailRow>
+                                                              </DetailSection>
+                                                          </Grid>
+                                                      </Grid>
+                                                  </OrderDetailPanel>
+                                              </TableCell>
+                                          </TableRow>
+                                      )}
+                                  </React.Fragment>
+                              ))
+                          )}
+                      </TableBody>
+                  </Table>
+              </TableContainer>
+          )}
+      </StyledPaper>
 
-          <Typography variant="h6" gutterBottom>
-            Uložené miesta
+      <Dialog 
+        open={showNewOrderDialog} 
+        onClose={handleCloseNewOrderForm}
+        maxWidth="lg"
+        fullWidth
+        sx={{
+          '& .MuiBackdrop-root': {
+            backdropFilter: 'blur(5px)',
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(0, 0, 0, 0.8)' 
+              : 'rgba(255, 255, 255, 0.8)'
+          },
+          '& .MuiPaper-root': {
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(22, 28, 36, 0.95)' 
+              : 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            border: theme.palette.mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.08)' 
+              : '1px solid rgba(0, 0, 0, 0.08)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            maxHeight: '90vh'
+          },
+          '& .MuiDialogContent-root': {
+            padding: 0,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '90vh'
+          },
+          '& .MuiDialogTitle-root': {
+            padding: '20px 24px 12px',
+            borderBottom: theme.palette.mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.08)' 
+              : '1px solid rgba(0, 0, 0, 0.08)',
+            fontWeight: 600,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }
+        }}
+      >
+        <DialogGlobalStyles open={showNewOrderDialog} />
+        <DialogTitle>
+          {isEditMode ? 'Upraviť objednávku' : 'Nová objednávka'}
+          <IconButton 
+            onClick={handleCloseNewOrderForm} 
+            edge="end" 
+            aria-label="close"
+            sx={{
+              position: 'absolute',
+              right: 16,
+              top: 16,
+              color: theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <NewOrderForm 
+            isModal={true} 
+            onClose={handleCloseNewOrderForm} 
+            isEdit={isEditMode}
+            orderData={selectedOrder || undefined}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showDeleteConfirm}
+        onClose={handleDeleteCancel}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Potvrdiť odstránenie objednávky"}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Naozaj chcete odstrániť túto objednávku?
           </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={handleDeleteCancel}
+            sx={{ 
+              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)'
+            }}
+          >
+            Zrušiť
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirmed} 
+            autoFocus
+            sx={{ 
+              color: '#ff9f43',
+              '&:hover': { 
+                backgroundColor: 'rgba(255, 159, 67, 0.1)' 
+              } 
+            }}
+          >
+            Potvrdiť
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Názov</TableCell>
-                  <TableCell>Typ</TableCell>
-                  <TableCell>Adresa</TableCell>
-                  <TableCell>Mesto</TableCell>
-                  <TableCell>Krajina</TableCell>
-                  <TableCell>Kontakt</TableCell>
-                  <TableCell align="right">Akcie</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {savedPlaces
-                  .filter(place => 
-                    place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    place.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    place.street.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  .map((place) => (
-                    <TableRow key={place.id}>
-                      <TableCell>{place.name}</TableCell>
-                      <TableCell>
-                        {place.type === 'loading' ? 'Nakládka' : 'Vykládka'}
-                      </TableCell>
-                      <TableCell>{place.street}</TableCell>
-                      <TableCell>{place.city}</TableCell>
-                      <TableCell>{place.country}</TableCell>
-                      <TableCell>{place.contactPerson}</TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          onClick={() => {
-                            const placeData = {
-                              street: place.street,
-                              city: place.city,
-                              zip: place.zip,
-                              country: place.country,
-                              dateTime: '',
-                              contactPerson: place.contactPerson
-                            };
-                            
-                            if (place.type === 'loading') {
-                              setFormData(prev => ({
-                                ...prev,
-                                loadingPlaces: [placeData, ...prev.loadingPlaces.slice(1)]
-                              }));
-                            } else {
-                              setFormData(prev => ({
-                                ...prev,
-                                unloadingPlaces: [placeData, ...prev.unloadingPlaces.slice(1)]
-                              }));
-                            }
-                            
-                            setTabValue(0);
-                          }}
-                          color="primary"
-                          size="small"
+      <Dialog
+        open={showPdfPreview}
+        onClose={() => {
+            setShowPdfPreview(false);
+            if (pdfUrl) {
+                URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(null);
+            }
+        }}
+        maxWidth="lg"
+        fullWidth
+        sx={{
+            '& .MuiDialog-paper': {
+                height: '90vh',
+                maxHeight: '90vh',
+                overflow: 'hidden'
+            }
+        }}
+    >
+        <DialogTitle sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: '1px solid',
+            borderColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.1)' 
+                : 'rgba(0, 0, 0, 0.1)',
+        }}>
+            <Typography variant="h6">Náhľad PDF objednávky</Typography>
+            <Box>
+                {pdfUrl && (
+                    <Tooltip title="Stiahnuť PDF">
+                        <IconButton 
+                            onClick={() => {
+                                if (pdfUrl) {
+                                    const a = document.createElement('a');
+                                    a.href = pdfUrl;
+                                    a.download = `objednavka-${selectedOrderDetail?.id?.substring(0, 8) || 'preview'}.pdf`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                }
+                            }}
+                            sx={{ mr: 1 }}
                         >
-                          <AddIcon />
+                            <FileDownloadIcon />
                         </IconButton>
-                        <IconButton
-                          onClick={() => {
-                            setSavedPlaces(prev => 
-                              prev.filter(p => p.id !== place.id)
-                            );
-                          }}
-                          color="error"
-                          size="small"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </StyledPaper>
-      </TabPanel>
+                    </Tooltip>
+                )}
+                <IconButton onClick={() => {
+                    setShowPdfPreview(false);
+                    if (pdfUrl) {
+                        URL.revokeObjectURL(pdfUrl);
+                        setPdfUrl(null);
+                    }
+                }}>
+                    <CloseIcon />
+                </IconButton>
+            </Box>
+        </DialogTitle>
+        <DialogContent sx={{ padding: 0, height: 'calc(100% - 64px)' }}>
+            {pdfUrl && (
+                <iframe 
+                    src={pdfUrl} 
+                    style={{ width: '100%', height: '100%', border: 'none' }}
+                    title="PDF preview"
+                />
+            )}
+        </DialogContent>
+    </Dialog>
     </PageWrapper>
   );
 };
 
-export default OrdersForm; 
+export default OrdersList; 

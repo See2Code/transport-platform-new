@@ -1,10 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendTestReminder = exports.initializeLastLogin = exports.logFunctionMetrics = exports.checkTransportNotifications = exports.checkBusinessCaseReminders = exports.sendInvitationEmail = exports.clearDatabase = void 0;
+exports.googleMapsProxy = exports.sendTestReminder = exports.initializeLastLogin = exports.logFunctionMetrics = exports.checkTransportNotifications = exports.checkBusinessCaseReminders = exports.sendInvitationEmail = exports.clearDatabase = void 0;
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
+// Inicializácia Firebase Admin
 admin.initializeApp();
+// Import API proxy funkcií
+const apiProxy = require("./api-proxy");
 const REGION = 'europe-west1';
 // Konfigurácia emailového transportu
 const transporter = nodemailer.createTransport({
@@ -621,4 +624,8 @@ exports.sendTestReminder = functions
         throw new functions.https.HttpsError('internal', 'Nastala chyba pri odosielaní testovacej pripomienky');
     }
 });
+// Export API proxy funkcií
+exports.googleMapsProxy = apiProxy.googleMapsProxy;
+// Prípadné ďalšie funkcie
+// export const otherApiProxy = apiProxy.otherApiProxy; 
 //# sourceMappingURL=index.js.map

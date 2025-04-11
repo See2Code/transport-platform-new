@@ -1,0 +1,1205 @@
+import React, { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
+import { OrderFormData as BaseOrderFormData, Customer, LoadingPlace, UnloadingPlace, GoodsItem } from '../types/orders'; // Adjust path if necessary
+import { countries } from '../constants/countries'; // Adjust path if necessary
+import {
+  Box, Typography, TextField, Button, Paper, Grid, FormControl, InputLabel,
+  Select, MenuItem, SelectChangeEvent, useTheme, Checkbox, FormControlLabel,
+  Stepper, Step, StepLabel, Autocomplete, IconButton, Divider, Tooltip, CircularProgress, Collapse, GlobalStyles
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { useThemeMode } from '../contexts/ThemeContext';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';
+import { sk } from 'date-fns/locale';
+import { Theme } from '@mui/material/styles';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add'; // For Add Goods button
+import DeleteIcon from '@mui/icons-material/Delete'; // For Remove Goods/Place button
+import { collection, addDoc, query, where, getDocs, Timestamp, doc, updateDoc, orderBy, limit, runTransaction } from 'firebase/firestore';
+import { db } from '../firebase'; // Adjust path if necessary
+import { useAuth } from '../contexts/AuthContext'; // Adjust path if necessary
+import { useNavigate } from 'react-router-dom';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import CloseIcon from '@mui/icons-material/Close';
+
+// --- Interfaces (Ensure they match your types/orders.ts) ---
+interface OrderFormData extends BaseOrderFormData {
+    id?: string;
+    createdAt?: Timestamp | Date;
+    datumPrijatia?: Date | null;
+    zakaznik?: string;
+    zakaznikData?: Customer | null;
+    kontaktnaOsoba?: string;
+    suma?: string;
+    mena?: string;
+    vyuctovaniePodlaMnozstva?: boolean;
+    cisloNakladuZakaznika?: string;
+    internaPoznamka?: string;
+    vyzadujeSaTypNavesu?: string;
+    poziadavky?: string;
+    // Ensure loading/unloading places include goods
+    loadingPlaces: LoadingPlace[];
+    unloadingPlaces: UnloadingPlace[];
+    carrierCompany: string;
+    carrierContact: string;
+    carrierVehicleReg: string;
+    carrierPrice: string;
+}
+
+// --- Styled Components ---
+const PageWrapper = styled('div')<{ isModal?: boolean }>(({ isModal, theme }) => ({ 
+    padding: '24px',
+    overflow: 'auto',
+    height: isModal ? '100%' : 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    '@media (max-width: 600px)': {
+        padding: '16px'
+    }
+}));
+const StyledPaper = styled(Paper)<{ isModal?: boolean }>(({ isModal, theme }) => ({ 
+    padding: theme.spacing(isModal ? 2 : 3),
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'auto',
+    borderRadius: isModal ? 0 : theme.shape.borderRadius,
+    border: isModal ? 'none' : `1px solid ${theme.palette.divider}`,
+    boxShadow: isModal ? 'none' : theme.shadows[1],
+}));
+const StyledFieldset = styled(Box)(({ theme }) => ({ padding: theme.spacing(2), marginBottom: theme.spacing(3), border: `1px solid ${theme.palette.divider}`, borderRadius: '4px' }));
+const StyledLegend = styled(Typography)(({ theme }) => ({ fontWeight: 600, marginBottom: theme.spacing(2), color: '#ff9f43' }));
+const FormSection = styled(Box)(({ theme }) => ({ marginBottom: theme.spacing(4) }));
+const GoodsItemRow = styled(Box)(({ theme }) => ({ display: 'flex', gap: theme.spacing(1), alignItems: 'center', marginBottom: theme.spacing(1.5), flexWrap: 'wrap' }));
+const PlaceSection = styled(Box)(({ theme }) => ({ marginBottom: theme.spacing(3), paddingBottom: theme.spacing(2), borderBottom: `1px solid ${theme.palette.divider}` }));
+
+// Štýly pre zlepšenie viditeľnosti sekcií
+const SectionHeader = styled(Box)(({ theme }) => ({
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: theme.spacing(2),
+    padding: theme.spacing(1.5),
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(41, 50, 65, 0.5)' : 'rgba(232, 244, 253, 0.5)',
+    borderRadius: theme.shape.borderRadius,
+    borderLeft: `4px solid #ff9f43`
+}));
+
+const AddButton = styled(Button)(({ theme }) => ({
+    fontWeight: 600,
+    padding: theme.spacing(0.8, 2),
+    color: '#fff',
+    background: 'linear-gradient(45deg, #ff9f43 30%, #ffc473 90%)',
+    boxShadow: '0 2px 8px rgba(255, 159, 67, 0.25)',
+    '&:hover': {
+        background: 'linear-gradient(45deg, #ffc473 30%, #ff9f43 90%)',
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 12px rgba(255, 159, 67, 0.35)'
+    }
+}));
+
+// Nový komponent pre tlačidlo "Ďalej" - rovnaký ako AddButton
+const NextButton = styled(Button)(({ theme }) => ({
+    fontWeight: 600,
+    padding: theme.spacing(0.8, 2),
+    color: '#fff',
+    background: 'linear-gradient(45deg, #ff9f43 30%, #ffc473 90%)',
+    boxShadow: '0 2px 8px rgba(255, 159, 67, 0.25)',
+    '&:hover': {
+        background: 'linear-gradient(45deg, #ffc473 30%, #ff9f43 90%)',
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 12px rgba(255, 159, 67, 0.35)'
+    }
+}));
+
+const PlaceCard = styled(Box)(({ theme }) => ({
+    marginBottom: theme.spacing(3),
+    padding: theme.spacing(2),
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(30, 36, 44, 0.3)' : 'rgba(250, 250, 250, 0.8)',
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    position: 'relative',
+    '&:hover': {
+        boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0, 0, 0, 0.15)' 
+            : '0 4px 12px rgba(0, 0, 0, 0.05)'
+    }
+}));
+
+const GoodsWrapper = styled(Box)(({ theme }) => ({
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(1.5),
+    paddingBottom: theme.spacing(0.5),
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.01)',
+    borderRadius: theme.shape.borderRadius,
+    border: `1px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'}`,
+}));
+
+// --- Initial Empty States ---
+const emptyGoodsItem: GoodsItem = { id: crypto.randomUUID(), name: '', quantity: 1, unit: 'ks', palletExchange: 'Bez výmeny', dimensions: '', description: '', adrClass: '', referenceNumber: '' };
+const emptyLoadingPlace: LoadingPlace = { id: crypto.randomUUID(), street: '', city: '', zip: '', country: 'Slovensko', dateTime: null, contactPerson: '', goods: [{ ...emptyGoodsItem }] };
+const emptyUnloadingPlace: UnloadingPlace = { id: crypto.randomUUID(), street: '', city: '', zip: '', country: 'Slovensko', dateTime: null, contactPerson: '', goods: [{ ...emptyGoodsItem }] };
+
+// --- Component ---
+interface NewOrderFormProps {
+    isModal?: boolean;
+    onClose?: () => void;
+    isEdit?: boolean;
+    orderData?: Partial<OrderFormData>;
+}
+
+const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, isEdit = false, orderData = {} }) => {
+    const theme = useTheme();
+    const { isDarkMode } = useThemeMode();
+    const { userData } = useAuth();
+    const navigate = useNavigate();
+    const [activeStep, setActiveStep] = useState(0);
+
+    const [formData, setFormData] = useState<Partial<OrderFormData>>({
+        datumPrijatia: new Date(),
+        zakaznik: '',
+        zakaznikData: null,
+        kontaktnaOsoba: '',
+        suma: '',
+        mena: 'EUR',
+        vyuctovaniePodlaMnozstva: false,
+        cisloNakladuZakaznika: '',
+        internaPoznamka: '',
+        vyzadujeSaTypNavesu: '',
+        poziadavky: '',
+        loadingPlaces: [{ ...emptyLoadingPlace, id: crypto.randomUUID(), goods: [{...emptyGoodsItem, id: crypto.randomUUID()}] }], // Start with one loading place and one goods item
+        unloadingPlaces: [{ ...emptyUnloadingPlace, id: crypto.randomUUID(), goods: [{...emptyGoodsItem, id: crypto.randomUUID()}] }], // Start with one unloading place and one goods item
+        carrierCompany: '',
+        carrierContact: '',
+        carrierVehicleReg: '',
+        carrierPrice: '',
+    });
+    const [customerOptions, setCustomerOptions] = useState<Customer[]>([]);
+    const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+    const [isCustomerLoading, setIsCustomerLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Načítať dáta existujúcej objednávky pri editácii
+    useEffect(() => {
+        if (isEdit && orderData) {
+            console.log('Načítavám dáta pre editáciu', orderData);
+            
+            // Pre lepšiu kompatibilitu medzi rôznymi formátmi
+            const zakaznikValue = (orderData as any).zakaznik || orderData.customerCompany || '';
+            const kontaktnaOsobaValue = (orderData as any).kontaktnaOsoba || 
+                `${orderData.customerContactName || ''} ${orderData.customerContactSurname || ''}`.trim();
+            
+            setFormData(prevData => ({ 
+                ...prevData, 
+                ...orderData,
+                zakaznik: zakaznikValue,
+                kontaktnaOsoba: kontaktnaOsobaValue
+            }));
+            
+            console.log('Nastavené hodnoty po načítaní:', {
+                zakaznik: zakaznikValue,
+                kontaktnaOsoba: kontaktnaOsobaValue
+            });
+        }
+    }, [isEdit, orderData]);
+
+    // --- Handlers ---
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value, type, checked } = e.target as HTMLInputElement;
+        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    };
+    const handleDateChange = (name: keyof OrderFormData) => (date: Date | null) => { setFormData(prev => ({ ...prev, [name]: date })); };
+    const handleSelectChange = (e: SelectChangeEvent<string>) => { setFormData(prev => ({ ...prev, [e.target.name]: e.target.value })); };
+    const handleDateTimeChange = (type: 'loading' | 'unloading', index: number) => (date: Date | null) => {
+         setFormData(prev => {
+            const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
+            if (places[index]) {
+                places[index] = { ...places[index], dateTime: date };
+            }
+            return type === 'loading' ? { ...prev, loadingPlaces: places } : { ...prev, unloadingPlaces: places };
+        });
+    };
+    const handlePlaceInputChange = (type: 'loading' | 'unloading', index: number, field: keyof LoadingPlace | keyof UnloadingPlace) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+         setFormData(prev => {
+            const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
+            if (places[index]) {
+                places[index] = { ...places[index], [field]: e.target.value };
+            }
+            return type === 'loading' ? { ...prev, loadingPlaces: places } : { ...prev, unloadingPlaces: places };
+        });
+    };
+     const handlePlaceAutocompleteChange = (type: 'loading' | 'unloading', index: number, field: keyof LoadingPlace | keyof UnloadingPlace) => (event: any, newValue: { name: string, code: string } | null) => {
+        setFormData(prev => {
+            const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
+            if (places[index]) {
+                places[index] = { ...places[index], [field]: newValue?.name || 'Slovensko' }; // Default to Slovensko if null
+            }
+            return type === 'loading' ? { ...prev, loadingPlaces: places } : { ...prev, unloadingPlaces: places };
+        });
+    };
+     const handleGoodsChange = (type: 'loading' | 'unloading', placeIndex: number, goodsIndex: number, field: keyof GoodsItem) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+        const value = e.target.value;
+         setFormData(prev => {
+            const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
+            if (places[placeIndex]?.goods?.[goodsIndex]) {
+                places[placeIndex].goods[goodsIndex] = { ...places[placeIndex].goods[goodsIndex], [field]: value };
+            }
+            return type === 'loading' ? { ...prev, loadingPlaces: places } : { ...prev, unloadingPlaces: places };
+        });
+    };
+
+    const addPlace = (type: 'loading' | 'unloading') => {
+        setFormData(prev => {
+            const newPlace = type === 'loading' ? { ...emptyLoadingPlace, id: crypto.randomUUID(), goods: [{...emptyGoodsItem, id: crypto.randomUUID()}] } : { ...emptyUnloadingPlace, id: crypto.randomUUID(), goods: [{...emptyGoodsItem, id: crypto.randomUUID()}] };
+            return type === 'loading'
+                ? { ...prev, loadingPlaces: [...(prev.loadingPlaces || []), newPlace] }
+                : { ...prev, unloadingPlaces: [...(prev.unloadingPlaces || []), newPlace] };
+        });
+    };
+     const removePlace = (type: 'loading' | 'unloading', index: number) => {
+        setFormData(prev => {
+            const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
+            if (places.length > 1) { // Prevent removing the last place
+                 const updatedPlaces = places.filter((_, i) => i !== index);
+                 return type === 'loading' ? { ...prev, loadingPlaces: updatedPlaces } : { ...prev, unloadingPlaces: updatedPlaces };
+            }
+            return prev;
+        });
+    };
+     const addGoodsItem = (type: 'loading' | 'unloading', placeIndex: number) => {
+         setFormData(prev => {
+            const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
+            if (places[placeIndex]) {
+                places[placeIndex] = { ...places[placeIndex], goods: [...(places[placeIndex].goods || []), { ...emptyGoodsItem, id: crypto.randomUUID() }] };
+            }
+            return type === 'loading' ? { ...prev, loadingPlaces: places } : { ...prev, unloadingPlaces: places };
+        });
+    };
+     const removeGoodsItem = (type: 'loading' | 'unloading', placeIndex: number, goodsIndex: number) => {
+        setFormData(prev => {
+            const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
+            if (places[placeIndex]?.goods && places[placeIndex].goods.length > 1) { // Prevent removing the last goods item
+                 places[placeIndex].goods = places[placeIndex].goods.filter((_, i) => i !== goodsIndex);
+            }
+             return type === 'loading' ? { ...prev, loadingPlaces: places } : { ...prev, unloadingPlaces: places };
+        });
+    };
+
+    // Debounced customer search (similar to BusinessCases)
+     useEffect(() => {
+        const fetchCustomers = async () => { /* ... same logic as in BusinessCases ... */ };
+        const debounceTimer = setTimeout(() => fetchCustomers(), 500);
+        return () => clearTimeout(debounceTimer);
+    }, [customerSearchTerm, userData?.companyID]);
+
+     const handleCustomerAutocompleteChange = (event: any, newValue: Customer | string | null) => {
+         if (typeof newValue === 'string') {
+             console.log('Nastavujem zákazníka z textu:', newValue);
+             setFormData(prev => ({ ...prev, zakaznik: newValue, zakaznikData: null, kontaktnaOsoba: '' }));
+         } else if (newValue) {
+              console.log('Nastavujem zákazníka z objektu:', newValue);
+              setFormData(prev => ({ 
+                 ...prev, 
+                 zakaznik: newValue.company, 
+                 zakaznikData: newValue, 
+                 kontaktnaOsoba: `${newValue.contactName || ''} ${newValue.contactSurname || ''}`.trim(),
+                 // Auto-fill address?
+                 customerStreet: newValue.street,
+                 customerCity: newValue.city,
+                 customerZip: newValue.zip,
+                 customerCountry: newValue.country,
+                 customerEmail: newValue.email,
+                 customerPhone: newValue.phone,
+                 customerVatId: newValue.vatId,
+              }));
+         } else {
+             console.log('Čistím údaje zákazníka');
+             setFormData(prev => ({ ...prev, zakaznik: '', zakaznikData: null, kontaktnaOsoba: '', /* clear address fields too */ }));
+         }
+     };
+
+    // Pomocná funkcia pre debug - kontrola zakaznika pred odoslaním
+    useEffect(() => {
+        console.log("Aktuálna hodnota zakaznik:", formData.zakaznik);
+    }, [formData.zakaznik]);
+
+    // Generovanie čísla objednávky vo formáte 0001/01/2025
+    const generateOrderNumber = async () => {
+        try {
+            const today = new Date();
+            const month = String(today.getMonth() + 1).padStart(2, '0'); // 01-12
+            const year = today.getFullYear();
+            
+            console.log(`Generujem číslo objednávky pre mesiac: ${month}, rok: ${year}`);
+            
+            // Vytvoríme referenciu na dokument počítadla pre aktuálny mesiac a rok
+            const counterDocRef = doc(db, 'counters', `orders_${userData?.companyID}_${year}_${month}`);
+            
+            // Použijeme transakciu na bezpečné atomické zvýšenie počítadla - aj keď
+            // dvaja špediteri súčasne vytvárajú objednávky, dostanú rozdielne čísla
+            return await runTransaction(db, async (transaction) => {
+                // Načítame aktuálny stav počítadla
+                const counterDoc = await transaction.get(counterDocRef);
+                
+                // Určenie ďalšieho čísla
+                let nextNumber = 1;
+                if (counterDoc.exists()) {
+                    // Ak počítadlo už existuje, zvýšime hodnotu
+                    nextNumber = (counterDoc.data().currentValue || 0) + 1;
+                }
+                
+                // Aktualizujeme počítadlo atomicky v rámci transakcie
+                transaction.set(counterDocRef, {
+                    currentValue: nextNumber,
+                    companyID: userData?.companyID,
+                    month,
+                    year,
+                    lastUpdated: Timestamp.now()
+                });
+                
+                // Formátujeme číslo s vedúcimi nulami
+                const orderNumber = nextNumber.toString().padStart(4, '0');
+                const orderNumberFormatted = `${orderNumber}/${month}/${year}`;
+                
+                console.log(`Vygenerované číslo objednávky: ${orderNumberFormatted}`);
+                
+                return {
+                    formattedNumber: orderNumberFormatted,
+                    orderNumber: orderNumber,
+                    orderMonth: month,
+                    orderYear: year.toString()
+                };
+            });
+        } catch (error) {
+            console.error("Chyba pri generovaní čísla objednávky:", error);
+            alert("Nastala chyba pri generovaní čísla objednávky. Skúste to znova.");
+            return null;
+        }
+    };
+
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        if (!userData?.companyID) { alert("Chyba: Chýba ID spoločnosti."); return; }
+        setIsSubmitting(true);
+        
+        console.log("Hodnota poľa zakaznik pred uložením:", formData.zakaznik);
+        console.log("Údaje formulára pred odoslaním:", formData);
+        console.log("Zákazník:", formData.zakaznik, "Suma:", formData.suma, "Kontaktná osoba:", formData.kontaktnaOsoba);
+        
+        try {
+            // Rozdelíme kontaktnú osobu na meno a priezvisko
+            let kontaktMeno = '';
+            let kontaktPriezvisko = '';
+            if (formData.kontaktnaOsoba) {
+                const casti = formData.kontaktnaOsoba.trim().split(' ');
+                if (casti.length >= 1) {
+                    kontaktMeno = casti[0];
+                    kontaktPriezvisko = casti.slice(1).join(' ');
+                }
+            }
+            
+            // Explicitne zabezpečiť, že máme hodnotu pre zákazníka
+            const zakaznikHodnota = formData.zakaznik || '';
+            
+            // Ak nejde o editáciu, vygenerujeme nové číslo objednávky
+            let orderNumberData = null;
+            if (!isEdit) {
+                orderNumberData = await generateOrderNumber();
+            }
+            
+            // Najdeme hodnotu pre createdByName, ktorá sa bude ukladať
+            let createdByName = '';
+
+            // 1. Najprv skúsime firstName + lastName z userData
+            if ((userData as any).firstName || (userData as any).lastName) {
+              createdByName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
+            }
+
+            // 2. Ak to nefunguje, skúsime displayName
+            if (!createdByName && (userData as any).displayName) {
+              createdByName = (userData as any).displayName;
+            }
+
+            // 3. Ak nie je firstName+lastName ani displayName, použijeme email
+            if (!createdByName && userData?.email) {
+              createdByName = userData.email;
+            }
+
+            // Použijeme vygenerované meno alebo email
+            const createdByNameToSave = createdByName || userData?.email || 'Neznámy používateľ';
+            
+            const orderDataToSave = {
+                ...formData,
+                companyID: userData.companyID,
+                createdBy: userData.uid, 
+                createdByName: createdByNameToSave,
+                createdAt: isEdit ? orderData?.createdAt : Timestamp.now(),
+                updatedAt: Timestamp.now(), // Pridáme informáciu o aktualizácii
+                datumPrijatia: formData.datumPrijatia ? Timestamp.fromDate(formData.datumPrijatia as Date) : Timestamp.now(),
+                loadingPlaces: formData.loadingPlaces?.map(p => ({...p, dateTime: p.dateTime ? Timestamp.fromDate(p.dateTime as Date) : null })),
+                unloadingPlaces: formData.unloadingPlaces?.map(p => ({...p, dateTime: p.dateTime ? Timestamp.fromDate(p.dateTime as Date) : null })),
+                
+                // Zabezpečíme, aby sa údaje uložili do oboch typov polí
+                zakaznik: zakaznikHodnota,
+                customerCompany: zakaznikHodnota,
+                customerPrice: formData.suma || '',
+                suma: formData.suma || '',
+                customerContactName: kontaktMeno,
+                customerContactSurname: kontaktPriezvisko,
+                kontaktnaOsoba: formData.kontaktnaOsoba || '',
+                
+                // Pridáme číslo objednávky, ak ide o novú objednávku
+                ...(orderNumberData && {
+                    orderNumberFormatted: orderNumberData.formattedNumber,
+                    orderNumber: orderNumberData.orderNumber,
+                    orderMonth: orderNumberData.orderMonth,
+                    orderYear: orderNumberData.orderYear
+                })
+            };
+            
+            // Safely copy the object without zakaznikData
+            const finalOrder = { ...orderDataToSave };
+            delete (finalOrder as any).zakaznikData;
+            
+            console.log("Finálne dáta odosielané do Firebase:", finalOrder);
+            console.log("Zákazník vo finálnych dátach:", finalOrder.zakaznik, finalOrder.customerCompany);
+            console.log("Kontaktná osoba rozdelená:", kontaktMeno, kontaktPriezvisko);
+
+            if (isEdit && orderData?.id) {
+                // Editácia existujúcej objednávky
+                const orderRef = doc(db, 'orders', orderData.id);
+                await updateDoc(orderRef, {
+                    ...finalOrder,
+                    companyID: userData?.companyID || '',
+                    createdBy: (orderData as any)?.createdBy || userData?.uid || '',
+                    createdByName: (orderData as any)?.createdByName || createdByNameToSave,
+                    updatedBy: userData?.uid || '',
+                    updatedAt: Timestamp.now(),
+                });
+                alert('Objednávka úspešne aktualizovaná!');
+            } else {
+                // Vytvorenie novej objednávky
+                const docRef = await addDoc(collection(db, 'orders'), {
+                    ...finalOrder,
+                    companyID: userData?.companyID || '',
+                    createdBy: userData?.uid || '',
+                    createdByName: createdByNameToSave,
+                    createdAt: Timestamp.now(),
+                });
+                alert('Objednávka úspešne vytvorená!');
+
+                // Generovanie PDF po uložení objednávky
+                generatePDF({...finalOrder, id: docRef.id} as any);
+            }
+            
+            // Ak je v modálnom režime, zavrieme modálny dialóg
+            if (isModal && onClose) {
+                onClose();
+            } else {
+                // Inak navigujeme na zoznam objednávok
+                navigate('/orders');
+            }
+
+        } catch (error) {
+            console.error("Chyba pri ukladaní objednávky:", error);
+            alert('Nastala chyba pri ukladaní objednávky.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Funkcia na generovanie PDF
+    const generatePDF = (orderData: OrderFormData & { id: string }) => {
+        try {
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            // Hlavička
+            doc.setFontSize(20);
+            doc.text('OBJEDNÁVKA PREPRAVY', pageWidth / 2, 20, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text(`Číslo: ${orderData.id.substring(0, 8)}`, pageWidth / 2, 30, { align: 'center' });
+            doc.text(`Dátum: ${new Date().toLocaleDateString('sk-SK')}`, pageWidth / 2, 40, { align: 'center' });
+            
+            // Údaje zákazníka
+            doc.setFontSize(14);
+            doc.text('Údaje zákazníka:', 14, 60);
+            doc.setFontSize(10);
+            doc.text(`Firma: ${orderData.zakaznik || ''}`, 14, 70);
+            doc.text(`Kontaktná osoba: ${orderData.kontaktnaOsoba || ''}`, 14, 80);
+            doc.text(`Suma: ${orderData.suma || ''} ${orderData.mena || 'EUR'}`, 14, 90);
+            
+            // Miesta nakládky
+            doc.setFontSize(14);
+            doc.text('Miesta nakládky:', 14, 110);
+            doc.setFontSize(10);
+            
+            let yPos = 120;
+            orderData.loadingPlaces?.forEach((place, index) => {
+                doc.text(`${index + 1}. ${place.street}, ${place.city}, ${place.zip}, ${place.country}`, 14, yPos);
+                yPos += 10;
+                doc.text(`Dátum a čas: ${place.dateTime instanceof Date ? place.dateTime.toLocaleString('sk-SK') : place.dateTime}`, 20, yPos);
+                yPos += 10;
+                doc.text(`Kontaktná osoba: ${place.contactPerson}`, 20, yPos);
+                yPos += 10;
+                
+                // Tovar na nakládke
+                if (place.goods && place.goods.length > 0) {
+                    doc.text('Tovar:', 20, yPos);
+                    yPos += 10;
+                    place.goods.forEach((item, itemIndex) => {
+                        doc.text(`- ${item.name}, ${item.quantity} ${item.unit}`, 25, yPos);
+                        yPos += 7;
+                    });
+                }
+                
+                yPos += 5;
+            });
+            
+            // Miesta vykládky
+            doc.setFontSize(14);
+            doc.text('Miesta vykládky:', 14, yPos);
+            yPos += 10;
+            doc.setFontSize(10);
+            
+            orderData.unloadingPlaces?.forEach((place, index) => {
+                // Ak sa blížime k spodku stránky, vytvoríme novú
+                if (yPos > 270) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                
+                doc.text(`${index + 1}. ${place.street}, ${place.city}, ${place.zip}, ${place.country}`, 14, yPos);
+                yPos += 10;
+                doc.text(`Dátum a čas: ${place.dateTime instanceof Date ? place.dateTime.toLocaleString('sk-SK') : place.dateTime}`, 20, yPos);
+                yPos += 10;
+                doc.text(`Kontaktná osoba: ${place.contactPerson}`, 20, yPos);
+                yPos += 10;
+                
+                // Tovar na vykládke
+                if (place.goods && place.goods.length > 0) {
+                    doc.text('Tovar:', 20, yPos);
+                    yPos += 10;
+                    place.goods.forEach((item, itemIndex) => {
+                        doc.text(`- ${item.name}, ${item.quantity} ${item.unit}`, 25, yPos);
+                        yPos += 7;
+                    });
+                }
+                
+                yPos += 5;
+            });
+            
+            // Dopravca
+            if (yPos > 240) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.text('Údaje dopravcu:', 14, yPos);
+            yPos += 10;
+            doc.setFontSize(10);
+            doc.text(`Firma: ${orderData.carrierCompany || '-'}`, 14, yPos);
+            doc.text(`Kontakt: ${orderData.carrierContact || '-'}`, 14, yPos);
+            doc.text(`EČV vozidla: ${orderData.carrierVehicleReg || '-'}`, 14, yPos);
+            yPos += 10;
+            doc.text(`Cena prepravy: ${orderData.carrierPrice || '-'} EUR`, 14, yPos);
+            
+            // Pätička
+            const pageCount = (doc as any).internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.text(`Strana ${i} z ${pageCount}`, pageWidth - 20, doc.internal.pageSize.getHeight() - 10);
+            }
+            
+            // Uloženie PDF
+            doc.save(`objednavka-${orderData.id.substring(0, 8)}.pdf`);
+            
+        } catch (error) {
+            console.error('Chyba pri generovaní PDF:', error);
+            alert('Nastala chyba pri generovaní PDF objednávky');
+        }
+    };
+
+    // Stepper navigation
+    const handleNext = () => setActiveStep((prev) => prev + 1);
+    const handleBack = () => setActiveStep((prev) => prev - 1);
+    const steps = ['Zákazník a Náklad', 'Miesta a Dopravca'];
+
+    return (
+        <Box 
+            sx={{ 
+                p: isModal ? 3 : 2,
+                height: isModal ? '100%' : 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(22, 28, 36, 0.95)' 
+                    : 'rgba(255, 255, 255, 0.95)',
+                backgroundImage: isModal ? 'none' : undefined
+            }}
+        >
+            <GlobalStyles 
+                styles={{
+                    '.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#ff9f43 !important'
+                    },
+                    '.MuiInputLabel-root.Mui-focused': {
+                        color: '#ff9f43 !important'
+                    },
+                    '.MuiCheckbox-root.Mui-checked': {
+                        color: '#ff9f43 !important'
+                    },
+                    '.MuiRadio-root.Mui-checked': {
+                        color: '#ff9f43 !important'
+                    },
+                    '.MuiSwitch-root .MuiSwitch-switchBase.Mui-checked': {
+                        color: '#ff9f43 !important'
+                    },
+                    '.MuiSwitch-root .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                        backgroundColor: '#ff9f43 !important'
+                    }
+                }}
+            />
+            <Stepper 
+                activeStep={activeStep} 
+                sx={{ 
+                    mb: 4,
+                    '& .MuiStepLabel-root .Mui-active': {
+                        color: '#ff9f43', // Oranžová farba pre aktívny krok
+                    },
+                    '& .MuiStepLabel-root .Mui-completed': {
+                        color: '#ff9f43', // Oranžová farba pre dokončený krok
+                    },
+                    '& .MuiStepConnector-line': {
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                    },
+                    '& .MuiStepIcon-root.Mui-active': {
+                        color: '#ff9f43',
+                    },
+                    '& .MuiStepIcon-root.Mui-completed': {
+                        color: '#ff9f43',
+                    },
+                    '& .MuiStepIcon-text': {
+                        fill: theme.palette.mode === 'dark' ? '#fff' : '#000',
+                    }
+                }}
+            >
+                {steps.map((label) => (
+                    <Step key={label}>
+                        <StepLabel>{label}</StepLabel>
+                    </Step>
+                ))}
+            </Stepper>
+
+            <form 
+                onSubmit={handleSubmit} 
+                style={{ 
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    width: '100%',
+                    height: '100%'
+                }}
+            >
+                {/* STEP 1: Zákazník a Náklad */}
+                <Collapse in={activeStep === 0} timeout={500}>
+                    <Box sx={{ 
+                        minHeight: '600px',
+                        height: 'auto',
+                        overflow: 'visible',
+                        pb: 8 // Pridať padding na spodku, aby bol priestor pre tlačidlá
+                    }}>
+                        {/* Základné údaje */}
+                        <FormSection>
+                            <StyledLegend variant="h6">Základné údaje</StyledLegend>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6} md={4}>
+                                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                                        <DatePicker label="Dátum prijatia *" value={formData.datumPrijatia} onChange={handleDateChange('datumPrijatia')} slotProps={{ textField: { fullWidth: true, required: true, size: 'small' } }} />
+                                    </LocalizationProvider>
+                                </Grid>
+                            </Grid>
+                        </FormSection>
+
+                        {/* Údaje zákazníka */}
+                        <FormSection>
+                            <StyledLegend variant="h6">Údaje zákazníka</StyledLegend>
+                            <Grid container spacing={2} alignItems="center">
+                                 <Grid item xs={12} md={6}>
+                                    <Autocomplete
+                                        freeSolo 
+                                        options={customerOptions} 
+                                        getOptionLabel={(o) => typeof o === 'string' ? o : o.company}
+                                        value={formData.zakaznikData ?? formData.zakaznik} 
+                                        onChange={handleCustomerAutocompleteChange}
+                                        onInputChange={(e, val) => {
+                                            setCustomerSearchTerm(val);
+                                            // Ak nie je vybraný žiadny objekt zákazníka, nastavíme text ako zákazníka
+                                            if (!formData.zakaznikData && val) {
+                                                setFormData(prev => ({ ...prev, zakaznik: val }));
+                                            }
+                                        }} 
+                                        loading={isCustomerLoading}
+                                        renderInput={(params) => (
+                                            <TextField 
+                                                {...params} 
+                                                label="Zákazník *" 
+                                                required 
+                                                size="small" 
+                                                InputProps={{ 
+                                                    ...params.InputProps, 
+                                                    endAdornment: (
+                                                        <>{isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}{params.InputProps.endAdornment}</>
+                                                    ) 
+                                                }} 
+                                            />
+                                        )}
+                                        renderOption={(props, option) => {
+                                            const typedOption = option as Customer;
+                                            return <li {...props} key={typedOption.id || ''}>{typedOption.company} ({typedOption.city})</li>;
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#ff9f43',
+                                            },
+                                            '& .MuiInputLabel-root.Mui-focused': {
+                                                color: '#ff9f43',
+                                            }
+                                        }}
+                                     />
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <TextField fullWidth label="Kontaktná osoba" name="kontaktnaOsoba" value={formData.kontaktnaOsoba || ''} onChange={handleInputChange} size="small"/>
+                                </Grid>
+                                {/* Add other customer fields if needed here, prefilled from zakaznikData */}
+                                <Grid item xs={12} sm={6}><TextField fullWidth label="IČ DPH" name="customerVatId" value={formData.customerVatId || ''} onChange={handleInputChange} size="small" /></Grid>
+                                <Grid item xs={12} sm={6}><TextField fullWidth label="Ulica" name="customerStreet" value={formData.customerStreet || ''} onChange={handleInputChange} size="small" /></Grid>
+                                 {/* ... more customer fields ... */}
+                            </Grid>
+                        </FormSection>
+
+                        {/* Cena */}
+                        <FormSection>
+                            <StyledLegend variant="h6">Cena</StyledLegend>
+                            <Grid container spacing={2} alignItems="center">
+                                <Grid item xs={12} sm={4}><TextField fullWidth label="Suma *" name="suma" type="number" value={formData.suma || ''} onChange={handleInputChange} required inputProps={{ min: 0, step: "0.01" }} size="small"/></Grid>
+                                <Grid item xs={6} sm={3}><FormControl fullWidth required size="small"><InputLabel>Mena *</InputLabel><Select name="mena" value={formData.mena || 'EUR'} label="Mena *" onChange={handleSelectChange}><MenuItem value="EUR">EUR</MenuItem><MenuItem value="CZK">CZK</MenuItem>{/* ... */}</Select></FormControl></Grid>
+                                <Grid item xs={6} sm={5}><FormControlLabel control={<Checkbox name="vyuctovaniePodlaMnozstva" checked={formData.vyuctovaniePodlaMnozstva || false} onChange={handleInputChange} />} label="Vyúčtovanie podľa množstva" /></Grid>
+                            </Grid>
+                        </FormSection>
+
+                        {/* Náklad */}
+                        <FormSection>
+                            <StyledLegend variant="h6">Náklad</StyledLegend>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6}><TextField fullWidth label="Č. nákladu zákazníka" name="cisloNakladuZakaznika" value={formData.cisloNakladuZakaznika || ''} onChange={handleInputChange} size="small"/></Grid>
+                                <Grid item xs={12} sm={6}><TextField fullWidth label="Interná poznámka" name="internaPoznamka" value={formData.internaPoznamka || ''} onChange={handleInputChange} size="small"/></Grid>
+                                <Grid item xs={12} sm={6}><FormControl fullWidth size="small"><InputLabel>Vyžaduje sa typ návesu</InputLabel><Select name="vyzadujeSaTypNavesu" value={formData.vyzadujeSaTypNavesu || ''} label="Vyžaduje sa typ návesu" onChange={handleSelectChange}><MenuItem value="">-- Nevyžaduje sa --</MenuItem><MenuItem value="Plachta">Plachta</MenuItem>{/* ... */}</Select></FormControl></Grid>
+                                <Grid item xs={12} sm={6}><TextField fullWidth label="Požiadavky" name="poziadavky" value={formData.poziadavky || ''} onChange={handleInputChange} size="small"/></Grid>
+                            </Grid>
+                        </FormSection>
+                             <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'flex-end', 
+                                mt: 2,
+                                position: 'fixed',
+                                bottom: isModal ? 20 : 40,
+                                right: isModal ? 40 : 60,
+                                zIndex: 2,
+                                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(22, 28, 36, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                                p: 2,
+                                borderRadius: '8px',
+                                boxShadow: '0 3px 10px rgba(0,0,0,0.2)',
+                                minWidth: '200px'
+                             }}>
+                                <NextButton onClick={handleNext}>Ďalej</NextButton>
+                             </Box>
+                        </Box>
+                    </Collapse>
+
+                        {/* STEP 2: Miesta a Dopravca */}
+                    <Collapse in={activeStep === 1} timeout={500}>
+                        <Box sx={{ 
+                            minHeight: '600px',
+                            height: 'auto',
+                            overflow: 'visible',
+                            pb: 8 // Pridať padding na spodku, aby bol priestor pre tlačidlá
+                        }}>
+                             {/* Body Nakládky */}
+                            <FormSection>
+                                <SectionHeader>
+                                 <StyledLegend variant="h6">Body Nakládky</StyledLegend>
+                                    <AddButton 
+                                        startIcon={<AddIcon />} 
+                                        onClick={() => addPlace('loading')} 
+                                        size="small"
+                                    >
+                                        Pridať Nakládku
+                                    </AddButton>
+                                </SectionHeader>
+                                {formData.loadingPlaces?.map((place, index) => (
+                                    <PlaceCard key={place.id || index}>
+                                        <Typography 
+                                            variant="subtitle1" 
+                                            sx={{ 
+                                                mb: 2, 
+                                                fontWeight: 600, 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'space-between' 
+                                            }}
+                                        >
+                                            <span>Nakládka #{index + 1}</span>
+                                            {formData.loadingPlaces && formData.loadingPlaces.length > 1 && (
+                                                <IconButton 
+                                                    size="small" 
+                                                    onClick={() => removePlace('loading', index)} 
+                                                    color="error"
+                                                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            {/* Fields for Loading Place */}
+                                            <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Ulica a číslo *" value={place.street} onChange={handlePlaceInputChange('loading', index, 'street')} required /></Grid>
+                                            <Grid item xs={6} sm={3}><TextField size="small" fullWidth label="Mesto *" value={place.city} onChange={handlePlaceInputChange('loading', index, 'city')} required /></Grid>
+                                            <Grid item xs={6} sm={3}><TextField size="small" fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('loading', index, 'zip')} required /></Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <Autocomplete size="small" options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('loading', index, 'country')} 
+                                                    renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                                                    <DateTimePicker 
+                                                        label="Dátum a čas nakládky *"
+                                                        value={place.dateTime as Date | null}
+                                                        onChange={handleDateTimeChange('loading', index)}
+                                                        slotProps={{ textField: { fullWidth: true, required: true, size: 'small' } }}
+                                                    />
+                                                </LocalizationProvider>
+                                            </Grid>
+                                            <Grid item xs={12}><TextField size="small" fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('loading', index, 'contactPerson')} required /></Grid>
+                                        </Grid>
+                                         {/* Goods Items Section */}
+                                        <GoodsWrapper>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>Tovar na naloženie:</Typography>
+                                                <Button 
+                                                    startIcon={<AddIcon />} 
+                                                    size="small" 
+                                                    onClick={() => addGoodsItem('loading', index)}
+                                                    sx={{
+                                                        color: '#ff9f43',
+                                                        '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
+                                                    }}
+                                                >
+                                                    Pridať tovar
+                                                </Button>
+                                            </Box>
+                                            
+                                            {place.goods?.map((item, goodsIndex) => (
+                                                <Box 
+                                                    key={item.id || goodsIndex}
+                                                    sx={{
+                                                        p: 1.5,
+                                                        mb: 1.5,
+                                                        borderRadius: 1,
+                                                        position: 'relative',
+                                                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'
+                                                    }}
+                                                >
+                                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                                                        Tovar #{goodsIndex + 1}
+                                                        {place.goods && place.goods.length > 1 && (
+                                                            <IconButton 
+                                                                size="small" 
+                                                                onClick={() => removeGoodsItem('loading', index, goodsIndex)} 
+                                                                color="error"
+                                                                sx={{ position: 'absolute', top: 8, right: 8 }}
+                                                            >
+                                                                <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                        )}
+                                                    </Typography>
+                                                    
+                                                    <Grid container spacing={2}>
+                                                        <Grid item xs={12} sm={6}>
+                                                            <TextField 
+                                                                size="small" 
+                                                                label="Názov tovaru *" 
+                                                                value={item.name} 
+                                                                onChange={handleGoodsChange('loading', index, goodsIndex, 'name')} 
+                                                                required 
+                                                                fullWidth
+                                                            />
+                                                        </Grid>
+                                                        <Grid item xs={6} sm={3}>
+                                                            <TextField 
+                                                                size="small" 
+                                                                label="Množstvo *" 
+                                                                type="number" 
+                                                                value={item.quantity} 
+                                                                onChange={handleGoodsChange('loading', index, goodsIndex, 'quantity')} 
+                                                                required 
+                                                                inputProps={{min: 0, step: 1}}
+                                                                fullWidth
+                                                            />
+                                                        </Grid>
+                                                        <Grid item xs={6} sm={3}>
+                                                            <FormControl size="small" fullWidth>
+                                                                <InputLabel>Jednotka *</InputLabel>
+                                                                <Select 
+                                                                    value={item.unit} 
+                                                                    label="Jednotka *" 
+                                                                    onChange={handleGoodsChange('loading', index, goodsIndex, 'unit')} 
+                                                                    required
+                                                                >
+                                                                    <MenuItem value="ks">ks</MenuItem>
+                                                                    <MenuItem value="pal">pal</MenuItem>
+                                                                    <MenuItem value="kg">kg</MenuItem>
+                                                                </Select>
+                                                            </FormControl>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6}>
+                                                            <FormControl size="small" fullWidth>
+                                                                <InputLabel>Výmena paliet</InputLabel>
+                                                                <Select 
+                                                                    value={item.palletExchange} 
+                                                                    label="Výmena paliet" 
+                                                                    onChange={handleGoodsChange('loading', index, goodsIndex, 'palletExchange')}
+                                                                >
+                                                                    <MenuItem value="Bez výmeny">Bez výmeny</MenuItem>
+                                                                    <MenuItem value="Výmena">Výmena</MenuItem>
+                                                                </Select>
+                                                            </FormControl>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6}>
+                                                            <TextField 
+                                                                size="small" 
+                                                                label="Rozmer" 
+                                                                value={item.dimensions} 
+                                                                onChange={handleGoodsChange('loading', index, goodsIndex, 'dimensions')} 
+                                                                fullWidth
+                                                            />
+                                                        </Grid>
+                                                        <Grid item xs={12}>
+                                                            <TextField 
+                                                                size="small" 
+                                                                label="Popis tovaru" 
+                                                                value={item.description} 
+                                                                onChange={handleGoodsChange('loading', index, goodsIndex, 'description')} 
+                                                                fullWidth
+                                                            />
+                                                        </Grid>
+                                                    </Grid>
+                                                </Box>
+                                            ))}
+                                        </GoodsWrapper>
+                                    </PlaceCard>
+                                ))}
+                            </FormSection>
+
+                            {/* Body Vykládky */}
+                            <FormSection>
+                                 <SectionHeader>
+                                     <StyledLegend variant="h6">Body Vykládky</StyledLegend>
+                                     <AddButton 
+                                         startIcon={<AddIcon />} 
+                                         onClick={() => addPlace('unloading')} 
+                                         size="small"
+                                     >
+                                         Pridať Vykládku
+                                    </AddButton>
+                                </SectionHeader>
+                                {formData.unloadingPlaces?.map((place, index) => (
+                                    <PlaceCard key={place.id || index}>
+                                        <Typography 
+                                            variant="subtitle1" 
+                                            sx={{ 
+                                                mb: 2, 
+                                                fontWeight: 600, 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'space-between' 
+                                            }}
+                                        >
+                                            <span>Vykládka #{index + 1}</span>
+                                            {formData.unloadingPlaces && formData.unloadingPlaces.length > 1 && (
+                                                <IconButton 
+                                                    size="small" 
+                                                    onClick={() => removePlace('unloading', index)} 
+                                                    color="error"
+                                                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            {/* Fields for Unloading Place */}
+                                            <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Ulica a číslo *" value={place.street} onChange={handlePlaceInputChange('unloading', index, 'street')} required /></Grid>
+                                            <Grid item xs={6} sm={3}><TextField size="small" fullWidth label="Mesto *" value={place.city} onChange={handlePlaceInputChange('unloading', index, 'city')} required /></Grid>
+                                            <Grid item xs={6} sm={3}><TextField size="small" fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('unloading', index, 'zip')} required /></Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                <Autocomplete size="small" options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('unloading', index, 'country')} 
+                                                    renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
+                                            </Grid>
+                                            <Grid item xs={12} sm={6}>
+                                                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                                                     <DateTimePicker 
+                                                         label="Dátum a čas vykládky *"
+                                                         value={place.dateTime as Date | null}
+                                                         onChange={handleDateTimeChange('unloading', index)}
+                                                         slotProps={{ textField: { fullWidth: true, required: true, size: 'small' } }}
+                                                     />
+                                                 </LocalizationProvider>
+                                             </Grid>
+                                            <Grid item xs={12}><TextField size="small" fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('unloading', index, 'contactPerson')} required /></Grid>
+                                        </Grid>
+                                         {/* Goods Items Section */}
+                                         <GoodsWrapper>
+                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                                                 <Typography variant="body2" sx={{ fontWeight: 500 }}>Tovar na vyloženie:</Typography>
+                                                 <Button 
+                                                     startIcon={<AddIcon />} 
+                                                     size="small" 
+                                                     onClick={() => addGoodsItem('unloading', index)}
+                                                     sx={{
+                                                         color: '#ff9f43',
+                                                         '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
+                                                     }}
+                                                 >
+                                                     Pridať tovar
+                                                 </Button>
+                                             </Box>
+                                             
+                                             {place.goods?.map((item, goodsIndex) => (
+                                                 <Box 
+                                                     key={item.id || goodsIndex}
+                                                     sx={{
+                                                         p: 1.5,
+                                                         mb: 1.5,
+                                                         borderRadius: 1,
+                                                         position: 'relative',
+                                                         backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'
+                                                     }}
+                                                 >
+                                                     <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                                                         Tovar #{goodsIndex + 1}
+                                                         {place.goods && place.goods.length > 1 && (
+                                                             <IconButton 
+                                                                 size="small" 
+                                                                 onClick={() => removeGoodsItem('unloading', index, goodsIndex)} 
+                                                                 color="error"
+                                                                 sx={{ position: 'absolute', top: 8, right: 8 }}
+                                                             >
+                                                                 <DeleteIcon fontSize="small" />
+                                                             </IconButton>
+                                                         )}
+                                                     </Typography>
+                                                     
+                                                     <Grid container spacing={2}>
+                                                         <Grid item xs={12} sm={6}>
+                                                             <TextField 
+                                                                 size="small" 
+                                                                 label="Názov tovaru *" 
+                                                                 value={item.name} 
+                                                                 onChange={handleGoodsChange('unloading', index, goodsIndex, 'name')} 
+                                                                 required 
+                                                                 fullWidth
+                                                             />
+                                                         </Grid>
+                                                         <Grid item xs={6} sm={3}>
+                                                             <TextField 
+                                                                 size="small" 
+                                                                 label="Množstvo *" 
+                                                                 type="number" 
+                                                                 value={item.quantity} 
+                                                                 onChange={handleGoodsChange('unloading', index, goodsIndex, 'quantity')} 
+                                                                 required 
+                                                                 inputProps={{min: 0, step: 1}}
+                                                                 fullWidth
+                                                             />
+                                                         </Grid>
+                                                         <Grid item xs={6} sm={3}>
+                                                             <FormControl size="small" fullWidth>
+                                                                 <InputLabel>Jednotka *</InputLabel>
+                                                                 <Select 
+                                                                     value={item.unit} 
+                                                                     label="Jednotka *" 
+                                                                     onChange={handleGoodsChange('unloading', index, goodsIndex, 'unit')} 
+                                                                     required
+                                                                 >
+                                                                     <MenuItem value="ks">ks</MenuItem>
+                                                                     <MenuItem value="pal">pal</MenuItem>
+                                                                     <MenuItem value="kg">kg</MenuItem>
+                                                                 </Select>
+                                                             </FormControl>
+                                                         </Grid>
+                                                         <Grid item xs={12}>
+                                                             <TextField 
+                                                                 size="small" 
+                                                                 label="Popis tovaru" 
+                                                                 value={item.description} 
+                                                                 onChange={handleGoodsChange('unloading', index, goodsIndex, 'description')} 
+                                                                 fullWidth
+                                                             />
+                                                         </Grid>
+                                                     </Grid>
+                                                 </Box>
+                                             ))}
+                                         </GoodsWrapper>
+                                     </PlaceCard>
+                                 ))}
+                            </FormSection>
+
+                            {/* Dopravca */}
+                             <FormSection>
+                                 <StyledLegend variant="h6">Dopravca (Vykonávateľ)</StyledLegend>
+                                 <Grid container spacing={2}>
+                                     <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Názov firmy dopravcu" name="carrierCompany" value={formData.carrierCompany || ''} onChange={handleInputChange} /></Grid>
+                                     <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Kontakt na dopravcu" name="carrierContact" value={formData.carrierContact || ''} onChange={handleInputChange} /></Grid>
+                                     <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="EČV Vozidla" name="carrierVehicleReg" value={formData.carrierVehicleReg || ''} onChange={handleInputChange} /></Grid>
+                                     <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Cena za prepravu (€)" name="carrierPrice" type="number" value={formData.carrierPrice || ''} onChange={handleInputChange} inputProps={{ min: 0, step: "0.01" }}/></Grid>
+                                 </Grid>
+                             </FormSection>
+
+                            {/* Navigation Buttons */}
+                            <Box sx={{ 
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                mt: 2,
+                                position: 'fixed',
+                                bottom: isModal ? 20 : 40,
+                                right: isModal ? 40 : 60,
+                                zIndex: 2,
+                                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(22, 28, 36, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                                p: 2,
+                                borderRadius: '8px',
+                                boxShadow: '0 3px 10px rgba(0,0,0,0.2)',
+                                minWidth: '200px'
+                            }}>
+                                <Button onClick={handleBack} sx={{ mr: 2 }}>Späť</Button>
+                                <NextButton type="submit" disabled={isSubmitting}>
+                                    {isSubmitting ? 
+                                      <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 
+                                      isEdit ? 'Uložiť zmeny' : 'Vytvoriť objednávku'
+                                    }
+                                </NextButton>
+                            </Box>
+                        </Box>
+                    </Collapse>
+                </form>
+            </Box>
+        );
+};
+
+export default NewOrderForm;

@@ -32,15 +32,8 @@ const firebaseConfig = {
   databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL
 };
 
-console.log('Firebase konfigurácia:', {
-  apiKey: firebaseConfig.apiKey,
-  authDomain: firebaseConfig.authDomain,
-  projectId: firebaseConfig.projectId,
-  storageBucket: firebaseConfig.storageBucket,
-  messagingSenderId: firebaseConfig.messagingSenderId,
-  appId: firebaseConfig.appId,
-  databaseURL: firebaseConfig.databaseURL
-});
+// Odstránenie logovania citlivých údajov
+console.log('Firebase inicializácia...');
 
 // Initialize Firebase
 let app;

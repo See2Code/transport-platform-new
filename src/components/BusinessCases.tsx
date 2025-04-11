@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -28,8 +28,10 @@ import {
   Snackbar,
   Card,
   CircularProgress,
+  Collapse,
+  SelectChangeEvent
 } from '@mui/material';
-import { DateTimePicker } from '@mui/x-date-pickers';
+import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { sk } from 'date-fns/locale';
@@ -51,6 +53,7 @@ import { useNavigate } from 'react-router-dom';
 import SearchField from './common/SearchField';
 import { format } from 'date-fns';
 import { useThemeMode } from '../contexts/ThemeContext';
+import { useJsApiLoader } from '@react-google-maps/api';
 
 const euCountries = [
   { code: 'SK', name: 'Slovensko', flag: '🇸🇰', prefix: '+421' },
@@ -414,290 +417,125 @@ export default function BusinessCases() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
+  const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
+  const [filterOptions, setFilterOptions] = useState({ showOfflineVehicles: true, showOnlineOnly: false });
   const [formData, setFormData] = useState({
-    companyName: '',
-    vatNumber: '',
-    companyAddress: '',
-    contactPerson: {
-      firstName: '',
-      lastName: '',
-      phone: '',
-      email: '',
-    },
-    internalNote: '',
-    status: 'NOT_CALLED' as keyof typeof caseStatuses,
-    reminderDateTime: null as Date | null,
-    reminderNote: '',
-    createdBy: null as { firstName: string; lastName: string; } | null,
-    createdAt: null as Date | null
+    companyName: '', vatNumber: '', companyAddress: '',
+    contactPerson: { firstName: '', lastName: '', phone: '', email: '' },
+    internalNote: '', status: 'NOT_CALLED' as keyof typeof caseStatuses,
+    reminderDateTime: null as Date | null, reminderNote: '',
   });
   const [selectedCountry, setSelectedCountry] = useState(euCountries[0]);
   const { isDarkMode } = useThemeMode();
   const [loading, setLoading] = useState(false);
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'thisWeek' | 'thisMonth' | 'thisYear' | null>('all');
   const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
   const [phaseDialogOpen, setPhaseDialogOpen] = useState(false);
   const [phases, setPhases] = useState<Phase[]>([]);
 
-  useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-  }, [currentUser, navigate]);
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
+    libraries: ['places'],
+    id: 'script-loader'
+  });
 
-  useEffect(() => {
-    fetchCases();
-  }, []);
+  const getVehicleIcons = useCallback(() => {
+    // Implement your logic to get vehicle icons based on isLoaded
+    return isLoaded ? 'icons' : 'fallback';
+  }, [isLoaded]);
 
-  const fetchCases = async () => {
+  const vehicleIcons = getVehicleIcons();
+
+  const fetchCases = useCallback(async () => {
     try {
-      if (!userData?.companyID) {
-        console.log('Chýbajúce companyID - používateľ nemá priradenú firmu');
-        setSnackbar({
-          open: true,
-          message: 'Nemáte priradenú firmu, kontaktujte administrátora',
-          severity: 'error'
-        });
-        return;
-      }
-
+      if (!userData?.companyID) { console.log('Chýbajúce companyID'); return; }
       setLoading(true);
       const casesCollection = collection(db, 'businessCases');
-      const casesQuery = query(
-        casesCollection, 
-        where('companyID', '==', userData.companyID),
-        orderBy('createdAt', 'desc')
-      );
-      const snapshot = await getDocs(casesQuery);
-      console.log('BusinessCases: Počet načítaných dokumentov:', snapshot.size);
-      console.log('BusinessCases: CompanyID používateľa:', userData.companyID);
+      let q = query(casesCollection, where('companyID', '==', userData.companyID));
+      // Apply date filters
+      if (filterStartDate) { q = query(q, where('createdAt', '>=', Timestamp.fromDate(new Date(filterStartDate.setHours(0, 0, 0, 0))))); }
+      if (filterEndDate) { q = query(q, where('createdAt', '<=', Timestamp.fromDate(new Date(filterEndDate.setHours(23, 59, 59, 999))))); }
+      q = query(q, orderBy('createdAt', 'desc'));
       
-      const casesData = snapshot.docs.map(doc => {
+      const snapshot = await getDocs(q);
+      const casesData: BusinessCase[] = snapshot.docs.map(doc => {
         const data = doc.data();
-        console.log('BusinessCases: Spracovávam dokument:', {
-          id: doc.id,
-          companyID: data.companyID,
-          companyName: data.companyName,
-          createdAt: data.createdAt
-        });
         
+        // Convert phase timestamps correctly
+        const phasesWithDates: Phase[] = (data.phases || []).map((phase: any): Phase => {
+            let createdAtDate: Date;
+            if (phase.createdAt instanceof Timestamp) { createdAtDate = phase.createdAt.toDate(); }
+            else if (phase.createdAt) { try { const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); createdAtDate = !isNaN(d.getTime()) ? d : new Date(); } catch (e) { createdAtDate = new Date(); } }
+            else { createdAtDate = new Date(); }
+            return { id: phase.id || crypto.randomUUID(), name: phase.name || 'Neznáma fáza', createdAt: createdAtDate };
+        });
+
+        const createdAtTimestamp = data.createdAt instanceof Timestamp ? data.createdAt : (data.createdAt ? Timestamp.fromDate(new Date(data.createdAt)) : Timestamp.now());
+
+        // Return a full BusinessCase object
         return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date(data.createdAt)),
-          reminderDateTime: data.reminderDateTime ? new Date(data.reminderDateTime.seconds * 1000) : null
-        };
-      }) as BusinessCase[];
+            id: doc.id,
+            companyName: data.companyName || '',
+            vatNumber: data.vatNumber || '',
+            companyAddress: data.companyAddress || '',
+            contactPerson: {
+                firstName: data.contactPerson?.firstName || '',
+                lastName: data.contactPerson?.lastName || '',
+                phone: data.contactPerson?.phone || '',
+                email: data.contactPerson?.email || ''
+            },
+            internalNote: data.internalNote || '',
+            status: data.status || 'NOT_CALLED',
+            reminderDateTime: convertToDate(data.reminderDateTime),
+            reminderNote: data.reminderNote || '',
+            createdAt: createdAtTimestamp,
+            createdBy: {
+                firstName: data.createdBy?.firstName || '',
+                lastName: data.createdBy?.lastName || ''
+            },
+            countryCode: data.countryCode,
+            companyID: data.companyID,
+            phases: phasesWithDates
+        } as BusinessCase; // Assert as BusinessCase
+      }); 
+      
       setCases(casesData);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching cases:', error);
-      setLoading(false);
-      setSnackbar({
-        open: true,
-        message: 'Nastala chyba pri načítaní prípadov',
-        severity: 'error'
+    } catch (error) { console.error('Error fetching cases:', error); setSnackbar({ open: true, message: 'Chyba pri načítaní prípadov', severity: 'error' }); }
+    finally { setLoading(false); }
+  }, [userData?.companyID, filterStartDate, filterEndDate]);
+
+  const handleFilterChange = useCallback((filter: keyof typeof filterOptions) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFilterOptions((prev: { showOfflineVehicles: boolean; showOnlineOnly: boolean; }) => ({ ...prev, [filter]: event.target.checked }));
+  }, []);
+
+  const getFilteredCases = useCallback(() => {
+    return cases.filter(c => 
+      c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${c.contactPerson.firstName} ${c.contactPerson.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.internalNote?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [cases, searchTerm]);
+
+  const handleRowClick = useCallback((id: string) => {
+    setExpandedCaseId(prevId => (prevId === id ? null : id));
+  }, []);
+
+  const handleCountryChange = useCallback((event: SelectChangeEvent<string>) => {
+    const country = euCountries.find(c => c.code === event.target.value);
+    if (country) {
+      setSelectedCountry(country);
+      setFormData(prev => {
+        let phone = prev.contactPerson.phone;
+        const oldPrefix = euCountries.find(c => phone.startsWith(c.prefix))?.prefix;
+        if (!phone || (oldPrefix && phone === oldPrefix)) {
+          phone = country.prefix;
+        }
+        return { ...prev, contactPerson: { ...prev.contactPerson, phone } };
       });
     }
-  };
+  }, []);
 
-  const handleSubmit = async () => {
-    try {
-      if (!currentUser || !userData) {
-        setSnackbar({
-          open: true,
-          message: 'Nie ste prihlásený',
-          severity: 'error'
-        });
-        return;
-      }
-
-      const businessCaseData = {
-        companyName: formData.companyName,
-        vatNumber: formData.vatNumber,
-        companyAddress: formData.companyAddress,
-        contactPerson: formData.contactPerson,
-        internalNote: formData.internalNote,
-        status: formData.status,
-        reminderDateTime: formData.reminderDateTime ? Timestamp.fromDate(new Date(formData.reminderDateTime)) : null,
-        reminderNote: formData.reminderNote,
-        createdAt: Timestamp.now(),
-        createdBy: {
-          firstName: userData.firstName || '',
-          lastName: userData.lastName || ''
-        },
-        countryCode: selectedCountry.code,
-        companyID: userData.companyID  // Pridané companyID pre zabezpečenie správneho prístupu
-      };
-
-      if (editCase?.id) {
-        await updateDoc(doc(db, 'businessCases', editCase.id), businessCaseData);
-        setSnackbar({
-          open: true,
-          message: 'Prípad bol úspešne upravený',
-          severity: 'success'
-        });
-
-        // Ak je nastavený reminder pri editácii, vytvoríme email notifikáciu
-        if (formData.reminderDateTime) {
-          console.log('Vytváram pripomienku:', {
-            dateTime: formData.reminderDateTime,
-            email: currentUser.email,
-            companyName: formData.companyName,
-            businessCaseId: editCase.id
-          });
-
-          const reminderData = {
-            userId: currentUser.uid,
-            userEmail: currentUser.email,
-            businessCaseId: editCase.id,
-            reminderDateTime: Timestamp.fromDate(new Date(formData.reminderDateTime)),
-            companyName: formData.companyName,
-            reminderNote: formData.reminderNote || '',
-            contactPerson: formData.contactPerson,
-            createdAt: Timestamp.now(),
-            createdBy: {
-              firstName: userData.firstName || '',
-              lastName: userData.lastName || ''
-            },
-            sent: false
-          };
-
-          console.log('Dáta pripomienky:', reminderData);
-          
-          try {
-            const reminderRef = await addDoc(collection(db, 'reminders'), reminderData);
-            console.log('Pripomienka vytvorená s ID:', reminderRef.id);
-          } catch (error) {
-            console.error('Chyba pri vytváraní pripomienky:', error);
-            throw error;
-          }
-        }
-      } else {
-        const docRef: DocumentReference<DocumentData> = await addDoc(collection(db, 'businessCases'), businessCaseData);
-        setSnackbar({
-          open: true,
-          message: 'Prípad bol úspešne vytvorený',
-          severity: 'success'
-        });
-
-        // Ak je nastavený reminder pri vytvorení, vytvoríme email notifikáciu
-        if (formData.reminderDateTime) {
-          console.log('Vytváram pripomienku:', {
-            dateTime: formData.reminderDateTime,
-            email: currentUser.email,
-            companyName: formData.companyName,
-            businessCaseId: docRef.id
-          });
-
-          const reminderData = {
-            userId: currentUser.uid,
-            userEmail: currentUser.email,
-            businessCaseId: docRef.id,
-            reminderDateTime: Timestamp.fromDate(new Date(formData.reminderDateTime)),
-            companyName: formData.companyName,
-            reminderNote: formData.reminderNote || '',
-            contactPerson: formData.contactPerson,
-            createdAt: Timestamp.now(),
-            createdBy: {
-              firstName: userData.firstName || '',
-              lastName: userData.lastName || ''
-            },
-            sent: false
-          };
-
-          console.log('Dáta pripomienky:', reminderData);
-          
-          try {
-            const reminderRef = await addDoc(collection(db, 'reminders'), reminderData);
-            console.log('Pripomienka vytvorená s ID:', reminderRef.id);
-          } catch (error) {
-            console.error('Chyba pri vytváraní pripomienky:', error);
-            throw error;
-          }
-        }
-      }
-
-      // Vytvorenie alebo aktualizácia kontaktu
-      const contactsCollection = collection(db, 'contacts');
-      const contactData = {
-        firstName: formData.contactPerson.firstName,
-        lastName: formData.contactPerson.lastName,
-        company: formData.companyName,
-        phonePrefix: selectedCountry.prefix,
-        phoneNumber: formData.contactPerson.phone.replace(selectedCountry.prefix, ''),
-        countryCode: selectedCountry.code.toLowerCase(),
-        email: formData.contactPerson.email,
-        createdAt: Timestamp.now(),
-        createdBy: {
-          firstName: userData.firstName,
-          lastName: userData.lastName
-        }
-      };
-
-      await addDoc(contactsCollection, contactData);
-
-      setOpen(false);
-      setEditCase(null);
-      setFormData({
-        companyName: '',
-        vatNumber: '',
-        companyAddress: '',
-        contactPerson: {
-          firstName: '',
-          lastName: '',
-          phone: '',
-          email: '',
-        },
-        internalNote: '',
-        status: 'NOT_CALLED',
-        reminderDateTime: null,
-        reminderNote: '',
-        createdBy: null,
-        createdAt: null
-      });
-      fetchCases();
-    } catch (error) {
-      console.error('Error saving business case:', error);
-      setSnackbar({
-        open: true,
-        message: 'Nastala chyba pri ukladaní obchodného prípadu',
-        severity: 'error'
-      });
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    setCaseToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!caseToDelete) return;
-    
-    try {
-      await deleteDoc(doc(db, 'businessCases', caseToDelete));
-      setSnackbar({
-        open: true,
-        message: 'Prípad bol úspešne vymazaný',
-        severity: 'success'
-      });
-      fetchCases();
-    } catch (error) {
-      console.error('Error deleting case:', error);
-      setSnackbar({
-        open: true,
-        message: 'Nastala chyba pri mazaní prípadu',
-        severity: 'error'
-      });
-    } finally {
-      setDeleteDialogOpen(false);
-      setCaseToDelete(null);
-    }
-  };
-
-  const handleEdit = (businessCase: BusinessCase) => {
+  const handleEdit = useCallback((businessCase: BusinessCase) => {
     setEditCase(businessCase);
     setFormData({
       companyName: businessCase.companyName,
@@ -708,58 +546,101 @@ export default function BusinessCases() {
       status: businessCase.status,
       reminderDateTime: businessCase.reminderDateTime,
       reminderNote: businessCase.reminderNote,
-      createdBy: businessCase.createdBy || null,
-      createdAt: businessCase.createdAt?.toDate() || null
     });
+    const country = euCountries.find(c => c.code === businessCase.countryCode) || euCountries[0];
+    setSelectedCountry(country);
     setOpen(true);
-  };
+  }, []);
 
-  const handleCountryChange = (event: any) => {
-    const country = euCountries.find(c => c.code === event.target.value);
-    if (country) {
-      setSelectedCountry(country);
-      // Ak je telefónne číslo prázdne, pridáme predvolbu
-      if (!formData.contactPerson.phone) {
-        setFormData({
-          ...formData,
-          contactPerson: { ...formData.contactPerson, phone: country.prefix }
-        });
+  const handleDelete = useCallback((id: string) => {
+    setCaseToDelete(id);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
+    try {
+      if (!currentUser || !userData) {
+        setSnackbar({ open: true, message: 'Nie ste prihlásený', severity: 'error' }); return;
       }
+      const isEditing = !!editCase?.id;
+      const businessCaseData = {
+        companyName: formData.companyName,
+        vatNumber: formData.vatNumber,
+        companyAddress: formData.companyAddress,
+        contactPerson: formData.contactPerson,
+        internalNote: formData.internalNote,
+        status: formData.status,
+        reminderDateTime: formData.reminderDateTime ? Timestamp.fromDate(formData.reminderDateTime) : null,
+        reminderNote: formData.reminderNote,
+        countryCode: selectedCountry.code,
+        companyID: userData.companyID,
+        ...(isEditing ? {} : { 
+          createdAt: Timestamp.now(),
+          createdBy: { firstName: userData.firstName || '', lastName: userData.lastName || '' }
+        }),
+        ...(isEditing ? { lastModifiedAt: Timestamp.now() } : {})
+      };
+
+      if (isEditing) {
+        await updateDoc(doc(db, 'businessCases', editCase.id!), businessCaseData);
+        setSnackbar({ open: true, message: 'Prípad bol úspešne upravený', severity: 'success' });
+      } else {
+        const docRef = await addDoc(collection(db, 'businessCases'), businessCaseData);
+        setSnackbar({ open: true, message: 'Prípad bol úspešne vytvorený', severity: 'success' });
+        if (formData.reminderDateTime) {
+          const reminderData = {
+            userId: currentUser.uid, userEmail: currentUser.email, businessCaseId: docRef.id,
+            reminderDateTime: Timestamp.fromDate(formData.reminderDateTime), companyName: formData.companyName,
+            reminderNote: formData.reminderNote || '', contactPerson: formData.contactPerson, createdAt: Timestamp.now(),
+            createdBy: { firstName: userData.firstName || '', lastName: userData.lastName || '' }, sent: false
+          };
+          await addDoc(collection(db, 'reminders'), reminderData);
+        }
+      }
+      if (isEditing && formData.reminderDateTime) {
+        const reminderData = {
+          userId: currentUser.uid, userEmail: currentUser.email, businessCaseId: editCase.id!,
+          reminderDateTime: Timestamp.fromDate(formData.reminderDateTime), companyName: formData.companyName,
+          reminderNote: formData.reminderNote || '', contactPerson: formData.contactPerson, createdAt: Timestamp.now(),
+          createdBy: { firstName: userData.firstName || '', lastName: userData.lastName || '' }, sent: false
+        };
+        await addDoc(collection(db, 'reminders'), reminderData);
+      }
+      
+      setOpen(false); setEditCase(null);
+      setFormData({ 
+        companyName: '', vatNumber: '', companyAddress: '',
+        contactPerson: { firstName: '', lastName: '', phone: '', email: '' },
+        internalNote: '', status: 'NOT_CALLED', reminderDateTime: null, reminderNote: '' 
+      });
+      fetchCases();
+    } catch (error) {
+      console.error('Error saving business case:', error);
+      setSnackbar({ open: true, message: 'Nastala chyba pri ukladaní', severity: 'error' });
     }
-  };
+  }, [currentUser, userData, formData, editCase, selectedCountry, fetchCases]);
 
-  const handleDateFilterChange = (filter: 'all' | 'today' | 'thisWeek' | 'thisMonth' | 'thisYear' | null) => {
-    setDateFilter(filter);
-  };
-
-  const filteredCases = cases.filter((businessCase: BusinessCase) => {
-    const createdAt = businessCase.createdAt instanceof Timestamp ? businessCase.createdAt.toDate() : new Date(businessCase.createdAt);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const thisWeekStart = new Date(today);
-    thisWeekStart.setDate(today.getDate() - today.getDay());
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisYearStart = new Date(now.getFullYear(), 0, 1);
-
-    if (dateFilter === 'today') {
-      return createdAt >= today;
-    } else if (dateFilter === 'thisWeek') {
-      return createdAt >= thisWeekStart;
-    } else if (dateFilter === 'thisMonth') {
-      return createdAt >= thisMonthStart;
-    } else if (dateFilter === 'thisYear') {
-      return createdAt >= thisYearStart;
+  const confirmDelete = useCallback(async () => {
+    if (!caseToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'businessCases', caseToDelete));
+      setSnackbar({ open: true, message: 'Prípad bol úspešne vymazaný', severity: 'success' });
+      fetchCases();
+    } catch (error) {
+      console.error('Error deleting case:', error);
+      setSnackbar({ open: true, message: 'Nastala chyba pri mazaní', severity: 'error' });
+    } finally {
+      setDeleteDialogOpen(false);
+      setCaseToDelete(null);
     }
+  }, [caseToDelete, fetchCases]);
 
-    return true;
-  });
+  useEffect(() => {
+    fetchCases();
+  }, [fetchCases]);
 
-  const handleRowClick = (id: string) => {
-    setExpandedCaseId(expandedCaseId === id ? null : id);
-  };
-
-  const renderMobileCase = (businessCase: BusinessCase) => (
-    <MobileBusinessCard isDarkMode={isDarkMode}>
+  const renderMobileCase = useCallback((businessCase: BusinessCase) => (
+    <MobileBusinessCard key={businessCase.id} isDarkMode={isDarkMode}>
       <MobileCardHeader isDarkMode={isDarkMode}>
         <MobileCompanyName isDarkMode={isDarkMode}>
           {businessCase.companyName}
@@ -901,9 +782,9 @@ export default function BusinessCases() {
         </IconButton>
       </MobileCardActions>
     </MobileBusinessCard>
-  );
+  ), [isDarkMode, handleEdit, handleDelete]);
 
-  const fetchPhases = async () => {
+  const fetchPhases = useCallback(async () => {
     try {
       const phasesCollection = collection(db, 'phases');
       const snapshot = await getDocs(phasesCollection);
@@ -921,9 +802,9 @@ export default function BusinessCases() {
     } catch (error) {
       console.error('Error fetching phases:', error);
     }
-  };
+  }, []);
 
-  const handleAddPhase = async (phase: string, businessCaseId: string) => {
+  const handleAddPhase = useCallback(async (phase: string, businessCaseId: string) => {
     const timestamp = Timestamp.now();
     const newPhase: Phase = { 
       id: crypto.randomUUID(),
@@ -964,9 +845,9 @@ export default function BusinessCases() {
       });
     }
     setPhaseDialogOpen(false);
-  };
+  }, []);
 
-  const handleDeletePhase = async (businessCaseId: string, phaseId: string) => {
+  const handleDeletePhase = useCallback(async (businessCaseId: string, phaseId: string) => {
     try {
       const caseRef = doc(db, 'businessCases', businessCaseId);
       const caseDoc = await getDoc(caseRef);
@@ -1001,11 +882,11 @@ export default function BusinessCases() {
         severity: 'error'
       });
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPhases();
-  }, []);
+  }, [fetchPhases]);
 
   const renderPhasesTimeline = (caseId: string): JSX.Element | null => {
     const businessCase = cases.find((c: BusinessCase) => c.id === caseId);
@@ -1101,8 +982,6 @@ export default function BusinessCases() {
                 status: 'NOT_CALLED',
                 reminderDateTime: null,
                 reminderNote: '',
-                createdBy: null,
-                createdAt: null
               });
               setSelectedCountry(euCountries[0]);
               setOpen(true);
@@ -1125,7 +1004,6 @@ export default function BusinessCases() {
         </Box>
       </PageHeader>
 
-      {/* Mobilné tlačidlo */}
       <Box sx={{ 
         display: { xs: 'block', sm: 'none' },
         width: '100%', 
@@ -1149,8 +1027,6 @@ export default function BusinessCases() {
               status: 'NOT_CALLED',
               reminderDateTime: null,
               reminderNote: '',
-              createdBy: null,
-              createdAt: null
             });
             setSelectedCountry(euCountries[0]);
             setOpen(true);
@@ -1189,330 +1065,219 @@ export default function BusinessCases() {
         <SearchField
           value={searchTerm}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-          label="Vyhľadať prípad"
+          label="Vyhľadať prípad (Firma, Kontakt, Poznámka)"
         />
       </SearchWrapper>
 
-      <Box sx={{ display: 'flex', gap: 2, marginBottom: 2 }}>
-        <Button variant={dateFilter === 'all' ? 'contained' : 'outlined'} onClick={() => handleDateFilterChange('all')}>
-          Všetky
-        </Button>
-        <Button variant={dateFilter === 'today' ? 'contained' : 'outlined'} onClick={() => handleDateFilterChange('today')}>
-          Dnes
-        </Button>
-        <Button variant={dateFilter === 'thisWeek' ? 'contained' : 'outlined'} onClick={() => handleDateFilterChange('thisWeek')}>
-          Tento týždeň
-        </Button>
-        <Button variant={dateFilter === 'thisMonth' ? 'contained' : 'outlined'} onClick={() => handleDateFilterChange('thisMonth')}>
-          Tento mesiac
-        </Button>
-        <Button variant={dateFilter === 'thisYear' ? 'contained' : 'outlined'} onClick={() => handleDateFilterChange('thisYear')}>
-          Tento rok
-        </Button>
-      </Box>
-
-      {/* Mobilné zobrazenie */}
-      <Box sx={{ 
-        display: { 
-          xs: 'block', 
-          md: 'none' 
-        }
-      }}>
-        {filteredCases.map((businessCase: BusinessCase) => (
-          <Box key={businessCase.id}>
-            {renderMobileCase(businessCase)}
-          </Box>
-        ))}
-      </Box>
-
-      {/* Desktop zobrazenie */}
-      <TableContainer 
-        component={Paper} 
-        sx={{ 
-          display: { 
-            xs: 'none', 
-            md: 'block' 
-          },
-          backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-          borderRadius: '20px',
-          border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-          '& .MuiTableCell-root': {
-            color: isDarkMode ? '#ffffff' : '#000000',
-            borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-            padding: '16px',
-            fontSize: '0.9rem',
-            whiteSpace: 'nowrap'
-          },
-          '& .MuiTableHead-root .MuiTableCell-root': {
-            fontWeight: 600,
-            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-            color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-            borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-          },
-          '& .MuiTableBody-root .MuiTableRow-root': {
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': {
-              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-            }
-          }
-        }}
-      >
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Dátum vytvorenia</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Firma</TableCell>
-              <TableCell>Kontaktná osoba</TableCell>
-              <TableCell>Telefón</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Vytvoril</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredCases.map((businessCase) => (
-              <React.Fragment key={businessCase.id}>
-                <StyledTableRow isDarkMode={isDarkMode} onClick={() => handleRowClick(businessCase.id!)}>
-                  <TableCell>
-                    {businessCase.createdAt instanceof Timestamp ? 
-                      businessCase.createdAt.toDate().toLocaleString('sk-SK', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }).replace(',', '') : 
-                      new Date(businessCase.createdAt).toLocaleString('sk-SK', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }).replace(',', '')}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={caseStatuses[businessCase.status].label}
-                      color={caseStatuses[businessCase.status].color}
-                      size="small"
-                      sx={{
-                        fontSize: {
-                          xs: '0.7rem',
-                          sm: '0.8rem'
-                        },
-                        height: {
-                          xs: '24px',
-                          sm: '32px'
-                        }
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>{businessCase.companyName}</TableCell>
-                  <TableCell>{businessCase.contactPerson.firstName} {businessCase.contactPerson.lastName}</TableCell>
-                  <TableCell>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 1,
-                      '& img': {
-                        width: {
-                          xs: '16px',
-                          sm: '20px'
-                        }
+      <Box sx={{ display: 'flex', gap: 2, marginBottom: 3, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Typography variant="body1" fontWeight="medium">Filtrovať podľa dátumu:</Typography>
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+              <DatePicker
+                  label="Od"
+                  value={filterStartDate}
+                  onChange={(newValue: Date | null) => setFilterStartDate(newValue)}
+                  slotProps={{ 
+                      textField: { 
+                          size: 'small',
+                          sx: { 
+                              minWidth: 150,
+                              backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.8)' : '#ffffff',
+                           },
+                           InputLabelProps: { sx: { color: isDarkMode ? 'rgba(255,255,255,0.7)' : 'inherit' }},
+                           InputProps: { sx: { color: isDarkMode ? '#fff' : 'inherit' }}
                       }
-                    }}>
-                      <img
-                        loading="lazy"
-                        src={`https://flagcdn.com/${businessCase.countryCode?.toLowerCase()}.svg`}
-                        alt=""
-                      />
-                      {businessCase.contactPerson.phone}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{businessCase.contactPerson.email}</TableCell>
-                  <TableCell>
-                    {businessCase.createdBy?.firstName} {businessCase.createdBy?.lastName}
-                  </TableCell>
-                </StyledTableRow>
-                {expandedCaseId === businessCase.id && (
-                  <StyledTableRow isDarkMode={isDarkMode}>
-                    <TableCell colSpan={7}>
-                      <Box sx={{ padding: 2 }}>
-                        <Typography variant="h6" sx={{ marginBottom: 1 }}>Detail obchodného prípadu</Typography>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                          <Box>
-                            <Typography variant="body2"><strong>Dátum vytvorenia:</strong> {businessCase.createdAt instanceof Timestamp ? 
-                              businessCase.createdAt.toDate().toLocaleString('sk-SK', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              }).replace(',', '') : 
-                              new Date(businessCase.createdAt).toLocaleString('sk-SK', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              }).replace(',', '')}</Typography>
-                            <Typography variant="body2"><strong>Status:</strong> {caseStatuses[businessCase.status].label}</Typography>
-                            <Typography variant="body2"><strong>Firma:</strong> {businessCase.companyName}</Typography>
-                            <Typography variant="body2"><strong>IČ DPH:</strong> {businessCase.vatNumber}</Typography>
-                            {businessCase.internalNote && (
-                              <Typography variant="body2" sx={{ marginTop: 1 }}><strong>Interná poznámka:</strong> {businessCase.internalNote}</Typography>
-                            )}
-                          </Box>
-                          <Box>
-                            <Typography variant="body2"><strong>Kontaktná osoba:</strong> {businessCase.contactPerson.firstName} {businessCase.contactPerson.lastName}</Typography>
-                            <Typography variant="body2"><strong>Telefón:</strong> {businessCase.contactPerson.phone}</Typography>
-                            <Typography variant="body2"><strong>Email:</strong> {businessCase.contactPerson.email}</Typography>
-                            {businessCase.reminderDateTime && (
-                              <Typography variant="body2"><strong>Pripomienka:</strong> {convertToDate(businessCase.reminderDateTime)?.toLocaleString('sk-SK', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              }).replace(',', '')}</Typography>
-                            )}
-                            {businessCase.reminderNote && (
-                              <Typography variant="body2" sx={{ marginTop: 1 }}><strong>Poznámka k pripomienke:</strong> {businessCase.reminderNote}</Typography>
-                            )}
-                          </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-                          <Typography variant="body2" sx={{ textAlign: 'left', marginLeft: 0 }}><strong>Vytvoril:</strong> {businessCase.createdBy?.firstName} {businessCase.createdBy?.lastName}</Typography>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Tooltip title="Upraviť">
-                              <IconButton 
-                                onClick={() => handleEdit(businessCase)}
-                                sx={{ 
-                                  color: colors.accent.main,
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(255, 159, 67, 0.1)'
-                                  }
-                                }}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Vymazať">
-                              <IconButton 
-                                onClick={() => handleDelete(businessCase.id!)}
-                                sx={{ 
-                                  color: colors.secondary.main,
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(255, 107, 107, 0.1)'
-                                  }
-                                }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </Box>
-                        <Box sx={{ marginTop: 2 }}>
-                          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            Fázy obchodu
-                            <IconButton onClick={() => setPhaseDialogOpen(true)} sx={{ color: colors.accent.main }}>
-                              <AddIcon />
-                            </IconButton>
-                          </Typography>
-                          <Box sx={{ 
-                            marginTop: 1, 
-                            display: 'flex', 
-                            gap: 1, 
-                            flexWrap: 'nowrap',
-                            overflowX: 'auto',
-                            padding: '4px 0',
-                            '&::-webkit-scrollbar': {
-                              height: '6px',
-                            },
-                            '&::-webkit-scrollbar-thumb': {
-                              background: 'rgba(0, 0, 0, 0.2)',
-                              borderRadius: '3px',
-                            },
-                          }}>
-                            {businessCase.phases?.map((phase, index) => (
-                              <Chip
-                                key={phase.id}
-                                label={
-                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                    <Typography sx={{ fontSize: '0.8rem', whiteSpace: 'normal', overflow: 'visible', paddingRight: '5px' }}>
-                                      {`${phase.name} - ${
-                                        phase.createdAt instanceof Date ? 
-                                        phase.createdAt.toLocaleString('sk-SK', {
-                                          day: '2-digit',
-                                          month: '2-digit',
-                                          year: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        }) : 
-                                        'Neznámy dátum'
-                                      }`}
-                                    </Typography>
-                                    <IconButton 
-                                      size="small" 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        e.preventDefault();
-                                        handleDeletePhase(businessCase.id!, phase.id);
-                                      }}
-                                      sx={{ ml: 1, p: 0.5 }}
-                                    >
-                                      <DeleteIcon sx={{ color: '#ffffff', fontSize: '0.9rem' }} />
-                                    </IconButton>
-                                  </Box>
-                                }
-                                sx={{
-                                  backgroundColor: phaseColors[index % phaseColors.length],
-                                  color: '#ffffff',
-                                  borderRadius: '16px',
-                                  '& .MuiChip-label': {
-                                    padding: '6px 8px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    width: '100%'
-                                  },
-                                  height: 'auto',
-                                  minHeight: '36px',
-                                  fontSize: '0.85rem',
-                                  minWidth: '280px',
-                                  maxWidth: '280px',
-                                  flex: '0 0 auto',
-                                  position: 'relative',
-                                  '&::after': index < (businessCase.phases?.length || 0) - 1 ? {
-                                    content: '""',
-                                    position: 'absolute',
-                                    right: '-12px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    width: '10px',
-                                    height: '10px',
-                                    borderTop: '5px solid transparent',
-                                    borderBottom: '5px solid transparent',
-                                    borderLeft: `5px solid ${phaseColors[index % phaseColors.length]}`,
-                                    zIndex: 1
-                                  } : {}
-                                }}
-                              />
-                            ))}
-                          </Box>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                  </StyledTableRow>
-                )}
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  }}
+              />
+              <DatePicker
+                  label="Do"
+                  value={filterEndDate}
+                  onChange={(newValue: Date | null) => setFilterEndDate(newValue)}
+                  slotProps={{ 
+                      textField: { 
+                          size: 'small', 
+                          sx: { 
+                              minWidth: 150,
+                              backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.8)' : '#ffffff',
+                           },
+                           InputLabelProps: { sx: { color: isDarkMode ? 'rgba(255,255,255,0.7)' : 'inherit' }},
+                           InputProps: { sx: { color: isDarkMode ? '#fff' : 'inherit' }}
+                      }
+                  }}
+              />
+          </LocalizationProvider>
+           <Button 
+              onClick={() => { setFilterStartDate(null); setFilterEndDate(null); }} 
+              size="small"
+              sx={{ ml: 1, color: isDarkMode ? colors.text.secondary : 'inherit' }}
+            >
+              Vymazať filter
+            </Button>
+      </Box>
+
+      {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                <CircularProgress sx={{ color: colors.accent.main }} />
+            </Box>
+        )}
+
+      {!loading && (
+          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+              {getFilteredCases().map((businessCase: BusinessCase) => renderMobileCase(businessCase))}
+          </Box>
+      )}
+
+      {!loading && (
+          <TableContainer 
+              component={Paper} 
+              sx={{ 
+                  display: { xs: 'none', md: 'block' },
+                  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                  borderRadius: '20px',
+                  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                  backdropFilter: 'blur(20px)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                  '& .MuiTableCell-root': {
+                    color: isDarkMode ? '#ffffff' : '#000000',
+                    borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    padding: '16px',
+                    fontSize: '0.9rem',
+                    whiteSpace: 'nowrap'
+                  },
+                  '& .MuiTableHead-root .MuiTableCell-root': {
+                    fontWeight: 600,
+                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                  },
+                  '& .MuiTableBody-root .MuiTableRow-root': {
+                    transition: 'all 0.2s ease-in-out',
+                    '&:hover': {
+                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }
+                  }
+              }}
+          >
+              <Table>
+                  <TableHead>
+                      <TableRow>
+                          <TableCell>Dátum vytvorenia</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Firma</TableCell>
+                          <TableCell>Kontaktná osoba</TableCell>
+                          <TableCell>Telefón</TableCell>
+                          <TableCell>Email</TableCell>
+                          <TableCell>Vytvoril</TableCell>
+                      </TableRow>
+                  </TableHead>
+                  <TableBody>
+                       {getFilteredCases().map((businessCase: BusinessCase) => (
+                          <React.Fragment key={businessCase.id}>
+                              <StyledTableRow isDarkMode={isDarkMode} onClick={() => handleRowClick(businessCase.id!)} sx={{ cursor: 'pointer' }}>
+                                  <StyledTableCell isDarkMode={isDarkMode}>{(businessCase.createdAt as Timestamp)?.toDate().toLocaleString('sk-SK') ?? '-'}</StyledTableCell>
+                                  <StyledTableCell isDarkMode={isDarkMode}><Chip label={caseStatuses[businessCase.status]?.label ?? businessCase.status} color={caseStatuses[businessCase.status]?.color ?? 'default'} size="small" /></StyledTableCell>
+                                  <StyledTableCell isDarkMode={isDarkMode}>{businessCase.companyName}</StyledTableCell>
+                                  <StyledTableCell isDarkMode={isDarkMode}>{`${businessCase.contactPerson.firstName} ${businessCase.contactPerson.lastName}`}</StyledTableCell>
+                                  <StyledTableCell isDarkMode={isDarkMode}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          {businessCase.countryCode && <img loading="lazy" width="20" src={`https://flagcdn.com/${businessCase.countryCode.toLowerCase()}.svg`} alt="" />}
+                                          {businessCase.contactPerson.phone}
+                                      </Box>
+                                  </StyledTableCell>
+                                  <StyledTableCell isDarkMode={isDarkMode}>{businessCase.contactPerson.email}</StyledTableCell>
+                                  <StyledTableCell isDarkMode={isDarkMode}>{`${businessCase.createdBy?.firstName ?? ''} ${businessCase.createdBy?.lastName ?? ''}`}</StyledTableCell>
+                              </StyledTableRow>
+                              <TableRow sx={{ '& > *': { borderBottom: 'unset', padding: 0 } }}>
+                                  <StyledTableCell isDarkMode={isDarkMode} style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                                      <Collapse in={expandedCaseId === businessCase.id} timeout="auto" unmountOnExit>
+                                          <Box sx={{ margin: 1, padding: 2, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)', borderRadius: '8px' }}>
+                                              <Typography variant="h6" gutterBottom component="div" sx={{ fontSize: '1.2rem' }}>
+                                                  Detail obchodného prípadu
+                                              </Typography>
+                                              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 2 }}>
+                                                  <Box>
+                                                       <Typography variant="body2"><strong>Dátum vytvorenia:</strong> {(businessCase.createdAt as Timestamp)?.toDate().toLocaleString('sk-SK') ?? '-'}</Typography>
+                                                       <Typography variant="body2"><strong>Status:</strong> {caseStatuses[businessCase.status]?.label ?? businessCase.status}</Typography>
+                                                       <Typography variant="body2"><strong>Firma:</strong> {businessCase.companyName}</Typography>
+                                                       <Typography variant="body2"><strong>IČ DPH:</strong> {businessCase.vatNumber || '-'}</Typography>
+                                                       {businessCase.internalNote && <Typography variant="body2" sx={{ mt: 1 }}><strong>Interná poznámka:</strong> {businessCase.internalNote}</Typography>}
+                                                  </Box>
+                                                  <Box>
+                                                       <Typography variant="body2"><strong>Kontaktná osoba:</strong> {`${businessCase.contactPerson.firstName} ${businessCase.contactPerson.lastName}`}</Typography>
+                                                       <Typography variant="body2"><strong>Telefón:</strong> {businessCase.contactPerson.phone}</Typography>
+                                                       <Typography variant="body2"><strong>Email:</strong> {businessCase.contactPerson.email}</Typography>
+                                                       {businessCase.reminderDateTime && <Typography variant="body2"><strong>Pripomienka:</strong> {format(businessCase.reminderDateTime, 'dd.MM.yyyy HH:mm')}</Typography>}
+                                                       {businessCase.reminderNote && <Typography variant="body2" sx={{ mt: 1 }}><strong>Poznámka k pripomienke:</strong> {businessCase.reminderNote}</Typography>}
+                                                  </Box>
+                                              </Box>
+                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 1, borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` }}>
+                                                  <Typography variant="body2"><strong>Vytvoril:</strong> {`${businessCase.createdBy?.firstName ?? ''} ${businessCase.createdBy?.lastName ?? ''}`}</Typography>
+                                                  <Box sx={{ display: 'flex', gap: 1 }}>
+                                                      <Tooltip title="Upraviť"><IconButton onClick={() => handleEdit(businessCase)} sx={{ color: colors.accent.main, '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.1)' } }}><EditIcon /></IconButton></Tooltip>
+                                                      <Tooltip title="Vymazať"><IconButton onClick={() => handleDelete(businessCase.id!)} sx={{ color: colors.secondary.main, '&:hover': { backgroundColor: 'rgba(255, 107, 107, 0.1)' } }}><DeleteIcon /></IconButton></Tooltip>
+                                                  </Box>
+                                              </Box>
+                                              <Box sx={{ marginTop: 2 }}>
+                                                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1.1rem' }}>
+                                                      Fázy obchodu
+                                                      <IconButton 
+                                                          onClick={() => { 
+                                                              if (businessCase.id) {
+                                                                  setExpandedCaseId(businessCase.id); 
+                                                                  setPhaseDialogOpen(true); 
+                                                              }
+                                                          }} 
+                                                          sx={{ color: colors.accent.main }} 
+                                                          size="small"
+                                                      >
+                                                          <AddIcon fontSize="small"/>
+                                                      </IconButton>
+                                                  </Typography>
+                                                  <Box sx={{ marginTop: 1, display: 'flex', gap: 1, flexWrap: 'nowrap', overflowX: 'auto', padding: '4px 0', /* scrollbar styles */ }}>
+                                                      {businessCase.phases?.sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)).map((phase: Phase, index: number) => (
+                                                          <Chip
+                                                              key={phase.id}
+                                                              label={
+                                                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                                                      <Typography sx={{ fontSize: '0.8rem', whiteSpace: 'normal', overflow: 'visible', paddingRight: '5px' }}>
+                                                                          {`${phase.name} - ${phase.createdAt && phase.createdAt instanceof Date && !isNaN(phase.createdAt.getTime()) ? format(phase.createdAt, 'dd.MM.yyyy HH:mm') : 'Neznámy dátum'}`}
+                                                                      </Typography>
+                                                                      <IconButton 
+                                                                          size="small" 
+                                                                          onClick={(e: React.MouseEvent) => { 
+                                                                              e.stopPropagation(); 
+                                                                              e.preventDefault(); 
+                                                                              if (businessCase.id) handleDeletePhase(businessCase.id, phase.id); 
+                                                                          }} 
+                                                                          sx={{ ml: 0.5, p: 0.2 }}
+                                                                      >
+                                                                          <DeleteIcon sx={{ color: '#ffffff', fontSize: '0.8rem' }} />
+                                                                      </IconButton>
+                                                                  </Box>
+                                                              }
+                                                              sx={{
+                                                                  backgroundColor: phaseColors[index % phaseColors.length],
+                                                                  color: '#ffffff',
+                                                                  borderRadius: '16px',
+                                                                  '& .MuiChip-label': { padding: '6px 8px', display: 'flex', alignItems: 'center', width: '100%' },
+                                                                  height: 'auto', minHeight: '32px', fontSize: '0.8rem', minWidth: '180px', maxWidth: '250px', flex: '0 0 auto', position: 'relative',
+                                                                  '&::after': index < (businessCase.phases?.length || 0) - 1 ? { content: '""', position: 'absolute', right: '-10px', top: '50%', transform: 'translateY(-50%)', width: '8px', height: '8px', borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: `4px solid ${phaseColors[index % phaseColors.length]}`, zIndex: 1 } : {}
+                                                              }}
+                                                          />
+                                                      ))}
+                                                  </Box>
+                                              </Box>
+                                          </Box>
+                                      </Collapse>
+                                  </StyledTableCell>
+                              </TableRow>
+                          </React.Fragment>
+                      ))}
+                  </TableBody>
+              </Table>
+          </TableContainer>
+      )}
 
       <Dialog
         open={open}
@@ -1533,8 +1298,6 @@ export default function BusinessCases() {
             status: 'NOT_CALLED',
             reminderDateTime: null,
             reminderNote: '',
-            createdBy: null,
-            createdAt: null
           });
         }}
         maxWidth="md"
@@ -1951,89 +1714,45 @@ export default function BusinessCases() {
           <DialogTitle>Pridať fázu obchodu</DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 2 }}>
-              <Typography variant="body2">Vyberte alebo pridajte vlastný krok. Nová fáza sa pridá na koniec časovej osi (napravo).</Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: 1, 
-                marginTop: 2 
-              }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: 1, 
-                  alignItems: 'center', 
-                  marginBottom: 1 
-                }}>
-                  <Chip 
-                    label="Stretnutie" 
-                    onClick={() => handleAddPhase('Stretnutie', expandedCaseId!)} 
-                    sx={{ backgroundColor: phaseColors[0], color: '#fff' }} 
-                  />
-                  <Chip 
-                    label="Hovor" 
-                    onClick={() => handleAddPhase('Hovor', expandedCaseId!)} 
-                    sx={{ backgroundColor: phaseColors[1], color: '#fff' }} 
-                  />
-                  <Chip 
-                    label="Mail" 
-                    onClick={() => handleAddPhase('Mail', expandedCaseId!)} 
-                    sx={{ backgroundColor: phaseColors[2], color: '#fff' }} 
-                  />
-                  <Chip 
-                    label="Videohovor" 
-                    onClick={() => handleAddPhase('Videohovor', expandedCaseId!)} 
-                    sx={{ backgroundColor: phaseColors[3], color: '#fff' }} 
-                  />
-                </Box>
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}>
-                  <TextField
-                    placeholder="Pridať vlastný krok"
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    sx={{ marginTop: 1 }}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        const inputValue = (e.target as HTMLInputElement).value;
-                        handleAddPhase(inputValue, expandedCaseId!);
-                        (e.target as HTMLInputElement).value = '';
-                      }
-                    }}
-                  />
-                  <IconButton
-                    onClick={(e) => {
-                      const input = e.currentTarget.previousElementSibling?.querySelector('input');
-                      if (input && input.value) {
-                        handleAddPhase(input.value, expandedCaseId!);
-                        input.value = '';
-                      }
-                    }}
-                    sx={{ 
-                      marginTop: 1,
-                      backgroundColor: colors.accent.main,
-                      color: '#fff',
-                      '&:hover': {
-                        backgroundColor: colors.accent.light,
-                      }
-                    }}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </Box>
+              <Typography variant="body2">Vyberte alebo pridajte vlastný krok. Nová fáza sa pridá na koniec časovej osi.</Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, mb: 1 }}>
+                  <Chip label="Stretnutie" onClick={() => handleAddPhase('Stretnutie', expandedCaseId!)} sx={{ bgcolor: phaseColors[0], color: '#fff' }} />
+                  <Chip label="Hovor" onClick={() => handleAddPhase('Hovor', expandedCaseId!)} sx={{ bgcolor: phaseColors[1], color: '#fff' }} />
+                  <Chip label="Mail" onClick={() => handleAddPhase('Mail', expandedCaseId!)} sx={{ bgcolor: phaseColors[2], color: '#fff' }} />
+                  <Chip label="Videohovor" onClick={() => handleAddPhase('Videohovor', expandedCaseId!)} sx={{ bgcolor: phaseColors[3], color: '#fff' }} />
               </Box>
-              
-              {expandedCaseId && renderPhasesTimeline(expandedCaseId)}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                 <TextField
+                   placeholder="Pridať vlastný krok"
+                   variant="outlined"
+                   size="small"
+                   fullWidth
+                   sx={{ marginTop: 1 }}
+                   onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => { // Správny typ eventu
+                       if (e.key === 'Enter' && expandedCaseId) {
+                           const inputElement = e.target as HTMLInputElement;
+                           if (inputElement.value) handleAddPhase(inputElement.value, expandedCaseId);
+                           inputElement.value = ''; 
+                       }
+                   }}
+                 />
+                 <IconButton 
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => { // Správny typ eventu
+                        const inputElement = e.currentTarget.previousElementSibling?.querySelector('input');
+                        if (inputElement && inputElement.value && expandedCaseId) {
+                            handleAddPhase(inputElement.value, expandedCaseId);
+                            inputElement.value = ''; 
+                        }
+                    }}
+                    sx={{ /* marginTop odobratý, ak bol tu */ backgroundColor: colors.accent.main, color: '#fff', '&:hover': { backgroundColor: colors.accent.light } }}
+                 >
+                     <AddIcon />
+                 </IconButton>
+              </Box>
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPhaseDialogOpen(false)} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>
-              Zrušiť
-            </Button>
+            <Button onClick={() => setPhaseDialogOpen(false)}>Zrušiť</Button>
           </DialogActions>
         </StyledDialogContent>
       </Dialog>
