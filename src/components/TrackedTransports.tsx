@@ -445,24 +445,19 @@ const MapDialog = styled(Dialog)(({ theme }) => ({
     overflow: 'hidden',
     '& .MuiDialogTitle-root': {
       color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-      padding: '24px',
+      padding: '16px 24px',
       fontSize: '1.5rem',
       fontWeight: 600,
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
       borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+      zIndex: 10
     },
     '& .MuiDialogContent-root': {
-      padding: '24px',
-      minHeight: '600px',
-      color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-    },
-    '& .MuiDialogActions-root': {
-      padding: '24px',
-      borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+      padding: 0,
+      height: 'calc(100% - 64px)',
+      overflow: 'hidden'
     }
   },
   '& .MuiBackdrop-root': {
@@ -696,7 +691,7 @@ const TrackedTransports: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [transportToDelete, setTransportToDelete] = useState<Transport | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [mapTransport, setMapTransport] = useState<Transport | null>(null);
+  const [mapTransport, setMapTransport] = useState<Transport & { duration?: string } | null>(null);
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
@@ -1029,16 +1024,35 @@ const TrackedTransports: React.FC = () => {
               overflow: 'hidden',
               cursor: 'pointer',
               border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+              transition: 'all 0.2s ease-in-out',
               '&:hover': {
                 border: `1px solid ${colors.accent.main}`,
                 transform: 'scale(1.02)',
-                transition: 'all 0.2s ease-in-out'
+                boxShadow: '0 5px 15px rgba(0, 0, 0, 0.2)'
               }
             }} onClick={() => handleShowMap(transport)}>
               <TransportMap
                 origin={transport.loadingAddress}
                 destination={transport.unloadingAddress}
                 isThumbnail={true}
+                onDirectionsChange={(directions, distance, duration) => {
+                  if ((distance || duration) && !transport.distance) {
+                    // Vytvoríme objekt s aktualizáciami
+                    const updates: { distance?: string; duration?: string } = {};
+                    if (distance) updates.distance = distance;
+                    if (duration) updates.duration = duration;
+                    
+                    // Aktualizovať dokument len ak máme nejaké zmeny
+                    if (Object.keys(updates).length > 0) {
+                      updateDoc(doc(db, 'transports', transport.id), updates);
+                      
+                      // Aktualizovať lokálny stav
+                      setTransports(prevTransports => 
+                        prevTransports.map(t => t.id === transport.id ? { ...t, ...updates } : t)
+                      );
+                    }
+                  }
+                }}
               />
             </Box>
           </Box>
@@ -1246,6 +1260,269 @@ const TrackedTransports: React.FC = () => {
           </DialogActions>
         </StyledDialogContent>
       </Dialog>
+
+      <MapDialog
+        open={mapDialogOpen}
+        onClose={() => setMapDialogOpen(false)}
+        fullScreen
+        TransitionProps={{
+          onEntered: () => {
+            // Trigger resize event pre správne načítanie mapy po zobrazení dialógu
+            window.dispatchEvent(new Event('resize'));
+          }
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <Typography variant="h6">
+              {mapTransport ? (
+                <>
+                  Detaily prepravy: {mapTransport.orderNumber || 'Bez čísla objednávky'}
+                </>
+              ) : 'Mapa prepravy'}
+            </Typography>
+            <IconButton onClick={() => setMapDialogOpen(false)} size="large" edge="end">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {mapTransport && (
+            <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* Informačný panel */}
+              <Box sx={{ 
+                padding: '16px', 
+                backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '0 0 12px 12px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                mb: 2,
+                zIndex: 5,
+                position: 'relative',
+                border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                borderTop: 'none'
+              }}>
+                <Grid container spacing={2}>
+                  {/* Súhrnné informácie o trase */}
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <RouteIcon sx={{ color: colors.accent.main, mr: 1 }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#000000' }}>
+                        Súhrn trasy:
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, ml: 4 }}>
+                      <InfoChip variant="distance">
+                        <RouteIcon />
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          Vzdialenosť: {mapTransport.distance || 'Načítava sa...'}
+                        </Typography>
+                      </InfoChip>
+                      
+                      {mapTransport.duration && (
+                        <InfoChip variant="distance">
+                          <AccessTimeIcon />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            Odhadovaný čas jazdy: {mapTransport.duration}
+                          </Typography>
+                        </InfoChip>
+                      )}
+                    </Box>
+                  </Grid>
+
+                  {/* Vytvoril */}
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      fontSize: '0.9rem',
+                      justifyContent: 'flex-end'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <PersonIcon sx={{ fontSize: '1rem' }} />
+                        Vytvoril: {mapTransport.createdBy?.firstName} {mapTransport.createdBy?.lastName}
+                      </Box>
+                      <Box component="span" sx={{ mx: 1 }}>•</Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <AccessTimeIcon sx={{ fontSize: '1rem' }} />
+                        {format(mapTransport.createdAt instanceof Timestamp ? mapTransport.createdAt.toDate() : mapTransport.createdAt, 'dd.MM.yyyy HH:mm')}
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* Detailný prehľad nakládky a vykládky */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: { xs: 'column', md: 'row' }, 
+                  gap: 3, 
+                  mt: 3,
+                  justifyContent: 'space-between'
+                }}>
+                  {/* Nakládka */}
+                  <Box sx={{ flex: 1 }}>
+                    <Box sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      mb: 1,
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      '& .MuiSvgIcon-root': { color: colors.accent.main }
+                    }}>
+                      <LocationOnIcon />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Nakládka</Typography>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
+                      borderRadius: '8px',
+                      p: 1.5,
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+                    }}>
+                      <Typography sx={{ 
+                        fontWeight: 500, 
+                        mb: 0.5,
+                        color: isDarkMode ? '#ffffff' : '#000000'
+                      }}>
+                        {mapTransport.loadingAddress}
+                      </Typography>
+                      
+                      <Box sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        '& .MuiSvgIcon-root': { color: colors.accent.main, fontSize: '1rem' }
+                      }}>
+                        <AccessTimeIcon />
+                        <Typography variant="body2">
+                          {format(mapTransport.loadingDateTime instanceof Timestamp ? mapTransport.loadingDateTime.toDate() : mapTransport.loadingDateTime, 'dd.MM.yyyy HH:mm')}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                        mt: 0.5,
+                        fontSize: '0.85rem',
+                        '& .MuiSvgIcon-root': { color: colors.accent.light, fontSize: '0.9rem' }
+                      }}>
+                        <NotificationsIcon />
+                        <Typography variant="caption">
+                          Pripomienka {mapTransport.loadingReminder} minút pred nakládkou
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Vykládka */}
+                  <Box sx={{ flex: 1 }}>
+                    <Box sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      mb: 1,
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      '& .MuiSvgIcon-root': { color: colors.accent.main }
+                    }}>
+                      <LocationOnIcon />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Vykládka</Typography>
+                    </Box>
+                    
+                    <Box sx={{ 
+                      backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
+                      borderRadius: '8px',
+                      p: 1.5,
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+                    }}>
+                      <Typography sx={{ 
+                        fontWeight: 500, 
+                        mb: 0.5,
+                        color: isDarkMode ? '#ffffff' : '#000000'
+                      }}>
+                        {mapTransport.unloadingAddress}
+                      </Typography>
+                      
+                      <Box sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        '& .MuiSvgIcon-root': { color: colors.accent.main, fontSize: '1rem' }
+                      }}>
+                        <AccessTimeIcon />
+                        <Typography variant="body2">
+                          {format(mapTransport.unloadingDateTime instanceof Timestamp ? mapTransport.unloadingDateTime.toDate() : mapTransport.unloadingDateTime, 'dd.MM.yyyy HH:mm')}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                        mt: 0.5,
+                        fontSize: '0.85rem',
+                        '& .MuiSvgIcon-root': { color: colors.accent.light, fontSize: '0.9rem' }
+                      }}>
+                        <NotificationsIcon />
+                        <Typography variant="caption">
+                          Pripomienka {mapTransport.unloadingReminder} minút pred vykládkou
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Mapa na zvyšnú výšku */}
+              <Box sx={{ flex: 1, position: 'relative' }}>
+                <TransportMap
+                  origin={mapTransport.loadingAddress}
+                  destination={mapTransport.unloadingAddress}
+                  isThumbnail={false}
+                  onDirectionsChange={(directions, distance, duration) => {
+                    if ((distance || duration) && mapTransport) {
+                      let updates: { distance?: string; duration?: string } = {};
+                      let stateUpdate = { ...mapTransport };
+                      
+                      // Aktualizovať vzdialenosť ak nie je nastavená alebo sa zmenila
+                      if (distance && (!mapTransport.distance || mapTransport.distance !== distance)) {
+                        updates.distance = distance;
+                        stateUpdate.distance = distance;
+                      }
+                      
+                      // Aktualizovať dobu trvania ak sa zmenila
+                      if (duration && (!mapTransport.duration || mapTransport.duration !== duration)) {
+                        updates.duration = duration;
+                        stateUpdate.duration = duration;
+                      }
+                      
+                      // Ak sú nejaké zmeny, aktualizovať Firestore
+                      if (Object.keys(updates).length > 0) {
+                        updateDoc(doc(db, 'transports', mapTransport.id), updates);
+                        
+                        // Aktualizovať lokálny stav
+                        setTransports(prevTransports => 
+                          prevTransports.map(t => t.id === mapTransport.id ? { ...t, ...updates } : t)
+                        );
+                        
+                        // Aktualizovať stav mapTransport
+                        setMapTransport(stateUpdate);
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+      </MapDialog>
     </>
   );
 }

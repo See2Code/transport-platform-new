@@ -7,7 +7,7 @@ interface TransportMapProps {
   origin: string;
   destination: string;
   isThumbnail?: boolean;
-  onDirectionsChange?: (directions: google.maps.DirectionsResult | null, distance?: string) => void;
+  onDirectionsChange?: (directions: google.maps.DirectionsResult | null, distance?: string, duration?: string) => void;
 }
 
 const libraries: Libraries = ['places'];
@@ -244,15 +244,15 @@ export default function TransportMap({ origin, destination, isThumbnail = false,
         setDirections(result);
         setError(null);
         
-        // Vypočítame vzdialenosť
-        let distance = "";
-        if (result.routes[0]?.legs[0]?.distance?.text) {
-          distance = result.routes[0].legs[0].distance.text;
-        }
+        // Získanie vzdialenosti
+        const distance = result.routes[0]?.legs[0]?.distance?.text;
         
-        // Voláme callback s výsledkom a vzdialenosťou
+        // Získanie času trasy
+        const duration = result.routes[0]?.legs[0]?.duration?.text;
+        
+        // Odovzdanie údajov callback funkcii
         if (onDirectionsChange) {
-          onDirectionsChange(result, distance);
+          onDirectionsChange(result, distance, duration);
         }
         
         // Prispôsobenie mapy na zobrazenie celej trasy

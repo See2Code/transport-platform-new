@@ -992,14 +992,8 @@ const OrdersList: React.FC = () => {
       
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 14;
+      const margin = 15;
       const contentWidth = pageWidth - 2 * margin;
-      
-      // Formát dátumu pre hlavičku
-      const createdAtDate = orderData.createdAt ? format(convertToDate(orderData.createdAt)!, 'dd.MM.yyyy') : format(new Date(), 'dd.MM.yyyy');
-      
-      // Číslo objednávky
-      const orderNumber = (orderData as any).orderNumberFormatted || orderData.id.substring(0, 8);
       
       // Pomocná funkcia pre bezpečný text s diakritikou
       const safeText = (text: any): string => {
@@ -1007,39 +1001,66 @@ const OrdersList: React.FC = () => {
         return String(text);
       };
       
+      // Formát dátumu pre hlavičku
+      const createdAtDate = orderData.createdAt 
+        ? format(convertToDate(orderData.createdAt)!, 'dd.MM.yyyy') 
+        : format(new Date(), 'dd.MM.yyyy');
+      
+      // Číslo objednávky
+      const orderNumber = (orderData as any).orderNumberFormatted || orderData.id.substring(0, 8);
+      
       // --- HLAVIČKA DOKUMENTU ---
-      // Vypíšeme názov spoločnosti namiesto loga
-      doc.setFontSize(22);
-      doc.setFont('helvetica', 'bold');
+      // Logo alebo názov spoločnosti
+      if (settings?.logoURL) {
+        try {
+          // Pridáme logo ak existuje
+          const imgProps = doc.getImageProperties(settings.logoURL);
+          const imgHeight = 16;
+          const imgWidth = imgHeight * imgProps.width / imgProps.height;
+          doc.addImage(settings.logoURL, 'PNG', margin, margin, imgWidth, imgHeight);
+        } catch (error) {
+          console.error('Chyba pri načítaní loga:', error);
+          // Fallback na text ak logo zlyhalo
+          doc.setFontSize(20);
+          doc.setFont('helvetica', 'bold');
+          doc.text(settings.companyName || 'AESA GROUP', margin, margin + 8);
+        }
+      } else {
+        // Vypíšeme názov spoločnosti
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        const companyName = settings?.companyName || 'AESA GROUP';
+        doc.text(companyName, margin, margin + 8);
+      }
       
-      // Ak máme názov zo settings, použijeme ho, inak defaultný
-      const companyName = settings?.companyName || 'AESA GROUP';
-      doc.text(companyName, margin, margin + 8);
-      
+      // Dátum v hlavičke
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Trnava, ${createdAtDate}`, pageWidth - margin - 35, margin + 8);
+      doc.text(`${settings?.city || 'Trnava'}, ${createdAtDate}`, pageWidth - margin - 40, margin + 8);
       
-      // Čiara pod hlavičkou
+      // Oranžová čiara pod hlavičkou
       doc.setDrawColor(240, 140, 0); // Oranžová farba (FF9F43)
       doc.setLineWidth(0.5);
-      doc.line(margin, margin + 12, pageWidth - margin, margin + 12);
+      doc.line(margin, margin + 14, pageWidth - margin, margin + 14);
       
       // --- PRÍJEMCA A ODOSIELATEĽ ---
       const tableTop = margin + 20;
-      const colWidth = contentWidth / 2 - 2;
+      const colWidth = contentWidth / 2 - 3;
       
       // Bunka Príjemca
       doc.setFillColor(248, 248, 248);
-      doc.setDrawColor(210, 210, 210);
-      doc.roundedRect(margin, tableTop, colWidth, 45, 2, 2, 'F');
+      doc.setDrawColor(220, 220, 220);
+      doc.roundedRect(margin, tableTop, colWidth, 45, 3, 3, 'F');
+      doc.setLineWidth(0.2);
+      doc.roundedRect(margin, tableTop, colWidth, 45, 3, 3, 'S');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       
-      // Nadpis sekcie so správnou diakritikou
-      doc.text('Príjemca', margin + 3, tableTop + 7);
+      // Nadpis sekcie
+      doc.text('Príjemca', margin + 5, tableTop + 7);
       doc.setFont('helvetica', 'normal');
       
+      // Údaje príjemcu
       const customerCompany = safeText((orderData as any).zakaznik || orderData.customerCompany).toUpperCase();
       const customerStreet = safeText(orderData.customerStreet);
       const customerCity = safeText(orderData.customerCity);
@@ -1047,66 +1068,80 @@ const OrdersList: React.FC = () => {
       const customerCountry = safeText(orderData.customerCountry);
       const customerVatID = safeText(orderData.customerVatId);
       
-      doc.text(customerCompany, margin + 3, tableTop + 15);
-      doc.text(`${customerStreet}, ${customerZip} ${customerCity}, ${customerCountry}`, margin + 3, tableTop + 22);
-      doc.text(`IČO: ${customerVatID.split('/')[0] || 'N/A'}`, margin + 3, tableTop + 29);
-      doc.text(`DIČ/IČ DPH: ${customerVatID}`, margin + 3, tableTop + 36);
+      // Kontroly pre prázdne hodnoty
+      const customerAddress = [
+        customerStreet,
+        customerZip && customerCity ? `${customerZip} ${customerCity}` : (customerZip || customerCity),
+        customerCountry
+      ].filter(Boolean).join(', ');
+      
+      doc.setFontSize(10);
+      doc.text(customerCompany, margin + 5, tableTop + 15);
+      doc.text(customerAddress, margin + 5, tableTop + 22);
+      doc.text(`IČO: ${customerVatID ? customerVatID.split('/')[0] || 'N/A' : 'N/A'}`, margin + 5, tableTop + 29);
+      doc.text(`DIČ/IČ DPH: ${customerVatID || 'N/A'}`, margin + 5, tableTop + 36);
       
       // Bunka Predajca
-      doc.roundedRect(margin + colWidth + 4, tableTop, colWidth, 45, 2, 2, 'F');
+      doc.setFillColor(248, 248, 248);
+      doc.roundedRect(margin + colWidth + 6, tableTop, colWidth, 45, 3, 3, 'F');
+      doc.roundedRect(margin + colWidth + 6, tableTop, colWidth, 45, 3, 3, 'S');
       doc.setFont('helvetica', 'bold');
-      doc.text('Predajca', margin + colWidth + 7, tableTop + 7);
+      doc.text('Predajca', margin + colWidth + 11, tableTop + 7);
       doc.setFont('helvetica', 'normal');
       
-      // Použiť údaje zo settings ak sú k dispozícii
+      // Údaje predajcu
+      const companyName = settings?.companyName || 'AESA GROUP';
       const companyStreet = settings?.street || 'Pekárska 11';
       const companyCity = settings?.city || 'Trnava'; 
       const companyZip = settings?.zip || 'SK91701';
       const companyVatID = settings?.vatID || 'SK2121966220';
       const companyID = settings?.businessID || '55361731';
       
-      doc.text(companyName, margin + colWidth + 7, tableTop + 15);
-      doc.text(`${companyStreet}, ${companyZip} ${companyCity}`, margin + colWidth + 7, tableTop + 22);
-      doc.text(`IČO: ${companyID}`, margin + colWidth + 7, tableTop + 29);
-      doc.text(`DIČ/IČ DPH: ${companyVatID}`, margin + colWidth + 7, tableTop + 36);
+      doc.text(companyName, margin + colWidth + 11, tableTop + 15);
+      doc.text(`${companyStreet}, ${companyZip} ${companyCity}`, margin + colWidth + 11, tableTop + 22);
+      doc.text(`IČO: ${companyID}`, margin + colWidth + 11, tableTop + 29);
+      doc.text(`DIČ/IČ DPH: ${companyVatID}`, margin + colWidth + 11, tableTop + 36);
       
-      // Pokračujeme ako v pôvodnej funkcii...
+      // Pre špecifických zákazníkov - SL GROUP
+      let documentTitleY = tableTop + 60; // Premenujem premennú
       
-      // Vykresliť úlohy osôb pre SL GROUP
       if (customerCompany && customerCompany.toUpperCase().includes('SL GROUP')) {
         const contactTop = tableTop + 50;
-        doc.roundedRect(margin, contactTop, colWidth, 30, 2, 2, 'F');
-        doc.roundedRect(margin + colWidth + 4, contactTop, colWidth, 30, 2, 2, 'F');
+        doc.setFillColor(248, 248, 248);
+        doc.roundedRect(margin, contactTop, colWidth, 30, 3, 3, 'F');
+        doc.roundedRect(margin, contactTop, colWidth, 30, 3, 3, 'S');
+        doc.roundedRect(margin + colWidth + 6, contactTop, colWidth, 30, 3, 3, 'F');
+        doc.roundedRect(margin + colWidth + 6, contactTop, colWidth, 30, 3, 3, 'S');
+        
         doc.setFont('helvetica', 'bold');
-        doc.text('SL GROUP SL GROUP (+48 504 649 412)', margin + 3, contactTop + 7);
+        doc.text('SL GROUP (+48 504 649 412)', margin + 5, contactTop + 7);
         doc.setFont('helvetica', 'normal');
         const contactEmail = "prakapovich@sltr.pl";
-        doc.text(`Telefón: +48 504 649 412`, margin + 3, contactTop + 14);
-        doc.text(`Mobil: +48 504 649 412`, margin + 3, contactTop + 21);
-        doc.text(`E-mail: ${contactEmail}`, margin + 3, contactTop + 28);
+        doc.text(`Telefón: +48 504 649 412`, margin + 5, contactTop + 14);
+        doc.text(`Mobil: +48 504 649 412`, margin + 5, contactTop + 21);
+        doc.text(`E-mail: ${contactEmail}`, margin + 5, contactTop + 28);
         
         // Kontaktné informácie AESA
         doc.setFont('helvetica', 'bold');
-        doc.text(`Erik Géci`, margin + colWidth + 7, contactTop + 7);
+        doc.text(`Erik Géci`, margin + colWidth + 11, contactTop + 7);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Telefón: +421947964818`, margin + colWidth + 7, contactTop + 14);
-        doc.text(`Mobil: +421947964818`, margin + colWidth + 7, contactTop + 21);
-        doc.text(`E-mail: geci@aesa.sk`, margin + colWidth + 7, contactTop + 28);
+        doc.text(`Telefón: +421947964818`, margin + colWidth + 11, contactTop + 14);
+        doc.text(`Mobil: +421947964818`, margin + colWidth + 11, contactTop + 21);
+        doc.text(`E-mail: geci@aesa.sk`, margin + colWidth + 11, contactTop + 28);
+        
+        documentTitleY = contactTop + 40;
       }
       
       // Nadpis objednávky
-      const titleY = customerCompany && customerCompany.toUpperCase().includes('SL GROUP') ? tableTop + 90 : tableTop + 60;
-      
-      // Oranžovopodčiarknutý nadpis
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Dopravná objednávka č. ${orderNumber}`, pageWidth / 2, titleY, { align: 'center' });
+      doc.text(`Dopravná objednávka č. ${orderNumber}`, pageWidth / 2, documentTitleY, { align: 'center' });
       
       // Oranžová čiara pod nadpisom
-      doc.setDrawColor(240, 140, 0); // Oranžová farba (FF9F43)
+      doc.setDrawColor(240, 140, 0);
       doc.setLineWidth(0.3);
       const textWidth = doc.getTextWidth(`Dopravná objednávka č. ${orderNumber}`);
-      doc.line(pageWidth/2 - textWidth/2, titleY + 1, pageWidth/2 + textWidth/2, titleY + 1);
+      doc.line(pageWidth/2 - textWidth/2, documentTitleY + 1, pageWidth/2 + textWidth/2, documentTitleY + 1);
       
       doc.setFont('helvetica', 'normal');
       
@@ -1125,17 +1160,19 @@ const OrdersList: React.FC = () => {
         
         // 3. Ak je createdByName email, extrahujeme z neho meno
         if (createdByName && createdByName.includes('@')) {
-          return createdByName.split('@')[0]; // Vrátiť len časť pred @
+          const emailName = createdByName.split('@')[0];
+          // Pokus o kapitalizáciu prvého písmena
+          return emailName.charAt(0).toUpperCase() + emailName.slice(1);
         }
         
-        // 4. Ak nič z toho neexistuje, zobraziť "Neznámy špediter"
         return 'Neznámy špediter';
       })();
+      
       doc.setFontSize(10);
-      doc.text(`Špediter: ${spediteurName}`, pageWidth / 2, titleY + 8, { align: 'center' });
+      doc.text(`Špediter: ${spediteurName}`, pageWidth / 2, documentTitleY + 8, { align: 'center' });
       
       // Údaje týkajúce sa trasy
-      const routeTop = titleY + 15;
+      const routeTop = documentTitleY + 15;
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text(`Údaje týkajúce sa trasy (nakládky, vykládky):`, margin, routeTop);
@@ -1148,43 +1185,69 @@ const OrdersList: React.FC = () => {
           // Kontrola, či sa blížime ku koncu stránky a potrebujeme ďalšiu
           if (currentY + 80 > pageHeight) {
             doc.addPage();
-            currentY = margin;
+            currentY = margin + 10;
           }
           
           doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
           doc.text(`Nakládka ${index + 1}`, margin, currentY);
           const dateTimeStr = place.dateTime ? format(convertToDate(place.dateTime)!, 'dd.MM.yyyy (HH:mm)') : '';
-          doc.text(`${dateTimeStr}`, margin + 120, currentY);
+          if (dateTimeStr) {
+            doc.text(`${dateTimeStr}`, margin + 120, currentY);
+          }
           doc.setFont('helvetica', 'normal');
           currentY += 8;
           
-          // Vytvorenie boxu nakládky s tieňovaním
+          // Vytvorenie boxu nakládky
           const boxHeight = 60;
           doc.setFillColor(248, 248, 248);
-          doc.roundedRect(margin, currentY, contentWidth, boxHeight, 2, 2, 'F');
+          doc.setDrawColor(220, 220, 220);
+          doc.setLineWidth(0.2);
+          doc.roundedRect(margin, currentY, contentWidth, boxHeight, 3, 3, 'F');
+          doc.roundedRect(margin, currentY, contentWidth, boxHeight, 3, 3, 'S');
           
           // Údaje o mieste
           const placeCity = safeText(place.city);
           const placeCountry = safeText(place.country);
-          doc.setFontSize(10);
-          doc.text(`${placeCity}, ${placeCountry}`, margin + 5, currentY + 10);
+          const placeStreet = safeText(place.street);
+          const placeZip = safeText(place.zip);
           
-          // Referenčné číslo
-          doc.text(`Referenčné číslo: 0260.550.- 153-5GU`, margin + 5, currentY + 20);
+          const placeAddress = [
+            placeStreet,
+            placeZip && placeCity ? `${placeZip} ${placeCity}` : (placeZip || placeCity),
+            placeCountry
+          ].filter(Boolean).join(', ');
+          
+          doc.setFontSize(10);
+          doc.text(placeAddress, margin + 5, currentY + 10);
+          
+          // Kontaktná osoba
+          if (place.contactPerson) {
+            doc.text(`Kontaktná osoba: ${place.contactPerson}`, margin + 5, currentY + 20);
+          }
+          
+          // Referenčné číslo (ak existuje)
+          const refNumber = (place as any).referenceNumber || '0260.550.- 153-5GU';
+          doc.text(`Referenčné číslo: ${refNumber}`, margin + 5, currentY + (place.contactPerson ? 30 : 20));
           
           // Náklad
-          doc.text(`Náklad: Pallets (${place.goods?.length ? 'Výmena - Colli: Nie' : 'Bez výmeny'})`, margin + 5, currentY + 30);
+          const hasGoods = place.goods && place.goods.length > 0;
+          doc.text(`Náklad: Pallets (${hasGoods ? 'Výmena - Colli: Nie' : 'Bez výmeny'})`, margin + 5, currentY + (place.contactPerson ? 40 : 30));
           
-          // Počet
-          const goodsQuantity = place.goods?.reduce((sum, item) => sum + (parseInt(String(item.quantity)) || 0), 0) || 0;
-          doc.text("Počet: " + goodsQuantity.toString() + " x Colli", margin + 5, currentY + 40);
-          
-          // Rozmery a váha
-          const goodsWeight = place.goods && place.goods.length > 0 
-            ? place.goods.reduce((sum, item) => sum + (parseInt(String(item.quantity)) * 50 || 0), 0) || 996 
-            : 996;
-          doc.text("Rozmery: 120x100x100cm, Hmotnosť: " + goodsWeight.toString() + " kg", margin + 5, currentY + 50);
+          // Počet a množstvo
+          if (hasGoods && place.goods) {
+            const goodsQuantity = place.goods.reduce((sum, item) => sum + (parseInt(String(item.quantity)) || 0), 0);
+            doc.text(`Počet: ${goodsQuantity} x Colli`, margin + 5, currentY + (place.contactPerson ? 50 : 40));
+            
+            // Rozmery a váha - bezpečný prístup k váhe
+            const goodsWeight = place.goods.reduce((sum, item) => {
+              // Bezpečná kontrola váhy s defaultom 50kg
+              const itemWeight = (item as any).weight ? parseFloat(String((item as any).weight)) : 50;
+              return sum + ((parseInt(String(item.quantity)) || 0) * itemWeight);
+            }, 0);
+            
+            doc.text(`Rozmery: 120x100x100cm, Hmotnosť: ${goodsWeight.toFixed(2)} kg`, margin + 5, currentY + (place.contactPerson ? 60 : 50));
+          }
           
           currentY += boxHeight + 10;
         });
@@ -1196,85 +1259,187 @@ const OrdersList: React.FC = () => {
           // Kontrola, či sa blížime ku koncu stránky a potrebujeme ďalšiu
           if (currentY + 80 > pageHeight) {
             doc.addPage();
-            currentY = margin;
+            currentY = margin + 10;
           }
           
           doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
           doc.text(`Vykládka ${index + 1}`, margin, currentY);
           const dateTimeStr = place.dateTime ? format(convertToDate(place.dateTime)!, 'dd.MM.yyyy (HH:mm)') : '';
-          doc.text(`${dateTimeStr}`, margin + 120, currentY);
+          if (dateTimeStr) {
+            doc.text(`${dateTimeStr}`, margin + 120, currentY);
+          }
           doc.setFont('helvetica', 'normal');
           currentY += 8;
           
           // Vytvorenie boxu vykládky
           const boxHeight = 60;
           doc.setFillColor(248, 248, 248);
-          doc.roundedRect(margin, currentY, contentWidth, boxHeight, 2, 2, 'F');
+          doc.setDrawColor(220, 220, 220);
+          doc.setLineWidth(0.2);
+          doc.roundedRect(margin, currentY, contentWidth, boxHeight, 3, 3, 'F');
+          doc.roundedRect(margin, currentY, contentWidth, boxHeight, 3, 3, 'S');
           
           // Údaje o mieste
           const placeCity = safeText(place.city);
           const placeCountry = safeText(place.country);
-          doc.setFontSize(10);
-          doc.text(`${placeCity}, ${placeCountry}`, margin + 5, currentY + 10);
+          const placeStreet = safeText(place.street);
+          const placeZip = safeText(place.zip);
           
-          // Referenčné číslo
-          doc.text(`Referenčné číslo: 0260.550.- 153-5GU`, margin + 5, currentY + 20);
+          const placeAddress = [
+            placeStreet,
+            placeZip && placeCity ? `${placeZip} ${placeCity}` : (placeZip || placeCity),
+            placeCountry
+          ].filter(Boolean).join(', ');
+          
+          doc.setFontSize(10);
+          doc.text(placeAddress, margin + 5, currentY + 10);
+          
+          // Kontaktná osoba
+          if (place.contactPerson) {
+            doc.text(`Kontaktná osoba: ${place.contactPerson}`, margin + 5, currentY + 20);
+          }
+          
+          // Referenčné číslo (ak existuje)
+          const refNumber = (place as any).referenceNumber || '0260.550.- 153-5GU';
+          doc.text(`Referenčné číslo: ${refNumber}`, margin + 5, currentY + (place.contactPerson ? 30 : 20));
           
           // Náklad
-          doc.text(`Náklad: Pallets (${place.goods?.length ? 'Výmena - Colli: Nie' : 'Bez výmeny'})`, margin + 5, currentY + 30);
+          const hasGoods = place.goods && place.goods.length > 0;
+          doc.text(`Náklad: Pallets (${hasGoods ? 'Výmena - Colli: Nie' : 'Bez výmeny'})`, margin + 5, currentY + (place.contactPerson ? 40 : 30));
+          
+          // Počet a množstvo
+          if (hasGoods && place.goods) {
+            const goodsQuantity = place.goods.reduce((sum, item) => sum + (parseInt(String(item.quantity)) || 0), 0);
+            doc.text(`Počet: ${goodsQuantity} x Colli`, margin + 5, currentY + (place.contactPerson ? 50 : 40));
+          }
           
           currentY += boxHeight + 10;
         });
       }
       
-      // Ťahač
+      // Informácie o doprave
       currentY += 5;
-      if (currentY + 40 > pageHeight) {
+      if (currentY + 60 > pageHeight) {
         doc.addPage();
-        currentY = margin;
+        currentY = margin + 10;
       }
       
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Ťahač:`, margin, currentY);
+      doc.text('Dopravné prostriedky:', margin, currentY);
+      currentY += 8;
+      
+      // Box s dopravnými prostriedkami
+      doc.setFillColor(248, 248, 248);
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(margin, currentY, contentWidth, 35, 3, 3, 'F');
+      doc.roundedRect(margin, currentY, contentWidth, 35, 3, 3, 'S');
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      
+      // Ťahač
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ťahač:', margin + 5, currentY + 10);
       doc.setFont('helvetica', 'normal');
       const carrierVehicleReg = safeText(orderData.carrierVehicleReg || 'SB87MPA');
-      doc.text(carrierVehicleReg, margin + 40, currentY);
+      doc.text(carrierVehicleReg, margin + 40, currentY + 10);
+      
+      // Náves (ak existuje)
+      doc.setFont('helvetica', 'bold');
+      doc.text('Náves:', margin + 5, currentY + 20);
+      doc.setFont('helvetica', 'normal');
+      const carrierTrailerReg = safeText((orderData as any).carrierTrailerReg || 'SB87TRL');
+      doc.text(carrierTrailerReg, margin + 40, currentY + 20);
+      
+      // Dopravca údaje (ak existujú)
+      doc.setFont('helvetica', 'bold');
+      doc.text('Dopravca:', margin + 120, currentY + 10);
+      doc.setFont('helvetica', 'normal');
+      const carrierName = safeText((orderData as any).carrierName || orderData.carrierCompany || 'N/A');
+      doc.text(carrierName, margin + 160, currentY + 10);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('IČO:', margin + 120, currentY + 20);
+      doc.setFont('helvetica', 'normal');
+      const carrierVatID = safeText((orderData as any).carrierVatId || 'N/A');
+      doc.text(carrierVatID, margin + 160, currentY + 20);
       
       // Tabuľka s platbou
-      currentY += 10;
-      doc.setDrawColor(210, 210, 210);
-      doc.setLineWidth(0.3);
+      currentY += 45;
+      if (currentY + 40 > pageHeight) {
+        doc.addPage();
+        currentY = margin + 10;
+      }
       
-      // Hlavička tabuľky
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin, currentY, contentWidth, 8, 'F');
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Dátum splatnosti`, margin + 5, currentY + 6);
-      doc.text(`Preprava (bez DPH)`, margin + 120, currentY + 6);
+      doc.text('Platobné podmienky:', margin, currentY);
+      currentY += 8;
       
-      // Obsah tabuľky
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      
+      // Hlavička tabuľky s platbou
+      doc.setFillColor(240, 240, 240);
+      doc.roundedRect(margin, currentY, contentWidth, 8, 2, 2, 'F');
+      doc.roundedRect(margin, currentY, contentWidth, 8, 2, 2, 'S');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('Dátum splatnosti', margin + 5, currentY + 6);
+      doc.text('Preprava (bez DPH)', margin + 120, currentY + 6);
+      
+      // Obsah tabuľky s platbou
       currentY += 8;
       doc.setFillColor(248, 248, 248);
-      doc.rect(margin, currentY, contentWidth, 8, 'F');
+      doc.roundedRect(margin, currentY, contentWidth, 12, 0, 0, 'F');
+      doc.roundedRect(margin, currentY, contentWidth, 12, 0, 0, 'S');
+      
       doc.setFont('helvetica', 'normal');
-      doc.text(`45 dní od prijatia faktúry a dokumentov`, margin + 5, currentY + 6);
+      doc.text('45 dní od prijatia faktúry a dokumentov', margin + 5, currentY + 8);
+      
       const carrierPrice = safeText(orderData.carrierPrice || "880.00");
       doc.setFont('helvetica', 'bold');
-      doc.text(carrierPrice + " EUR", margin + 120, currentY + 6);
+      doc.text(carrierPrice + " EUR", margin + 120, currentY + 8);
       
-      // Ohraničenie tabuľky
-      doc.rect(margin, currentY - 8, contentWidth, 16);
-      doc.line(margin + 110, currentY - 8, margin + 110, currentY + 8);
+      // Vertikálna čiara v tabuľke
+      doc.line(margin + 110, currentY - 8, margin + 110, currentY + 12);
       
       // Poznámka k platbe
-      currentY += 15;
+      currentY += 20;
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.text("* Cena prepravy zahŕňa všetky poplatky spojené s dopravou, vrátane mýta a paliva.", margin, currentY);
       
-      // Pätička s číslami strán
+      // Podmienky a zodpovednosť
+      currentY += 10;
+      if (currentY + 50 > pageHeight) {
+        doc.addPage();
+        currentY = margin + 10;
+      }
+      
+      // Box s podmienkami
+      doc.setFillColor(248, 248, 248);
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(margin, currentY, contentWidth, 45, 3, 3, 'F');
+      doc.roundedRect(margin, currentY, contentWidth, 45, 3, 3, 'S');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Podmienky dopravy:', margin + 5, currentY + 8);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      
+      doc.text("1. Dopravca je povinný dodržiavať všetky podmienky uvedené v objednávke vrátane času nakládky a vykládky.", margin + 5, currentY + 15);
+      doc.text("2. Dopravca je povinný mať platné poistenie zodpovednosti dopravcu po celú dobu prepravy.", margin + 5, currentY + 22);
+      doc.text("3. V prípade meškania je dopravca povinný bezodkladne informovať objednávateľa prepravy.", margin + 5, currentY + 29);
+      doc.text("4. Podpisom dodacích listov dopravca potvrdzuje prevzatie tovaru v nepoškodenom stave.", margin + 5, currentY + 36);
+      
+      // Čísla strán a pätička
       const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
