@@ -16,13 +16,15 @@ import {
   InputLabel,
   Alert,
   CircularProgress,
-  SelectChangeEvent
+  SelectChangeEvent,
+  useTheme
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { useThemeMode } from '../contexts/ThemeContext';
 
 interface Country {
   code: string;
@@ -84,6 +86,8 @@ function generateCompanyID(companyName: string): string {
 
 function Register() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -203,301 +207,678 @@ function Register() {
 
   if (registrationSuccess) {
     return (
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
+          background: isDarkMode 
+            ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
+            : 'linear-gradient(135deg, #f5f7fa 0%, #e4e5e6 100%)',
+          color: isDarkMode ? '#ffffff' : '#333333',
+          overflow: 'hidden',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundAttachment: 'fixed',
+          '& > *': {
+            position: 'relative',
+            zIndex: 1,
+          }
+        }}
+      >
+        <Box 
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 0,
+            opacity: 0.03,
+            background: `radial-gradient(circle at 20% 30%, ${isDarkMode ? 'rgba(255, 159, 67, 0.8)' : 'rgba(255, 159, 67, 0.4)'} 0%, transparent 100px),
+                        radial-gradient(circle at 80% 40%, ${isDarkMode ? 'rgba(48, 43, 99, 0.8)' : 'rgba(48, 43, 99, 0.4)'} 0%, transparent 200px)`,
+            pointerEvents: 'none',
+          }}
+        />
+        <Container maxWidth="sm">
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 4, 
+              position: 'relative',
+              background: isDarkMode 
+                ? 'rgba(28, 28, 45, 0.8)' 
+                : 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+              border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+              boxShadow: isDarkMode
+                ? '0 10px 30px rgba(0, 0, 0, 0.3)'
+                : '0 10px 30px rgba(0, 0, 0, 0.08)',
+            }}
+          >
+            <IconButton
+              onClick={handleClose}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+
+            <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: '#ff9f43' }}>
+              Registrácia úspešná!
+            </Typography>
+
+            <Alert 
+              severity="success" 
+              sx={{ 
+                mb: 3,
+                '& .MuiAlert-icon': {
+                  color: '#ff9f43'
+                },
+                '& .MuiAlert-message': {
+                  color: '#ff9f43'
+                },
+                backgroundColor: 'rgba(255, 159, 67, 0.1)',
+              }}
+            >
+              Vaša firma bola úspešne zaregistrovaná.
+            </Alert>
+
+            <Typography variant="h6" gutterBottom sx={{ color: isDarkMode ? '#ffffff' : '#333333' }}>
+              Váš Company ID:
+            </Typography>
+            <Paper 
+              elevation={2} 
+              sx={{ 
+                p: 2, 
+                mb: 3, 
+                backgroundColor: '#ff9f43',
+                color: 'white',
+                textAlign: 'center',
+                fontSize: '1.2rem',
+                fontWeight: 'bold',
+                wordBreak: 'break-all'
+              }}
+            >
+              {formData.companyID}
+            </Paper>
+
+            <Typography variant="body1" gutterBottom color="warning.main" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>
+              Prosím, uložte si tento Company ID. Budete ho potrebovať pre:
+            </Typography>
+            <Box component="ul" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>
+              <li>Správu zamestnancov</li>
+              <li>Pridávanie nových členov tímu</li>
+              <li>Administráciu vašej firmy</li>
+            </Box>
+
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => navigate('/login')}
+              sx={{ 
+                mt: 3,
+                background: 'linear-gradient(45deg, #ff9f43 0%, #ffbe76 100%)',
+                color: 'white',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #f39839 0%, #f2b56e 100%)',
+                },
+                padding: '12px',
+                borderRadius: '12px',
+              }}
+            >
+              Prihlásiť sa
+            </Button>
+          </Paper>
+        </Container>
+      </Box>
+    );
+  }
+
+  return (
+    <Box 
+      sx={{ 
+        minHeight: '100vh',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
+          : 'linear-gradient(135deg, #f5f7fa 0%, #e4e5e6 100%)',
+        color: isDarkMode ? '#ffffff' : '#333333',
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundAttachment: 'fixed',
+        padding: '40px 0',
+        '& > *': {
+          position: 'relative',
+          zIndex: 1,
+        }
+      }}
+    >
+      <Box 
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
+          opacity: 0.03,
+          background: `radial-gradient(circle at 20% 30%, ${isDarkMode ? 'rgba(255, 159, 67, 0.8)' : 'rgba(255, 159, 67, 0.4)'} 0%, transparent 100px),
+                      radial-gradient(circle at 80% 40%, ${isDarkMode ? 'rgba(48, 43, 99, 0.8)' : 'rgba(48, 43, 99, 0.4)'} 0%, transparent 200px)`,
+          pointerEvents: 'none',
+        }}
+      />
       <Container maxWidth="sm">
-        <Paper elevation={3} sx={{ p: 4, mt: 8, position: 'relative' }}>
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 4, 
+            position: 'relative',
+            background: isDarkMode 
+              ? 'rgba(28, 28, 45, 0.8)' 
+              : 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+            boxShadow: isDarkMode
+              ? '0 10px 30px rgba(0, 0, 0, 0.3)'
+              : '0 10px 30px rgba(0, 0, 0, 0.08)',
+          }}
+        >
           <IconButton
             onClick={handleClose}
             sx={{
               position: 'absolute',
               right: 8,
-              top: 8
+              top: 8,
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
             }}
           >
             <CloseIcon />
           </IconButton>
 
-          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: '#ff9f43' }}>
-            Registrácia úspešná!
+          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: isDarkMode ? '#ffffff' : '#333333' }}>
+            Registrácia novej firmy
           </Typography>
 
-          <Alert 
-            severity="success" 
-            sx={{ 
-              mb: 3,
-              '& .MuiAlert-icon': {
-                color: '#ff9f43'
-              },
-              '& .MuiAlert-message': {
-                color: '#ff9f43'
-              },
-              backgroundColor: 'rgba(255, 159, 67, 0.1)',
-            }}
-          >
-            Vaša firma bola úspešne zaregistrovaná.
-          </Alert>
-
-          <Typography variant="h6" gutterBottom>
-            Váš Company ID:
-          </Typography>
-          <Paper 
-            elevation={2} 
-            sx={{ 
-              p: 2, 
-              mb: 3, 
-              backgroundColor: '#ff9f43',
-              color: 'white',
-              textAlign: 'center',
-              fontSize: '1.2rem',
-              fontWeight: 'bold',
-              wordBreak: 'break-all'
-            }}
-          >
-            {formData.companyID}
-          </Paper>
-
-          <Typography variant="body1" gutterBottom color="warning.main">
-            Prosím, uložte si tento Company ID. Budete ho potrebovať pre:
-          </Typography>
-          <ul>
-            <li>Správu zamestnancov</li>
-            <li>Pridávanie nových členov tímu</li>
-            <li>Administráciu vašej firmy</li>
-          </ul>
-
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={() => navigate('/login')}
-            sx={{ 
-              mt: 3,
-              backgroundColor: '#ff9f43',
-              '&:hover': {
-                backgroundColor: '#ffbe76',
-              }
-            }}
-          >
-            Prihlásiť sa
-          </Button>
-        </Paper>
-      </Container>
-    );
-  }
-
-  return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 4, mt: 8, position: 'relative' }}>
-        <IconButton
-          onClick={handleClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Registrácia novej firmy
-        </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        
-        <form onSubmit={handleSubmit}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="firstName"
-                label="Meno"
-                value={formData.firstName}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="lastName"
-                label="Priezvisko"
-                value={formData.lastName}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="email"
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Select
-                  value={formData.countryCode}
-                  onChange={handleCountryChange}
-                  sx={{ width: '200px' }}
-                >
-                  {countries.map((country) => (
-                    <MenuItem key={country.code} value={country.code}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <img
-                          loading="lazy"
-                          width="20"
-                          src={`https://flagcdn.com/${country.code}.svg`}
-                          alt={country.name}
-                        />
-                        <span>{country.name}</span>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          <form onSubmit={handleSubmit}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  name="phoneNumber"
-                  label={`Mobil (${formData.phonePrefix})`}
-                  placeholder="910 XXX XXX"
-                  value={formData.phoneNumber}
+                  name="firstName"
+                  label="Meno"
+                  value={formData.firstName}
                   onChange={handleChange}
                   fullWidth
                   required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
                 />
-              </Box>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="password"
-                label="Heslo"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="confirmPassword"
-                label="Potvrdiť heslo"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }}>Údaje o firme</Divider>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="companyName"
-                label="Názov firmy"
-                value={formData.companyName}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="street"
-                label="Ulica"
-                value={formData.street}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="zipCode"
-                label="PSČ"
-                value={formData.zipCode}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="city"
-                label="Mesto"
-                value={formData.city}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Krajina</InputLabel>
-                <Select
-                  name="country"
-                  value={formData.country}
-                  onChange={handleSelectChange}
-                  label="Krajina"
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  name="lastName"
+                  label="Priezvisko"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="email"
+                  label="Email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Select
+                    value={formData.countryCode}
+                    onChange={handleCountryChange}
+                    sx={{ width: '200px' }}
+                  >
+                    {countries.map((country) => (
+                      <MenuItem key={country.code} value={country.code}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <img
+                            loading="lazy"
+                            width="20"
+                            src={`https://flagcdn.com/${country.code}.svg`}
+                            alt={country.name}
+                          />
+                          <span>{country.name}</span>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <TextField
+                    name="phoneNumber"
+                    label={`Mobil (${formData.phonePrefix})`}
+                    placeholder="910 XXX XXX"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                          borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#ff9f43',
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      },
+                      '& .MuiInputLabel-root.Mui-focused': {
+                        color: '#ff9f43',
+                      },
+                      '& .MuiInputBase-input': {
+                        color: isDarkMode ? '#ffffff' : '#000000',
+                      },
+                    }}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="password"
+                  label="Heslo"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="confirmPassword"
+                  label="Potvrdiť heslo"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }}>Údaje o firme</Divider>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="companyName"
+                  label="Názov firmy"
+                  value={formData.companyName}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="street"
+                  label="Ulica"
+                  value={formData.street}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  name="zipCode"
+                  label="PSČ"
+                  value={formData.zipCode}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  name="city"
+                  label="Mesto"
+                  value={formData.city}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Krajina</InputLabel>
+                  <Select
+                    name="country"
+                    value={formData.country}
+                    onChange={handleSelectChange}
+                    label="Krajina"
+                  >
+                    {countries.map((country) => (
+                      <MenuItem key={country.code} value={country.code.toUpperCase()}>
+                        {country.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  name="ico"
+                  label="IČO"
+                  value={formData.ico}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  name="icDph"
+                  label="IČ DPH"
+                  value={formData.icDph}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiInputBase-input': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  disabled={loading}
+                  sx={{
+                    background: 'linear-gradient(45deg, #ff9f43 0%, #ffbe76 100%)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #f39839 0%, #f2b56e 100%)',
+                    },
+                    padding: '12px',
+                    borderRadius: '12px',
+                  }}
                 >
-                  {countries.map((country) => (
-                    <MenuItem key={country.code} value={country.code.toUpperCase()}>
-                      {country.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  {loading ? <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 'Registrovať'}
+                </Button>
+              </Grid>
+              <Grid item xs={12}>
+                <Link href="/login" variant="body2" sx={{ 
+                  display: 'block', 
+                  textAlign: 'center',
+                  color: '#ff9f43',
+                  '&:hover': {
+                    color: '#ffbe76'
+                  }
+                }}>
+                  Máte už účet? Prihláste sa
+                </Link>
+              </Grid>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="ico"
-                label="IČO"
-                value={formData.ico}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="icDph"
-                label="IČ DPH"
-                value={formData.icDph}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 'Registrovať'}
-              </Button>
-            </Grid>
-            <Grid item xs={12}>
-              <Link href="/login" variant="body2" sx={{ 
-                display: 'block', 
-                textAlign: 'center',
-                color: '#ff9f43',
-                '&:hover': {
-                  color: '#ffbe76'
-                }
-              }}>
-                Máte už účet? Prihláste sa
-              </Link>
-            </Grid>
-          </Grid>
-        </form>
-      </Paper>
-    </Container>
+          </form>
+        </Paper>
+      </Container>
+    </Box>
   );
 }
 

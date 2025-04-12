@@ -44,8 +44,13 @@ import {
   Menu as MenuIcon,
   Close as CloseIcon,
   KeyboardArrowDown as ArrowDownIcon,
+  Brightness4 as Brightness4Icon,
+  Brightness7 as Brightness7Icon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useThemeMode } from '../contexts/ThemeContext';
 
 // Navigation Menu
 const NavbarContainer = styled(AppBar)(({ theme }) => ({
@@ -54,6 +59,10 @@ const NavbarContainer = styled(AppBar)(({ theme }) => ({
   padding: '15px 0',
   transition: 'all 0.3s ease',
   position: 'fixed',
+  height: '80px',
+  display: 'flex',
+  justifyContent: 'center',
+  zIndex: 1000,
   '&.scrolled': {
     background: theme.palette.mode === 'dark' 
       ? 'rgba(16, 14, 60, 0.9)' 
@@ -61,6 +70,7 @@ const NavbarContainer = styled(AppBar)(({ theme }) => ({
     backdropFilter: 'blur(10px)',
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
     padding: '10px 0',
+    height: '70px',
   }
 }));
 
@@ -139,14 +149,22 @@ const Section = styled(Box)(({ theme }) => ({
 // Hero section styling
 const HeroSection = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
+  height: '100vh',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   textAlign: 'center',
   padding: '120px 0 80px',
   position: 'relative',
+  width: '100vw',
+  left: '50%',
+  right: '50%',
+  marginLeft: '-50vw',
+  marginRight: '-50vw',
   '@media (max-width: 900px)': {
     padding: '100px 0 60px',
+    height: 'auto',
+    minHeight: '100vh',
   },
   '&::after': {
     content: '""',
@@ -160,6 +178,29 @@ const HeroSection = styled(Box)(({ theme }) => ({
   }
 }));
 
+// Carousel styled components
+const CarouselContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
+  position: 'relative',
+  padding: '30px 0',
+}));
+
+const CarouselNavButton = styled(IconButton)(({ theme }) => ({
+  position: 'absolute',
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)',
+  color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+  zIndex: 10,
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+  },
+  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+  width: '40px',
+  height: '40px',
+}));
+
 // App screenshot box
 const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme }) => ({
   position: 'relative',
@@ -169,6 +210,11 @@ const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme 
     ? '0 20px 80px rgba(0, 0, 0, 0.6)' 
     : '0 20px 80px rgba(0, 0, 0, 0.15)',
   width: '100%',
+  minHeight: '400px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: isDarkMode ? '#1a1a2e' : '#f5f7fa',
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -177,7 +223,7 @@ const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme 
     right: 0,
     bottom: 0,
     background: isDarkMode
-      ? 'linear-gradient(145deg, rgba(255, 159, 67, 0.1) 0%, rgba(255, 107, 107, 0.1) 100%)'
+      ? 'linear-gradient(145deg, rgba(48, 43, 99, 0.15) 0%, rgba(36, 36, 62, 0.15) 100%)'
       : 'none',
     pointerEvents: 'none',
     zIndex: 1,
@@ -185,6 +231,8 @@ const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme 
   '& img': {
     width: '100%',
     height: 'auto',
+    maxHeight: '600px',
+    objectFit: 'contain',
     display: 'block',
     transition: 'transform 0.5s ease',
   },
@@ -314,7 +362,8 @@ const TestimonialCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) =
     background: 'linear-gradient(90deg, #ff9f43, #ff6b6b)',
     borderTopLeftRadius: '16px',
     borderTopRightRadius: '16px',
-  }
+  },
+  minHeight: '250px'
 }));
 
 // Benefit list
@@ -365,28 +414,79 @@ function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const { toggleTheme } = useThemeMode();
+
+  // Screenshot carousel
+  const [activeIndex, setActiveIndex] = useState(0);
+  const screenshots = [
+    { src: "/Images/dashboard-preview.jpg", alt: "CORE Dashboard", themeSpecific: 'dark' },
+    { src: "/Images/whiteview.jpg", alt: "Svetlý motív aplikácie", themeSpecific: 'light' },
+    { src: "/Images/tracked-transports.jpg", alt: "Sledovanie prepráv" },
+    { src: "/Images/mapview.jpg", alt: "Pohľad na mapu" },
+    { src: "/Images/orders.jpg", alt: "Objednávky" },
+    { src: "/Images/businesscases.jpg", alt: "Obchodné prípady" },
+    { src: "/Images/contacs.jpg", alt: "Kontakty" },
+    { src: "/Images/team.jpg", alt: "Tímová spolupráca" },
+    { src: "/Images/setttings.jpg", alt: "Nastavenia" }
+  ];
+
+  // Nastavenie prvého obrázka podľa témy
+  useEffect(() => {
+    if (isDarkMode) {
+      // Tmavá téma - zobrazíme dashboard-preview.jpg (index 0)
+      setActiveIndex(0);
+    } else {
+      // Svetlá téma - zobrazíme whiteview.jpg (index 1)
+      setActiveIndex(1);
+    }
+  }, [isDarkMode]);
+
+  const handlePrevImage = () => {
+    setActiveIndex((prevIndex) => 
+      prevIndex === 0 ? screenshots.length - 1 : prevIndex - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setActiveIndex((prevIndex) => 
+      prevIndex === screenshots.length - 1 ? 0 : prevIndex + 1
+    );
+  };
 
   // Handle scroll events for navbar and scroll-to-top button
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 100) {
-        setScrolled(true);
+      const scrollThreshold = 150;
+      if (window.scrollY > scrollThreshold) {
+        if (!scrolled) {
+          setScrolled(true);
+        }
         setShowScrollTop(true);
       } else {
-        setScrolled(false);
+        if (scrolled) {
+          setScrolled(false);
+        }
         setShowScrollTop(false);
       }
     };
 
     window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [scrolled]);
 
   // Scroll to section functions
   const scrollToSection = (sectionId: string) => {
     const section = document.getElementById(sectionId);
     if (section) {
-      section.scrollIntoView({ behavior: 'smooth' });
+      const menuHeight = scrolled ? 70 : 80;
+      const sectionTop = section.getBoundingClientRect().top + window.pageYOffset - menuHeight - 20;
+      
+      window.scrollTo({
+        top: sectionTop,
+        behavior: 'smooth'
+      });
     }
     // Close mobile menu if open
     setMobileMenuOpen(false);
@@ -467,7 +567,7 @@ function Home() {
     {
       icon: <Biotech fontSize="large" />,
       title: 'Špičkové technológie',
-      description: 'Využívame najmodernejšie technológie a postupy pre maximálnu spoľahlivosť a bezpečnosť.'
+      description: 'Moderné technológie a postupy pre maximálnu spoľahlivosť a bezpečnosť vašich dát.'
     }
   ];
 
@@ -489,9 +589,29 @@ function Home() {
           : 'linear-gradient(135deg, #f5f7fa 0%, #e4e5e6 100%)',
         color: isDarkMode ? '#ffffff' : '#333333',
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        backgroundAttachment: 'fixed',
+        '& > *': {
+          position: 'relative',
+          zIndex: 1,
+        }
       }}
     >
+      <Box 
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
+          opacity: 0.03,
+          background: `radial-gradient(circle at 20% 30%, ${isDarkMode ? 'rgba(255, 159, 67, 0.8)' : 'rgba(255, 159, 67, 0.4)'} 0%, transparent 100px),
+                      radial-gradient(circle at 80% 40%, ${isDarkMode ? 'rgba(48, 43, 99, 0.8)' : 'rgba(48, 43, 99, 0.4)'} 0%, transparent 200px)`,
+          pointerEvents: 'none',
+        }}
+      />
+
       {/* Fixed Navigation */}
       <NavbarContainer 
         className={scrolled ? 'scrolled' : ''}
@@ -539,6 +659,19 @@ function Home() {
               >
                 Prihlásiť sa
               </NavButton>
+              <IconButton
+                onClick={toggleTheme}
+                sx={{
+                  ml: 1,
+                  color: isDarkMode ? '#fff' : '#333',
+                  '&:hover': {
+                    background: 'rgba(255, 159, 67, 0.1)',
+                  }
+                }}
+                aria-label="prepnúť tému"
+              >
+                {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+              </IconButton>
             </Box>
 
             {/* Mobile Menu Toggle */}
@@ -630,6 +763,33 @@ function Home() {
             >
               Prihlásiť sa
             </Typography>
+          </ListItemButton>
+          <ListItemButton 
+            onClick={() => {
+              toggleTheme();
+              setMobileMenuOpen(false);
+            }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              '&:hover': {
+                background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <Typography 
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#333',
+                fontWeight: 500,
+              }}
+            >
+              {isDarkMode ? 'Svetlý režim' : 'Tmavý režim'}
+            </Typography>
+            {isDarkMode ? <Brightness7Icon sx={{ color: '#fff' }} /> : <Brightness4Icon sx={{ color: '#333' }} />}
           </ListItemButton>
         </List>
       </Drawer>
@@ -739,20 +899,148 @@ function Home() {
           </Fade>
         </HeroSection>
 
-        {/* Application Screenshot */}
-        <Box sx={{ mb: 10, mt: { xs: 0, md: -10 } }}>
+        {/* Application Screenshots Carousel */}
+        <Box sx={{ 
+          mb: 10, 
+          mt: { xs: 5, md: 10 },
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
           <Fade in={true} timeout={1500}>
-            <ScreenshotBox isDarkMode={isDarkMode}>
-              <img 
-                src="/dashboard-screenshot.jpg" 
-                alt="CORE Dashboard" 
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.onerror = null;
-                  target.src = "https://via.placeholder.com/1200x600/24243e/ffffff?text=CORE+Dashboard";
-                }}
-              />
-            </ScreenshotBox>
+            <CarouselContainer>
+              {/* Ľavé navigačné tlačidlo */}
+              <CarouselNavButton 
+                onClick={handlePrevImage}
+                sx={{ left: { xs: '5px', md: '20px' } }}
+              >
+                <ChevronLeftIcon />
+              </CarouselNavButton>
+
+              {/* Hlavný obrázok */}
+              <Box sx={{ 
+                width: '100%', 
+                maxWidth: '900px', 
+                mx: 'auto', 
+                position: 'relative',
+                height: { xs: '400px', md: '600px' },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden'
+              }}>
+                <AnimatePresence initial={false} mode="wait">
+                  <motion.div
+                    key={activeIndex}
+                    initial={{ opacity: 0, x: 300 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -300 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    style={{ 
+                      width: '100%',
+                      position: 'absolute',
+                      display: 'flex',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <ScreenshotBox isDarkMode={isDarkMode} sx={{ width: '100%' }}>
+                      <img 
+                        src={screenshots[activeIndex].src} 
+                        alt={screenshots[activeIndex].alt} 
+                        style={{ 
+                          width: '100%', 
+                          height: 'auto', 
+                          maxHeight: '600px', 
+                          objectFit: 'contain',
+                          borderRadius: '16px',
+                        }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          
+                          // Vytvorenie fallback komponentu
+                          const fallbackDiv = document.createElement('div');
+                          fallbackDiv.style.width = '100%';
+                          fallbackDiv.style.height = isMobile ? '350px' : '400px';
+                          fallbackDiv.style.display = 'flex';
+                          fallbackDiv.style.alignItems = 'center';
+                          fallbackDiv.style.justifyContent = 'center';
+                          fallbackDiv.style.flexDirection = 'column';
+                          fallbackDiv.style.backgroundColor = isDarkMode ? '#24243e' : '#f5f7fa';
+                          fallbackDiv.style.borderRadius = '20px';
+                          fallbackDiv.style.backgroundImage = isDarkMode 
+                            ? 'linear-gradient(135deg, rgba(16, 14, 60, 0.4) 0%, rgba(48, 43, 99, 0.4) 50%, rgba(36, 36, 62, 0.4) 100%)'
+                            : 'linear-gradient(135deg, rgba(245, 247, 250, 0.6) 0%, rgba(228, 229, 230, 0.6) 100%)';
+                          
+                          // Vytvorenie nadpisu
+                          const heading = document.createElement('h2');
+                          heading.textContent = screenshots[activeIndex].alt;
+                          heading.style.fontWeight = '700';
+                          heading.style.color = isDarkMode ? '#ffffff' : '#333333';
+                          heading.style.marginBottom = '16px';
+                          heading.style.fontSize = '1.5rem';
+                          heading.style.textAlign = 'center';
+                          
+                          // Pridanie elementov do fallbacku
+                          fallbackDiv.appendChild(heading);
+                          
+                          // Nahradenie img elementu s fallbackom
+                          if (e.currentTarget.parentElement) {
+                            e.currentTarget.parentElement.appendChild(fallbackDiv);
+                          }
+                        }}
+                      />
+                      <Box 
+                        sx={{ 
+                          position: 'absolute', 
+                          bottom: '20px', 
+                          left: '50%', 
+                          transform: 'translateX(-50%)',
+                          background: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.8)',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          backdropFilter: 'blur(10px)',
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: isDarkMode ? 'white' : 'black' }}>
+                          {screenshots[activeIndex].alt}
+                        </Typography>
+                      </Box>
+                    </ScreenshotBox>
+                  </motion.div>
+                </AnimatePresence>
+              </Box>
+
+              {/* Pravé navigačné tlačidlo */}
+              <CarouselNavButton 
+                onClick={handleNextImage}
+                sx={{ right: { xs: '5px', md: '20px' } }}
+              >
+                <ChevronRightIcon />
+              </CarouselNavButton>
+              
+              {/* Navigácia pre galériu */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, position: 'absolute', bottom: '-30px', width: '100%' }}>
+                {screenshots.map((_, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      mx: 0.5,
+                      bgcolor: activeIndex === index ? '#ff9f43' : isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'scale(1.2)',
+                        bgcolor: activeIndex === index ? '#ff9f43' : isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+                      }
+                    }}
+                    onClick={() => setActiveIndex(index)}
+                  />
+                ))}
+              </Box>
+            </CarouselContainer>
           </Fade>
         </Box>
 
@@ -914,10 +1202,18 @@ function Home() {
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar 
-                      src="https://via.placeholder.com/60x60" 
-                      alt="Peter Novák" 
-                      sx={{ width: 60, height: 60, mr: 2 }}
-                    />
+                      sx={{ 
+                        width: 60, 
+                        height: 60, 
+                        mr: 2,
+                        bgcolor: '#ff9f43',
+                        color: '#fff',
+                        fontWeight: 'bold',
+                        fontSize: '1.5rem'
+                      }}
+                    >
+                      PN
+                    </Avatar>
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#333333' }}>
                         Peter Novák
@@ -961,7 +1257,8 @@ function Home() {
                   fontWeight: 700, 
                   mb: 2,
                   color: isDarkMode ? '#ffffff' : '#333333',
-                  fontSize: { xs: '1.75rem', md: '2.5rem' }
+                  fontSize: { xs: '1.75rem', md: '2.5rem' },
+                  textAlign: 'center'
                 }}
               >
                 Pripravení zmodernizovať vašu špedičnú spoločnosť?
@@ -973,18 +1270,16 @@ function Home() {
                   color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
                   maxWidth: '700px',
                   mx: 'auto',
-                  fontSize: { xs: '1rem', md: '1.1rem' }
+                  fontSize: { xs: '1rem', md: '1.1rem' },
+                  textAlign: 'center'
                 }}
               >
                 Začnite už dnes a získajte náskok pred konkurenciou. Prvých 30 dní zadarmo, bez záväzkov.
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
                 <PrimaryButton onClick={() => navigate('/register')} size="large">
-                  Vyskúšajte CORE zadarmo
+                  Vyskúšajte CORE na 14 dní úplne zadarmo
                 </PrimaryButton>
-                <SecondaryButton onClick={() => navigate('/login')} size="large">
-                  Prejsť do aplikácie
-                </SecondaryButton>
               </Box>
             </Box>
           </motion.div>
@@ -994,7 +1289,7 @@ function Home() {
         <Box component="footer" sx={{ py: 5, textAlign: 'center' }}>
           <Divider sx={{ mb: 4, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
           <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' }}>
-            © {new Date().getFullYear()} AESA s.r.o. Všetky práva vyhradené.
+            © {new Date().getFullYear()} AESA Group, SE. Všetky práva vyhradené.
           </Typography>
         </Box>
       </Container>
