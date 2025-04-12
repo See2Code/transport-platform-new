@@ -5,6 +5,7 @@ import { CircularProgress, Box, Typography, Button, Dialog, DialogTitle, DialogC
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { useThemeMode } from './ThemeContext';
 
 export interface UserData {
   uid: string;
@@ -71,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentSession, setCurrentSession] = useState<string | null>(null);
   const [logoutNotification, setLogoutNotification] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { isDarkMode } = useThemeMode();
 
   const generateDeviceId = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -323,18 +325,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               onClose={() => setLogoutNotification(null)}
               aria-labelledby="alert-dialog-title"
               aria-describedby="alert-dialog-description"
+              PaperProps={{
+                sx: {
+                  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                  backdropFilter: 'blur(10px)',
+                  border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '12px',
+                  minWidth: '320px',
+                }
+              }}
             >
-              <DialogTitle id="alert-dialog-title">{"Odhlásenie"}</DialogTitle>
-              <DialogContent>
-                <DialogContentText id="alert-dialog-description">
+              <DialogTitle id="alert-dialog-title" 
+                sx={{ 
+                  borderBottom: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
+                  padding: '16px 24px',
+                  fontWeight: 600
+                }}
+              >
+                {"Odhlásenie"}
+              </DialogTitle>
+              <DialogContent sx={{ padding: '24px', paddingBottom: '16px' }}>
+                <DialogContentText id="alert-dialog-description"
+                  sx={{ 
+                    color: isDarkMode ? '#ffffff' : '#333333',
+                    fontSize: '16px',
+                    fontWeight: 500
+                  }}
+                >
                   {logoutNotification}
                 </DialogContentText>
               </DialogContent>
-              <DialogActions>
-                <Button onClick={() => {
-                  setLogoutNotification(null);
-                  navigate('/login');
-                }} autoFocus>
+              <DialogActions sx={{ padding: '8px 24px 16px' }}>
+                <Button 
+                  onClick={() => {
+                    setLogoutNotification(null);
+                    navigate('/login');
+                  }}
+                  autoFocus
+                  sx={{
+                    backgroundColor: '#ff9f43',
+                    color: '#fff',
+                    fontWeight: 500,
+                    '&:hover': {
+                      backgroundColor: '#f9872f',
+                    }
+                  }}
+                >
                   OK
                 </Button>
               </DialogActions>

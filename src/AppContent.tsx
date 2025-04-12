@@ -116,19 +116,38 @@ const AppContent: React.FC = () => {
             minHeight: '100vh',
             width: '100%',
             overflowX: 'hidden',
+            scrollbarWidth: 'thin',
+            scrollbarColor: isDarkMode 
+              ? 'rgba(255, 159, 67, 0.5) rgba(0, 0, 0, 0.1)' 
+              : 'rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1)',
             '&::-webkit-scrollbar': {
               width: '8px',
+              backgroundColor: 'transparent',
             },
             '&::-webkit-scrollbar-track': {
-              background: isDarkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+              background: 'transparent',
               borderRadius: '4px',
+              margin: '4px 0',
             },
             '&::-webkit-scrollbar-thumb': {
-              background: isDarkMode ? 'rgba(255, 159, 67, 0.5)' : 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '4px',
-              '&:hover': {
-                background: isDarkMode ? 'rgba(255, 159, 67, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-              },
+              background: isDarkMode 
+                ? 'rgba(255, 159, 67, 0.3)' 
+                : 'rgba(0, 0, 0, 0.15)',
+              borderRadius: '10px',
+              border: isDarkMode 
+                ? '2px solid rgba(16, 14, 60, 0.5)' 
+                : '2px solid rgba(245, 245, 250, 0.5)',
+              transition: 'all 0.3s ease-in-out',
+              opacity: 0,
+            },
+            '&:hover::-webkit-scrollbar-thumb': {
+              opacity: 1,
+            },
+            '&::-webkit-scrollbar-thumb:hover, &::-webkit-scrollbar-thumb:active': {
+              background: isDarkMode 
+                ? 'rgba(255, 159, 67, 0.7)' 
+                : 'rgba(0, 0, 0, 0.3)',
+              opacity: 1,
             },
           },
           '#root': {
