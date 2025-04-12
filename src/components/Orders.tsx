@@ -557,6 +557,39 @@ interface Carrier {
   createdAt: Date;
 }
 
+// DEFINÍCIA StyledDialogContent (upravená podľa Contacts.tsx)
+const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+  color: isDarkMode ? '#ffffff' : '#000000',
+  padding: '0px',
+  borderRadius: '24px', // Zmenené na 24px
+  // border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, // Odstránený border
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+  overflow: 'hidden',
+  margin: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  '& .MuiDialogTitle-root': {
+    color: isDarkMode ? '#ffffff' : '#000000',
+    padding: '24px 24px 16px 24px',
+    // borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, // Odstránený border
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    flexShrink: 0,
+  },
+  '& .MuiDialogContent-root': {
+    padding: '16px 24px',
+    color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+    overflowY: 'auto',
+    flexGrow: 1,
+  },
+  '& .MuiDialogActions-root': {
+      padding: '16px 24px 24px 24px',
+      // borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, // Odstránený border
+      flexShrink: 0,
+  }
+}));
+
 const OrdersList: React.FC = () => {
   const theme = useTheme();
   const { isDarkMode } = useThemeMode();
@@ -2569,58 +2602,44 @@ const OrdersList: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog pre mazanie OBJEDNÁVKY - už by mal používať StyledDialogContent */}
       <Dialog
         open={showDeleteConfirm}
         onClose={handleDeleteCancel}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        sx={{
-          // Štýl pre pozadie za dialógom (môže zostať priehľadné)
-          '& .MuiBackdrop-root': {
-            backdropFilter: 'blur(3px)', 
-            backgroundColor: 'rgba(0, 0, 0, 0.5)'
-          },
-          // Štýl pre samotný dialóg (papier)
-          '& .MuiPaper-root': {
-            borderRadius: '12px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-            border: theme.palette.mode === 'dark' 
-              ? '1px solid rgba(255, 255, 255, 0.1)' 
-              : '1px solid rgba(0, 0, 0, 0.1)',
-            // Nastavenie plne nepriehľadného pozadia
-            backgroundColor: theme.palette.background.paper, 
-            // backdropFilter už neaplikujeme na papier
-          }
-        }}
+        aria-labelledby="confirm-order-delete-title"
+        aria-describedby="confirm-order-delete-description"
+        PaperProps={{ sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '16px' } }}
+        BackdropProps={{ sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' } }}
       >
-        <DialogTitle id="alert-dialog-title">{"Potvrdiť odstránenie objednávky"}</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Naozaj chcete odstrániť túto objednávku?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={handleDeleteCancel}
-            sx={{ 
-              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)'
-            }}
-          >
-            Zrušiť
-          </Button>
-          <Button 
-            onClick={handleDeleteConfirmed} 
-            autoFocus
-            sx={{ 
-              color: '#ff9f43',
-              '&:hover': { 
-                backgroundColor: 'rgba(255, 159, 67, 0.1)' 
-              } 
-            }}
-          >
-            Potvrdiť
-          </Button>
-        </DialogActions>
+        <StyledDialogContent isDarkMode={isDarkMode}>
+          <DialogTitle id="confirm-order-delete-title">Potvrdiť odstránenie objednávky</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="confirm-order-delete-description"> {/* Použitie DialogContentText */} 
+              Naozaj chcete odstrániť túto objednávku?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={handleDeleteCancel} 
+              sx={{ 
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', }
+              }}
+            >
+              Zrušiť
+            </Button>
+            <Button 
+              onClick={handleDeleteConfirmed} 
+              variant="contained" 
+              color="error" 
+              disabled={loading} 
+              autoFocus // Vrátenie autoFocus
+              sx={{ color: '#ffffff' }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Potvrdiť"} 
+            </Button>
+          </DialogActions>
+        </StyledDialogContent>
       </Dialog>
 
       <Dialog
@@ -2984,111 +3003,73 @@ const OrdersList: React.FC = () => {
       </DialogActions>
     </Dialog>
 
-    {/* Potvrdzovací dialóg pre vymazanie zákazníka */}
+    {/* Potvrdzovací dialóg pre vymazanie ZÁKAZNÍKA - už by mal používať StyledDialogContent */}
     <Dialog
-      open={showCustomerDeleteConfirm}
-      onClose={handleCustomerDeleteCancel}
-      aria-labelledby="confirm-customer-delete-title"
-      aria-describedby="confirm-customer-delete-description"
-      sx={{
-        // Štýl pre pozadie za dialógom
-        '& .MuiBackdrop-root': {
-          backdropFilter: 'blur(3px)', 
-          backgroundColor: 'rgba(0, 0, 0, 0.5)'
-        },
-        // Štýl pre samotný dialóg (papier)
-        '& .MuiPaper-root': {
-          borderRadius: '12px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-          border: theme.palette.mode === 'dark' 
-            ? '1px solid rgba(255, 255, 255, 0.1)' 
-            : '1px solid rgba(0, 0, 0, 0.1)',
-          backgroundColor: theme.palette.background.paper, 
-        }
-      }}
-    >
-      <DialogTitle id="confirm-customer-delete-title">Potvrdiť odstránenie zákazníka</DialogTitle>
-      <DialogContent>
-        <DialogContentText id="confirm-customer-delete-description">
-          Naozaj chcete odstrániť tohto zákazníka?
-        </DialogContentText>
-      </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
-        <Button 
-          onClick={handleCustomerDeleteCancel}
-          sx={{ 
-            color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)'
-          }}
-        >
-          Zrušiť
-        </Button>
-        <Button 
-          onClick={handleCustomerDeleteConfirmed} 
-          autoFocus
-          sx={{ 
-            color: '#ff9f43',
-            '&:hover': { 
-              backgroundColor: 'rgba(255, 159, 67, 0.1)' 
-            } 
-          }}
-        >
-          Potvrdiť
-        </Button>
-      </DialogActions>
-    </Dialog>
+        open={showCustomerDeleteConfirm}
+        onClose={handleCustomerDeleteCancel}
+        aria-labelledby="confirm-customer-delete-title"
+        aria-describedby="confirm-customer-delete-description"
+        PaperProps={{ sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '16px' } }}
+        BackdropProps={{ sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' } }}
+      >
+        <StyledDialogContent isDarkMode={isDarkMode}>
+          <DialogTitle id="confirm-customer-delete-title">Potvrdiť odstránenie zákazníka</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="confirm-customer-delete-description"> {/* Použitie DialogContentText */} 
+              Naozaj chcete odstrániť tohto zákazníka?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCustomerDeleteCancel} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)', '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', } }}>
+              Zrušiť
+            </Button>
+            <Button 
+              onClick={handleCustomerDeleteConfirmed} 
+              variant="contained" 
+              color="error" 
+              disabled={loading} 
+              autoFocus // Vrátenie autoFocus
+              sx={{ color: '#ffffff' }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Potvrdiť"} 
+            </Button>
+          </DialogActions>
+        </StyledDialogContent>
+      </Dialog>
 
-    {/* Potvrdzovací dialóg pre vymazanie dopravcu */}
+    {/* Potvrdzovací dialóg pre vymazanie DOPRAVCU - už by mal používať StyledDialogContent */}
     <Dialog
-      open={showCarrierDeleteConfirm}
-      onClose={handleCarrierDeleteCancel}
-      aria-labelledby="confirm-carrier-delete-title"
-      aria-describedby="confirm-carrier-delete-description"
-      sx={{
-        // Štýl pre pozadie za dialógom
-        '& .MuiBackdrop-root': {
-          backdropFilter: 'blur(3px)', 
-          backgroundColor: 'rgba(0, 0, 0, 0.5)'
-        },
-        // Štýl pre samotný dialóg (papier)
-        '& .MuiPaper-root': {
-          borderRadius: '12px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-          border: theme.palette.mode === 'dark' 
-            ? '1px solid rgba(255, 255, 255, 0.1)' 
-            : '1px solid rgba(0, 0, 0, 0.1)',
-          backgroundColor: theme.palette.background.paper, 
-        }
-      }}
-    >
-      <DialogTitle id="confirm-carrier-delete-title">Potvrdiť odstránenie dopravcu</DialogTitle>
-      <DialogContent>
-        <DialogContentText id="confirm-carrier-delete-description">
-          Naozaj chcete odstrániť tohto dopravcu?
-        </DialogContentText>
-      </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
-        <Button 
-          onClick={handleCarrierDeleteCancel}
-          sx={{ 
-            color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)'
-          }}
-        >
-          Zrušiť
-        </Button>
-        <Button 
-          onClick={handleCarrierDeleteConfirmed} 
-          autoFocus
-          sx={{ 
-            color: '#ff9f43',
-            '&:hover': { 
-              backgroundColor: 'rgba(255, 159, 67, 0.1)' 
-            } 
-          }}
-        >
-          Potvrdiť
-        </Button>
-      </DialogActions>
-    </Dialog>
+        open={showCarrierDeleteConfirm}
+        onClose={handleCarrierDeleteCancel}
+        aria-labelledby="confirm-carrier-delete-title"
+        aria-describedby="confirm-carrier-delete-description"
+        PaperProps={{ sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '16px' } }}
+        BackdropProps={{ sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' } }}
+      >
+        <StyledDialogContent isDarkMode={isDarkMode}>
+          <DialogTitle id="confirm-carrier-delete-title">Potvrdiť odstránenie dopravcu</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="confirm-carrier-delete-description"> {/* Použitie DialogContentText */} 
+              Naozaj chcete odstrániť tohto dopravcu?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCarrierDeleteCancel} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)', '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', } }}>
+              Zrušiť
+            </Button>
+            <Button 
+              onClick={handleCarrierDeleteConfirmed} 
+              variant="contained" 
+              color="error" 
+              disabled={loading} 
+              autoFocus // Vrátenie autoFocus
+              sx={{ color: '#ffffff' }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Potvrdiť"} 
+            </Button>
+          </DialogActions>
+        </StyledDialogContent>
+      </Dialog>
     </PageWrapper>
   );
 };
