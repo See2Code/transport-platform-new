@@ -4,7 +4,7 @@ import { countries } from '../constants/countries'; // Adjust path if necessary
 import {
   Box, Typography, TextField, Button, Paper, Grid, FormControl, InputLabel,
   Select, MenuItem, SelectChangeEvent, useTheme, Checkbox, FormControlLabel,
-  Stepper, Step, StepLabel, Autocomplete, IconButton, Divider, Tooltip, CircularProgress, Collapse, GlobalStyles
+  Autocomplete, IconButton, Divider, Tooltip, CircularProgress, GlobalStyles
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../contexts/ThemeContext';
@@ -51,93 +51,7 @@ interface OrderFormData extends BaseOrderFormData {
 }
 
 // --- Styled Components ---
-const PageWrapper = styled('div')<{ isModal?: boolean }>(({ isModal, theme }) => ({ 
-    padding: '24px',
-    overflow: 'auto',
-    height: isModal ? '100%' : 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    '@media (max-width: 600px)': {
-        padding: '16px'
-    }
-}));
-const StyledPaper = styled(Paper)<{ isModal?: boolean }>(({ isModal, theme }) => ({ 
-    padding: theme.spacing(isModal ? 2 : 3),
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'auto',
-    borderRadius: isModal ? 0 : theme.shape.borderRadius,
-    border: isModal ? 'none' : `1px solid ${theme.palette.divider}`,
-    boxShadow: isModal ? 'none' : theme.shadows[1],
-}));
-const StyledFieldset = styled(Box)(({ theme }) => ({ padding: theme.spacing(2), marginBottom: theme.spacing(3), border: `1px solid ${theme.palette.divider}`, borderRadius: '4px' }));
-const StyledLegend = styled(Typography)(({ theme }) => ({ fontWeight: 600, marginBottom: theme.spacing(2), color: '#ff9f43' }));
-const FormSection = styled(Box)(({ theme }) => ({ marginBottom: theme.spacing(4) }));
-const GoodsItemRow = styled(Box)(({ theme }) => ({ display: 'flex', gap: theme.spacing(1), alignItems: 'center', marginBottom: theme.spacing(1.5), flexWrap: 'wrap' }));
-const PlaceSection = styled(Box)(({ theme }) => ({ marginBottom: theme.spacing(3), paddingBottom: theme.spacing(2), borderBottom: `1px solid ${theme.palette.divider}` }));
-
-// Štýly pre zlepšenie viditeľnosti sekcií
-const SectionHeader = styled(Box)(({ theme }) => ({
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: theme.spacing(2),
-    padding: theme.spacing(1.5),
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(41, 50, 65, 0.5)' : 'rgba(232, 244, 253, 0.5)',
-    borderRadius: theme.shape.borderRadius,
-    borderLeft: `4px solid #ff9f43`
-}));
-
-const AddButton = styled(Button)(({ theme }) => ({
-    fontWeight: 600,
-    padding: theme.spacing(0.8, 2),
-    color: '#fff',
-    background: 'linear-gradient(45deg, #ff9f43 30%, #ffc473 90%)',
-    boxShadow: '0 2px 8px rgba(255, 159, 67, 0.25)',
-    '&:hover': {
-        background: 'linear-gradient(45deg, #ffc473 30%, #ff9f43 90%)',
-        transform: 'translateY(-1px)',
-        boxShadow: '0 4px 12px rgba(255, 159, 67, 0.35)'
-    }
-}));
-
-// Nový komponent pre tlačidlo "Ďalej" - rovnaký ako AddButton
-const NextButton = styled(Button)(({ theme }) => ({
-    fontWeight: 600,
-    padding: theme.spacing(0.8, 2),
-    color: '#fff',
-    background: 'linear-gradient(45deg, #ff9f43 30%, #ffc473 90%)',
-    boxShadow: '0 2px 8px rgba(255, 159, 67, 0.25)',
-    '&:hover': {
-        background: 'linear-gradient(45deg, #ffc473 30%, #ff9f43 90%)',
-        transform: 'translateY(-1px)',
-        boxShadow: '0 4px 12px rgba(255, 159, 67, 0.35)'
-    }
-}));
-
-const PlaceCard = styled(Box)(({ theme }) => ({
-    marginBottom: theme.spacing(3),
-    padding: theme.spacing(2),
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(30, 36, 44, 0.3)' : 'rgba(250, 250, 250, 0.8)',
-    borderRadius: theme.shape.borderRadius,
-    border: `1px solid ${theme.palette.divider}`,
-    position: 'relative',
-    '&:hover': {
-        boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0, 0, 0, 0.15)' 
-            : '0 4px 12px rgba(0, 0, 0, 0.05)'
-    }
-}));
-
-const GoodsWrapper = styled(Box)(({ theme }) => ({
-    marginTop: theme.spacing(2),
-    padding: theme.spacing(1.5),
-    paddingBottom: theme.spacing(0.5),
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.01)',
-    borderRadius: theme.shape.borderRadius,
-    border: `1px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'}`,
-}));
+// Odstránené nepoužívané styled components ako PageWrapper, StyledPaper, StyledFieldset, StyledLegend, FormSection, SectionHeader, AddButton, NextButton, PlaceCard, GoodsWrapper
 
 // --- Initial Empty States ---
 const emptyGoodsItem: GoodsItem = { id: crypto.randomUUID(), name: '', quantity: 1, unit: 'ks', palletExchange: 'Bez výmeny', dimensions: '', description: '', adrClass: '', referenceNumber: '' };
@@ -157,7 +71,6 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
     const { isDarkMode } = useThemeMode();
     const { userData } = useAuth();
     const navigate = useNavigate();
-    const [activeStep, setActiveStep] = useState(0);
 
     const [formData, setFormData] = useState<Partial<OrderFormData>>({
         datumPrijatia: new Date(),
@@ -626,22 +539,14 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
         }
     };
 
-    // Stepper navigation
-    const handleNext = () => setActiveStep((prev) => prev + 1);
-    const handleBack = () => setActiveStep((prev) => prev - 1);
-    const steps = ['Zákazník a Náklad', 'Miesta a Dopravca'];
-
     return (
         <Box 
             sx={{ 
-                p: isModal ? 3 : 2,
-                height: isModal ? '100%' : 'auto',
+                p: isModal ? 0 : 2, // Padding pre ne-modálny režim
+                height: '100%', // Formulár zaberie výšku kontajnera
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(22, 28, 36, 0.95)' 
-                    : 'rgba(255, 255, 255, 0.95)',
-                backgroundImage: isModal ? 'none' : undefined
+                overflow: 'hidden' // Aby sa formulár nezväčšoval donekonečna
             }}
         >
             <GlobalStyles 
@@ -666,540 +571,520 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                     }
                 }}
             />
-            <Stepper 
-                activeStep={activeStep} 
-                sx={{ 
-                    mb: 4,
-                    '& .MuiStepLabel-root .Mui-active': {
-                        color: '#ff9f43', // Oranžová farba pre aktívny krok
-                    },
-                    '& .MuiStepLabel-root .Mui-completed': {
-                        color: '#ff9f43', // Oranžová farba pre dokončený krok
-                    },
-                    '& .MuiStepConnector-line': {
-                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                    },
-                    '& .MuiStepIcon-root.Mui-active': {
-                        color: '#ff9f43',
-                    },
-                    '& .MuiStepIcon-root.Mui-completed': {
-                        color: '#ff9f43',
-                    },
-                    '& .MuiStepIcon-text': {
-                        fill: theme.palette.mode === 'dark' ? '#fff' : '#000',
-                    }
-                }}
-            >
-                {steps.map((label) => (
-                    <Step key={label}>
-                        <StepLabel>{label}</StepLabel>
-                    </Step>
-                ))}
-            </Stepper>
-
-            <form 
+            
+            <Box 
+                component="form" 
                 onSubmit={handleSubmit} 
-                style={{ 
-                    position: 'relative',
+                sx={{ 
+                    flexGrow: 1, // Aby obsah zabral dostupný priestor
+                    overflowY: 'auto', // Pridáme scrollbar, ak je obsah príliš dlhý
+                    p: 3, // Vnútorný padding obsahu formulára
                     display: 'flex',
                     flexDirection: 'column',
                     width: '100%',
-                    height: '100%'
                 }}
             >
-                {/* STEP 1: Zákazník a Náklad */}
-                <Collapse in={activeStep === 0} timeout={500}>
-                    <Box sx={{ 
-                        minHeight: '600px',
-                        height: 'auto',
-                        overflow: 'visible',
-                        pb: 8 // Pridať padding na spodku, aby bol priestor pre tlačidlá
-                    }}>
-                        {/* Základné údaje */}
-                        <FormSection>
-                            <StyledLegend variant="h6">Základné údaje</StyledLegend>
-                            <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6} md={4}>
-                                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                                        <DatePicker label="Dátum prijatia *" value={formData.datumPrijatia} onChange={handleDateChange('datumPrijatia')} slotProps={{ textField: { fullWidth: true, required: true, size: 'small' } }} />
-                                    </LocalizationProvider>
-                                </Grid>
-                            </Grid>
-                        </FormSection>
+                <Grid container spacing={3} sx={{ flexGrow: 1 }}> {/* Grid zaberie dostupný priestor */}
+                    {/* Základné údaje */}
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle1" sx={{ mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
+                            Základné údaje
+                        </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                            <DatePicker label="Dátum prijatia *" value={formData.datumPrijatia} onChange={handleDateChange('datumPrijatia')} slotProps={{ textField: { fullWidth: true, required: true } }} />
+                        </LocalizationProvider>
+                    </Grid>
 
-                        {/* Údaje zákazníka */}
-                        <FormSection>
-                            <StyledLegend variant="h6">Údaje zákazníka</StyledLegend>
-                            <Grid container spacing={2} alignItems="center">
-                                 <Grid item xs={12} md={6}>
-                                    <Autocomplete
-                                        freeSolo 
-                                        options={customerOptions} 
-                                        getOptionLabel={(o) => typeof o === 'string' ? o : o.company}
-                                        value={formData.zakaznikData ?? formData.zakaznik} 
-                                        onChange={handleCustomerAutocompleteChange}
-                                        onInputChange={(e, val) => {
-                                            setCustomerSearchTerm(val);
-                                            // Ak nie je vybraný žiadny objekt zákazníka, nastavíme text ako zákazníka
-                                            if (!formData.zakaznikData && val) {
-                                                setFormData(prev => ({ ...prev, zakaznik: val }));
-                                            }
-                                        }} 
-                                        loading={isCustomerLoading}
-                                        renderInput={(params) => (
-                                            <TextField 
-                                                {...params} 
-                                                label="Zákazník *" 
-                                                required 
-                                                size="small" 
-                                                InputProps={{ 
-                                                    ...params.InputProps, 
-                                                    endAdornment: (
-                                                        <>{isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}{params.InputProps.endAdornment}</>
-                                                    ) 
-                                                }} 
+                    {/* Údaje zákazníka */}
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle1" sx={{ mt: 2, mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
+                            Údaje zákazníka
+                        </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Autocomplete
+                            freeSolo 
+                            options={customerOptions} 
+                            getOptionLabel={(o) => typeof o === 'string' ? o : o.company}
+                            value={formData.zakaznikData ?? formData.zakaznik} 
+                            onChange={handleCustomerAutocompleteChange}
+                            onInputChange={(e, val) => {
+                                setCustomerSearchTerm(val);
+                                // Ak nie je vybraný žiadny objekt zákazníka, nastavíme text ako zákazníka
+                                if (!formData.zakaznikData && val) {
+                                    setFormData(prev => ({ ...prev, zakaznik: val }));
+                                }
+                            }} 
+                            loading={isCustomerLoading}
+                            renderInput={(params) => (
+                                <TextField 
+                                    {...params} 
+                                    label="Zákazník *" 
+                                    required 
+                                    InputProps={{ 
+                                        ...params.InputProps, 
+                                        endAdornment: (
+                                            <>{isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}{params.InputProps.endAdornment}</>
+                                        ) 
+                                    }} 
+                                />
+                            )}
+                            renderOption={(props, option) => {
+                                const typedOption = option as Customer;
+                                return <li {...props} key={typedOption.id || ''}>{typedOption.company} ({typedOption.city})</li>;
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#ff9f43',
+                                },
+                                '& .MuiInputLabel-root.Mui-focused': {
+                                    color: '#ff9f43',
+                                }
+                            }}
+                         />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField fullWidth label="Kontaktná osoba" name="kontaktnaOsoba" value={formData.kontaktnaOsoba || ''} onChange={handleInputChange} />
+                    </Grid>
+                    <Grid item xs={12} sm={6}><TextField fullWidth label="IČ DPH" name="customerVatId" value={formData.customerVatId || ''} onChange={handleInputChange} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField fullWidth label="Ulica" name="customerStreet" value={formData.customerStreet || ''} onChange={handleInputChange} /></Grid>
+                
+                    {/* Cena */}
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle1" sx={{ mt: 2, mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
+                            Cena
+                        </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}><TextField fullWidth label="Suma *" name="suma" type="number" value={formData.suma || ''} onChange={handleInputChange} required inputProps={{ min: 0, step: "0.01" }} /></Grid>
+                    <Grid item xs={6} sm={3}><FormControl fullWidth required><InputLabel>Mena *</InputLabel><Select name="mena" value={formData.mena || 'EUR'} label="Mena *" onChange={handleSelectChange}><MenuItem value="EUR">EUR</MenuItem><MenuItem value="CZK">CZK</MenuItem>{/* ... */}</Select></FormControl></Grid>
+                    <Grid item xs={6} sm={5}><FormControlLabel control={<Checkbox name="vyuctovaniePodlaMnozstva" checked={formData.vyuctovaniePodlaMnozstva || false} onChange={handleInputChange} />} label="Vyúčtovanie podľa množstva" /></Grid>
+                
+                    {/* Náklad */}
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle1" sx={{ mt: 2, mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
+                            Náklad
+                        </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Číslo nákladu zákazníka"
+                            name="cisloNakladuZakaznika"
+                            value={formData.cisloNakladuZakaznika || ''}
+                            onChange={handleInputChange}
+                            placeholder="Referenčné číslo zákazníka"
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Interná poznámka"
+                            name="internaPoznamka"
+                            value={formData.internaPoznamka || ''}
+                            onChange={handleInputChange}
+                            multiline
+                            rows={2}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                            <InputLabel id="navesLabel">Vyžaduje sa typ návesu</InputLabel>
+                            <Select
+                                labelId="navesLabel"
+                                name="vyzadujeSaTypNavesu"
+                                value={formData.vyzadujeSaTypNavesu || ''}
+                                label="Vyžaduje sa typ návesu"
+                                onChange={handleSelectChange}
+                            >
+                                <MenuItem value=""><em>Žiadny</em></MenuItem>
+                                <MenuItem value="plachta">Plachta</MenuItem>
+                                <MenuItem value="skriňa">Skriňa</MenuItem>
+                                <MenuItem value="chladiak">Chladiarenský</MenuItem>
+                                <MenuItem value="mraziak">Mraziarenský</MenuItem>
+                                <MenuItem value="specialny">Špeciálny</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <TextField
+                            fullWidth
+                            label="Požiadavky"
+                            name="poziadavky"
+                            placeholder="Napr. GPS, Pásy, ADR..."
+                            value={formData.poziadavky || ''}
+                            onChange={handleInputChange}
+                        />
+                    </Grid>
+
+                    {/* Body Nakládky */}
+                    <Grid item xs={12}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 1 }}>
+                            <Typography variant="subtitle1" sx={{ color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
+                                Body Nakládky
+                            </Typography>
+                            <Button 
+                                startIcon={<AddIcon />} 
+                                onClick={() => addPlace('loading')} 
+                                size="small"
+                                sx={{ color: '#ff9f43' }}
+                            >
+                                Pridať Nakládku
+                            </Button>
+                        </Box>
+                    </Grid>
+                    {formData.loadingPlaces?.map((place, index) => (
+                        <Grid item xs={12} key={place.id || index}>
+                           <Paper sx={{ p: 2, mb: 1, position: 'relative' }}>
+                                <Typography 
+                                    variant="body1" 
+                                    sx={{ mb: 2, fontWeight: 500 }}
+                                >
+                                    Nakládka #{index + 1}
+                                    {formData.loadingPlaces && formData.loadingPlaces.length > 1 && (
+                                        <IconButton 
+                                            size="small" 
+                                            onClick={() => removePlace('loading', index)} 
+                                            color="error"
+                                            sx={{ position: 'absolute', top: 8, right: 8 }}
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                </Typography>
+                                <Grid container spacing={2}>
+                                    {/* Fields for Loading Place */}
+                                    <Grid item xs={12} sm={6}><TextField fullWidth label="Ulica a číslo *" value={place.street} onChange={handlePlaceInputChange('loading', index, 'street')} required /></Grid>
+                                    <Grid item xs={6} sm={3}><TextField fullWidth label="Mesto *" value={place.city} onChange={handlePlaceInputChange('loading', index, 'city')} required /></Grid>
+                                    <Grid item xs={6} sm={3}><TextField fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('loading', index, 'zip')} required /></Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <Autocomplete options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('loading', index, 'country')} 
+                                            renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                                            <DateTimePicker 
+                                                label="Dátum a čas nakládky *"
+                                                value={place.dateTime as Date | null}
+                                                onChange={handleDateTimeChange('loading', index)}
+                                                slotProps={{ textField: { fullWidth: true, required: true } }}
                                             />
-                                        )}
-                                        renderOption={(props, option) => {
-                                            const typedOption = option as Customer;
-                                            return <li {...props} key={typedOption.id || ''}>{typedOption.company} ({typedOption.city})</li>;
-                                        }}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#ff9f43',
-                                            },
-                                            '& .MuiInputLabel-root.Mui-focused': {
-                                                color: '#ff9f43',
-                                            }
-                                        }}
-                                     />
+                                        </LocalizationProvider>
+                                    </Grid>
+                                    <Grid item xs={12}><TextField fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('loading', index, 'contactPerson')} required /></Grid>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <TextField fullWidth label="Kontaktná osoba" name="kontaktnaOsoba" value={formData.kontaktnaOsoba || ''} onChange={handleInputChange} size="small"/>
-                                </Grid>
-                                {/* Add other customer fields if needed here, prefilled from zakaznikData */}
-                                <Grid item xs={12} sm={6}><TextField fullWidth label="IČ DPH" name="customerVatId" value={formData.customerVatId || ''} onChange={handleInputChange} size="small" /></Grid>
-                                <Grid item xs={12} sm={6}><TextField fullWidth label="Ulica" name="customerStreet" value={formData.customerStreet || ''} onChange={handleInputChange} size="small" /></Grid>
-                                 {/* ... more customer fields ... */}
-                            </Grid>
-                        </FormSection>
-
-                        {/* Cena */}
-                        <FormSection>
-                            <StyledLegend variant="h6">Cena</StyledLegend>
-                            <Grid container spacing={2} alignItems="center">
-                                <Grid item xs={12} sm={4}><TextField fullWidth label="Suma *" name="suma" type="number" value={formData.suma || ''} onChange={handleInputChange} required inputProps={{ min: 0, step: "0.01" }} size="small"/></Grid>
-                                <Grid item xs={6} sm={3}><FormControl fullWidth required size="small"><InputLabel>Mena *</InputLabel><Select name="mena" value={formData.mena || 'EUR'} label="Mena *" onChange={handleSelectChange}><MenuItem value="EUR">EUR</MenuItem><MenuItem value="CZK">CZK</MenuItem>{/* ... */}</Select></FormControl></Grid>
-                                <Grid item xs={6} sm={5}><FormControlLabel control={<Checkbox name="vyuctovaniePodlaMnozstva" checked={formData.vyuctovaniePodlaMnozstva || false} onChange={handleInputChange} />} label="Vyúčtovanie podľa množstva" /></Grid>
-                            </Grid>
-                        </FormSection>
-
-                        {/* Náklad */}
-                        <FormSection>
-                            <StyledLegend variant="h6">Náklad</StyledLegend>
-                            <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6}><TextField fullWidth label="Č. nákladu zákazníka" name="cisloNakladuZakaznika" value={formData.cisloNakladuZakaznika || ''} onChange={handleInputChange} size="small"/></Grid>
-                                <Grid item xs={12} sm={6}><TextField fullWidth label="Interná poznámka" name="internaPoznamka" value={formData.internaPoznamka || ''} onChange={handleInputChange} size="small"/></Grid>
-                                <Grid item xs={12} sm={6}><FormControl fullWidth size="small"><InputLabel>Vyžaduje sa typ návesu</InputLabel><Select name="vyzadujeSaTypNavesu" value={formData.vyzadujeSaTypNavesu || ''} label="Vyžaduje sa typ návesu" onChange={handleSelectChange}><MenuItem value="">-- Nevyžaduje sa --</MenuItem><MenuItem value="Plachta">Plachta</MenuItem>{/* ... */}</Select></FormControl></Grid>
-                                <Grid item xs={12} sm={6}><TextField fullWidth label="Požiadavky" name="poziadavky" value={formData.poziadavky || ''} onChange={handleInputChange} size="small"/></Grid>
-                            </Grid>
-                        </FormSection>
-                             <Box sx={{ 
-                                display: 'flex', 
-                                justifyContent: 'flex-end', 
-                                mt: 2,
-                                position: 'fixed',
-                                bottom: isModal ? 20 : 40,
-                                right: isModal ? 40 : 60,
-                                zIndex: 2,
-                                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(22, 28, 36, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                                p: 2,
-                                borderRadius: '8px',
-                                boxShadow: '0 3px 10px rgba(0,0,0,0.2)',
-                                minWidth: '200px'
-                             }}>
-                                <NextButton onClick={handleNext}>Ďalej</NextButton>
-                             </Box>
-                        </Box>
-                    </Collapse>
-
-                        {/* STEP 2: Miesta a Dopravca */}
-                    <Collapse in={activeStep === 1} timeout={500}>
-                        <Box sx={{ 
-                            minHeight: '600px',
-                            height: 'auto',
-                            overflow: 'visible',
-                            pb: 8 // Pridať padding na spodku, aby bol priestor pre tlačidlá
-                        }}>
-                             {/* Body Nakládky */}
-                            <FormSection>
-                                <SectionHeader>
-                                 <StyledLegend variant="h6">Body Nakládky</StyledLegend>
-                                    <AddButton 
-                                        startIcon={<AddIcon />} 
-                                        onClick={() => addPlace('loading')} 
-                                        size="small"
-                                    >
-                                        Pridať Nakládku
-                                    </AddButton>
-                                </SectionHeader>
-                                {formData.loadingPlaces?.map((place, index) => (
-                                    <PlaceCard key={place.id || index}>
-                                        <Typography 
-                                            variant="subtitle1" 
-                                            sx={{ 
-                                                mb: 2, 
-                                                fontWeight: 600, 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'space-between' 
-                                            }}
+                                 {/* Goods Items Section */}
+                                <Box sx={{ mt: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>Tovar na naloženie:</Typography>
+                                        <Button 
+                                            startIcon={<AddIcon />} 
+                                            size="small" 
+                                            onClick={() => addGoodsItem('loading', index)}
+                                            sx={{ color: '#ff9f43' }}
                                         >
-                                            <span>Nakládka #{index + 1}</span>
-                                            {formData.loadingPlaces && formData.loadingPlaces.length > 1 && (
-                                                <IconButton 
-                                                    size="small" 
-                                                    onClick={() => removePlace('loading', index)} 
-                                                    color="error"
-                                                    sx={{ position: 'absolute', top: 8, right: 8 }}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            )}
-                                        </Typography>
-                                        <Grid container spacing={2}>
-                                            {/* Fields for Loading Place */}
-                                            <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Ulica a číslo *" value={place.street} onChange={handlePlaceInputChange('loading', index, 'street')} required /></Grid>
-                                            <Grid item xs={6} sm={3}><TextField size="small" fullWidth label="Mesto *" value={place.city} onChange={handlePlaceInputChange('loading', index, 'city')} required /></Grid>
-                                            <Grid item xs={6} sm={3}><TextField size="small" fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('loading', index, 'zip')} required /></Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <Autocomplete size="small" options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('loading', index, 'country')} 
-                                                    renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
-                                            </Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                                                    <DateTimePicker 
-                                                        label="Dátum a čas nakládky *"
-                                                        value={place.dateTime as Date | null}
-                                                        onChange={handleDateTimeChange('loading', index)}
-                                                        slotProps={{ textField: { fullWidth: true, required: true, size: 'small' } }}
-                                                    />
-                                                </LocalizationProvider>
-                                            </Grid>
-                                            <Grid item xs={12}><TextField size="small" fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('loading', index, 'contactPerson')} required /></Grid>
-                                        </Grid>
-                                         {/* Goods Items Section */}
-                                        <GoodsWrapper>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>Tovar na naloženie:</Typography>
-                                                <Button 
-                                                    startIcon={<AddIcon />} 
-                                                    size="small" 
-                                                    onClick={() => addGoodsItem('loading', index)}
-                                                    sx={{
-                                                        color: '#ff9f43',
-                                                        '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
-                                                    }}
-                                                >
-                                                    Pridať tovar
-                                                </Button>
-                                            </Box>
+                                            Pridať tovar
+                                        </Button>
+                                    </Box>
+                                    
+                                    {place.goods?.map((item, goodsIndex) => (
+                                        <Paper 
+                                            key={item.id || goodsIndex}
+                                            sx={{ p: 1.5, mb: 1, position: 'relative' }}
+                                            elevation={0}
+                                            variant="outlined"
+                                        >
+                                            <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>
+                                                Tovar #{goodsIndex + 1}
+                                                {place.goods && place.goods.length > 1 && (
+                                                    <IconButton 
+                                                        size="small" 
+                                                        onClick={() => removeGoodsItem('loading', index, goodsIndex)} 
+                                                        color="error"
+                                                        sx={{ position: 'absolute', top: 4, right: 4 }}
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                )}
+                                            </Typography>
                                             
-                                            {place.goods?.map((item, goodsIndex) => (
-                                                <Box 
-                                                    key={item.id || goodsIndex}
-                                                    sx={{
-                                                        p: 1.5,
-                                                        mb: 1.5,
-                                                        borderRadius: 1,
-                                                        position: 'relative',
-                                                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'
-                                                    }}
-                                                >
-                                                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                                                        Tovar #{goodsIndex + 1}
-                                                        {place.goods && place.goods.length > 1 && (
-                                                            <IconButton 
-                                                                size="small" 
-                                                                onClick={() => removeGoodsItem('loading', index, goodsIndex)} 
-                                                                color="error"
-                                                                sx={{ position: 'absolute', top: 8, right: 8 }}
-                                                            >
-                                                                <DeleteIcon fontSize="small" />
-                                                            </IconButton>
-                                                        )}
-                                                    </Typography>
-                                                    
-                                                    <Grid container spacing={2}>
-                                                        <Grid item xs={12} sm={6}>
-                                                            <TextField 
-                                                                size="small" 
-                                                                label="Názov tovaru *" 
-                                                                value={item.name} 
-                                                                onChange={handleGoodsChange('loading', index, goodsIndex, 'name')} 
-                                                                required 
-                                                                fullWidth
-                                                            />
-                                                        </Grid>
-                                                        <Grid item xs={6} sm={3}>
-                                                            <TextField 
-                                                                size="small" 
-                                                                label="Množstvo *" 
-                                                                type="number" 
-                                                                value={item.quantity} 
-                                                                onChange={handleGoodsChange('loading', index, goodsIndex, 'quantity')} 
-                                                                required 
-                                                                inputProps={{min: 0, step: 1}}
-                                                                fullWidth
-                                                            />
-                                                        </Grid>
-                                                        <Grid item xs={6} sm={3}>
-                                                            <FormControl size="small" fullWidth>
-                                                                <InputLabel>Jednotka *</InputLabel>
-                                                                <Select 
-                                                                    value={item.unit} 
-                                                                    label="Jednotka *" 
-                                                                    onChange={handleGoodsChange('loading', index, goodsIndex, 'unit')} 
-                                                                    required
-                                                                >
-                                                                    <MenuItem value="ks">ks</MenuItem>
-                                                                    <MenuItem value="pal">pal</MenuItem>
-                                                                    <MenuItem value="kg">kg</MenuItem>
-                                                                </Select>
-                                                            </FormControl>
-                                                        </Grid>
-                                                        <Grid item xs={12} sm={6}>
-                                                            <FormControl size="small" fullWidth>
-                                                                <InputLabel>Výmena paliet</InputLabel>
-                                                                <Select 
-                                                                    value={item.palletExchange} 
-                                                                    label="Výmena paliet" 
-                                                                    onChange={handleGoodsChange('loading', index, goodsIndex, 'palletExchange')}
-                                                                >
-                                                                    <MenuItem value="Bez výmeny">Bez výmeny</MenuItem>
-                                                                    <MenuItem value="Výmena">Výmena</MenuItem>
-                                                                </Select>
-                                                            </FormControl>
-                                                        </Grid>
-                                                        <Grid item xs={12} sm={6}>
-                                                            <TextField 
-                                                                size="small" 
-                                                                label="Rozmer" 
-                                                                value={item.dimensions} 
-                                                                onChange={handleGoodsChange('loading', index, goodsIndex, 'dimensions')} 
-                                                                fullWidth
-                                                            />
-                                                        </Grid>
-                                                        <Grid item xs={12}>
-                                                            <TextField 
-                                                                size="small" 
-                                                                label="Popis tovaru" 
-                                                                value={item.description} 
-                                                                onChange={handleGoodsChange('loading', index, goodsIndex, 'description')} 
-                                                                fullWidth
-                                                            />
-                                                        </Grid>
-                                                    </Grid>
-                                                </Box>
-                                            ))}
-                                        </GoodsWrapper>
-                                    </PlaceCard>
-                                ))}
-                            </FormSection>
-
-                            {/* Body Vykládky */}
-                            <FormSection>
-                                 <SectionHeader>
-                                     <StyledLegend variant="h6">Body Vykládky</StyledLegend>
-                                     <AddButton 
-                                         startIcon={<AddIcon />} 
-                                         onClick={() => addPlace('unloading')} 
-                                         size="small"
-                                     >
-                                         Pridať Vykládku
-                                    </AddButton>
-                                </SectionHeader>
-                                {formData.unloadingPlaces?.map((place, index) => (
-                                    <PlaceCard key={place.id || index}>
-                                        <Typography 
-                                            variant="subtitle1" 
-                                            sx={{ 
-                                                mb: 2, 
-                                                fontWeight: 600, 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'space-between' 
-                                            }}
-                                        >
-                                            <span>Vykládka #{index + 1}</span>
-                                            {formData.unloadingPlaces && formData.unloadingPlaces.length > 1 && (
-                                                <IconButton 
-                                                    size="small" 
-                                                    onClick={() => removePlace('unloading', index)} 
-                                                    color="error"
-                                                    sx={{ position: 'absolute', top: 8, right: 8 }}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            )}
-                                        </Typography>
-                                        <Grid container spacing={2}>
-                                            {/* Fields for Unloading Place */}
-                                            <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Ulica a číslo *" value={place.street} onChange={handlePlaceInputChange('unloading', index, 'street')} required /></Grid>
-                                            <Grid item xs={6} sm={3}><TextField size="small" fullWidth label="Mesto *" value={place.city} onChange={handlePlaceInputChange('unloading', index, 'city')} required /></Grid>
-                                            <Grid item xs={6} sm={3}><TextField size="small" fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('unloading', index, 'zip')} required /></Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                <Autocomplete size="small" options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('unloading', index, 'country')} 
-                                                    renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
+                                            <Grid container spacing={1}>
+                                                <Grid item xs={12} sm={6}>
+                                                    <TextField 
+                                                        label="Názov tovaru *" 
+                                                        value={item.name} 
+                                                        onChange={handleGoodsChange('loading', index, goodsIndex, 'name')} 
+                                                        required 
+                                                        fullWidth
+                                                        size="small"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={6} sm={3}>
+                                                    <TextField 
+                                                        label="Množstvo *" 
+                                                        type="number" 
+                                                        value={item.quantity} 
+                                                        onChange={handleGoodsChange('loading', index, goodsIndex, 'quantity')} 
+                                                        required 
+                                                        inputProps={{min: 0, step: 1}}
+                                                        fullWidth
+                                                        size="small"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={6} sm={3}>
+                                                    <FormControl fullWidth size="small">
+                                                        <InputLabel>Jednotka *</InputLabel>
+                                                        <Select 
+                                                            value={item.unit} 
+                                                            label="Jednotka *" 
+                                                            onChange={handleGoodsChange('loading', index, goodsIndex, 'unit')} 
+                                                            required
+                                                        >
+                                                            <MenuItem value="ks">ks</MenuItem>
+                                                            <MenuItem value="pal">pal</MenuItem>
+                                                            <MenuItem value="kg">kg</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                </Grid>
+                                                <Grid item xs={12} sm={6}>
+                                                    <FormControl fullWidth size="small">
+                                                        <InputLabel>Výmena paliet</InputLabel>
+                                                        <Select 
+                                                            value={item.palletExchange} 
+                                                            label="Výmena paliet" 
+                                                            onChange={handleGoodsChange('loading', index, goodsIndex, 'palletExchange')}
+                                                        >
+                                                            <MenuItem value="Bez výmeny">Bez výmeny</MenuItem>
+                                                            <MenuItem value="Výmena">Výmena</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                </Grid>
+                                                <Grid item xs={12} sm={6}>
+                                                    <TextField 
+                                                        label="Rozmer" 
+                                                        value={item.dimensions} 
+                                                        onChange={handleGoodsChange('loading', index, goodsIndex, 'dimensions')} 
+                                                        fullWidth
+                                                        size="small"
+                                                    />
+                                                </Grid>
+                                                <Grid item xs={12}>
+                                                    <TextField 
+                                                        label="Popis tovaru" 
+                                                        value={item.description} 
+                                                        onChange={handleGoodsChange('loading', index, goodsIndex, 'description')} 
+                                                        fullWidth
+                                                        size="small"
+                                                    />
+                                                </Grid>
                                             </Grid>
-                                            <Grid item xs={12} sm={6}>
-                                                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                                                     <DateTimePicker 
-                                                         label="Dátum a čas vykládky *"
-                                                         value={place.dateTime as Date | null}
-                                                         onChange={handleDateTimeChange('unloading', index)}
-                                                         slotProps={{ textField: { fullWidth: true, required: true, size: 'small' } }}
-                                                     />
-                                                 </LocalizationProvider>
-                                             </Grid>
-                                            <Grid item xs={12}><TextField size="small" fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('unloading', index, 'contactPerson')} required /></Grid>
-                                        </Grid>
-                                         {/* Goods Items Section */}
-                                         <GoodsWrapper>
-                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                                                 <Typography variant="body2" sx={{ fontWeight: 500 }}>Tovar na vyloženie:</Typography>
-                                                 <Button 
-                                                     startIcon={<AddIcon />} 
-                                                     size="small" 
-                                                     onClick={() => addGoodsItem('unloading', index)}
-                                                     sx={{
-                                                         color: '#ff9f43',
-                                                         '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
-                                                     }}
-                                                 >
-                                                     Pridať tovar
-                                                 </Button>
-                                             </Box>
+                                        </Paper>
+                                    ))}
+                                </Box>
+                            </Paper>
+                        </Grid>
+                    ))}
+
+                     {/* Body Vykládky */}
+                     <Grid item xs={12}>
+                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 1 }}>
+                             <Typography variant="subtitle1" sx={{ color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
+                                 Body Vykládky
+                             </Typography>
+                             <Button 
+                                 startIcon={<AddIcon />} 
+                                 onClick={() => addPlace('unloading')} 
+                                 size="small"
+                                 sx={{ color: '#ff9f43' }}
+                             >
+                                 Pridať Vykládku
+                             </Button>
+                         </Box>
+                     </Grid>
+                    {formData.unloadingPlaces?.map((place, index) => (
+                        <Grid item xs={12} key={place.id || index}>
+                            <Paper sx={{ p: 2, mb: 1, position: 'relative' }}>
+                                <Typography 
+                                    variant="body1" 
+                                    sx={{ mb: 2, fontWeight: 500 }}
+                                >
+                                    Vykládka #{index + 1}
+                                    {formData.unloadingPlaces && formData.unloadingPlaces.length > 1 && (
+                                        <IconButton 
+                                            size="small" 
+                                            onClick={() => removePlace('unloading', index)} 
+                                            color="error"
+                                            sx={{ position: 'absolute', top: 8, right: 8 }}
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                </Typography>
+                                <Grid container spacing={2}>
+                                    {/* Fields for Unloading Place */}
+                                    <Grid item xs={12} sm={6}><TextField fullWidth label="Ulica a číslo *" value={place.street} onChange={handlePlaceInputChange('unloading', index, 'street')} required /></Grid>
+                                    <Grid item xs={6} sm={3}><TextField fullWidth label="Mesto *" value={place.city} onChange={handlePlaceInputChange('unloading', index, 'city')} required /></Grid>
+                                    <Grid item xs={6} sm={3}><TextField fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('unloading', index, 'zip')} required /></Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <Autocomplete options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('unloading', index, 'country')} 
+                                            renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                                             <DateTimePicker 
+                                                 label="Dátum a čas vykládky *"
+                                                 value={place.dateTime as Date | null}
+                                                 onChange={handleDateTimeChange('unloading', index)}
+                                                 slotProps={{ textField: { fullWidth: true, required: true } }}
+                                             />
+                                         </LocalizationProvider>
+                                     </Grid>
+                                    <Grid item xs={12}><TextField fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('unloading', index, 'contactPerson')} required /></Grid>
+                                </Grid>
+                                 {/* Goods Items Section */}
+                                 <Box sx={{ mt: 2 }}>
+                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                         <Typography variant="body2" sx={{ fontWeight: 500 }}>Tovar na vyloženie:</Typography>
+                                         <Button 
+                                             startIcon={<AddIcon />} 
+                                             size="small" 
+                                             onClick={() => addGoodsItem('unloading', index)}
+                                             sx={{ color: '#ff9f43' }}
+                                         >
+                                             Pridať tovar
+                                         </Button>
+                                     </Box>
+                                     
+                                     {place.goods?.map((item, goodsIndex) => (
+                                         <Paper 
+                                             key={item.id || goodsIndex}
+                                             sx={{ p: 1.5, mb: 1, position: 'relative' }}
+                                             elevation={0}
+                                             variant="outlined"
+                                         >
+                                             <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>
+                                                 Tovar #{goodsIndex + 1}
+                                                 {place.goods && place.goods.length > 1 && (
+                                                     <IconButton 
+                                                         size="small" 
+                                                         onClick={() => removeGoodsItem('unloading', index, goodsIndex)} 
+                                                         color="error"
+                                                         sx={{ position: 'absolute', top: 4, right: 4 }}
+                                                     >
+                                                         <DeleteIcon fontSize="small" />
+                                                     </IconButton>
+                                                 )}
+                                             </Typography>
                                              
-                                             {place.goods?.map((item, goodsIndex) => (
-                                                 <Box 
-                                                     key={item.id || goodsIndex}
-                                                     sx={{
-                                                         p: 1.5,
-                                                         mb: 1.5,
-                                                         borderRadius: 1,
-                                                         position: 'relative',
-                                                         backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)'
-                                                     }}
-                                                 >
-                                                     <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                                                         Tovar #{goodsIndex + 1}
-                                                         {place.goods && place.goods.length > 1 && (
-                                                             <IconButton 
-                                                                 size="small" 
-                                                                 onClick={() => removeGoodsItem('unloading', index, goodsIndex)} 
-                                                                 color="error"
-                                                                 sx={{ position: 'absolute', top: 8, right: 8 }}
-                                                             >
-                                                                 <DeleteIcon fontSize="small" />
-                                                             </IconButton>
-                                                         )}
-                                                     </Typography>
-                                                     
-                                                     <Grid container spacing={2}>
-                                                         <Grid item xs={12} sm={6}>
-                                                             <TextField 
-                                                                 size="small" 
-                                                                 label="Názov tovaru *" 
-                                                                 value={item.name} 
-                                                                 onChange={handleGoodsChange('unloading', index, goodsIndex, 'name')} 
-                                                                 required 
-                                                                 fullWidth
-                                                             />
-                                                         </Grid>
-                                                         <Grid item xs={6} sm={3}>
-                                                             <TextField 
-                                                                 size="small" 
-                                                                 label="Množstvo *" 
-                                                                 type="number" 
-                                                                 value={item.quantity} 
-                                                                 onChange={handleGoodsChange('unloading', index, goodsIndex, 'quantity')} 
-                                                                 required 
-                                                                 inputProps={{min: 0, step: 1}}
-                                                                 fullWidth
-                                                             />
-                                                         </Grid>
-                                                         <Grid item xs={6} sm={3}>
-                                                             <FormControl size="small" fullWidth>
-                                                                 <InputLabel>Jednotka *</InputLabel>
-                                                                 <Select 
-                                                                     value={item.unit} 
-                                                                     label="Jednotka *" 
-                                                                     onChange={handleGoodsChange('unloading', index, goodsIndex, 'unit')} 
-                                                                     required
-                                                                 >
-                                                                     <MenuItem value="ks">ks</MenuItem>
-                                                                     <MenuItem value="pal">pal</MenuItem>
-                                                                     <MenuItem value="kg">kg</MenuItem>
-                                                                 </Select>
-                                                             </FormControl>
-                                                         </Grid>
-                                                         <Grid item xs={12}>
-                                                             <TextField 
-                                                                 size="small" 
-                                                                 label="Popis tovaru" 
-                                                                 value={item.description} 
-                                                                 onChange={handleGoodsChange('unloading', index, goodsIndex, 'description')} 
-                                                                 fullWidth
-                                                             />
-                                                         </Grid>
-                                                     </Grid>
-                                                 </Box>
-                                             ))}
-                                         </GoodsWrapper>
-                                     </PlaceCard>
-                                 ))}
-                            </FormSection>
+                                             <Grid container spacing={1}>
+                                                 <Grid item xs={12} sm={6}>
+                                                     <TextField 
+                                                         label="Názov tovaru *" 
+                                                         value={item.name} 
+                                                         onChange={handleGoodsChange('unloading', index, goodsIndex, 'name')} 
+                                                         required 
+                                                         fullWidth
+                                                         size="small"
+                                                     />
+                                                 </Grid>
+                                                 <Grid item xs={6} sm={3}>
+                                                     <TextField 
+                                                         label="Množstvo *" 
+                                                         type="number" 
+                                                         value={item.quantity} 
+                                                         onChange={handleGoodsChange('unloading', index, goodsIndex, 'quantity')} 
+                                                         required 
+                                                         inputProps={{min: 0, step: 1}}
+                                                         fullWidth
+                                                         size="small"
+                                                     />
+                                                 </Grid>
+                                                 <Grid item xs={6} sm={3}>
+                                                     <FormControl fullWidth size="small">
+                                                         <InputLabel>Jednotka *</InputLabel>
+                                                         <Select 
+                                                             value={item.unit} 
+                                                             label="Jednotka *" 
+                                                             onChange={handleGoodsChange('unloading', index, goodsIndex, 'unit')} 
+                                                             required
+                                                         >
+                                                             <MenuItem value="ks">ks</MenuItem>
+                                                             <MenuItem value="pal">pal</MenuItem>
+                                                             <MenuItem value="kg">kg</MenuItem>
+                                                         </Select>
+                                                     </FormControl>
+                                                 </Grid>
+                                                 <Grid item xs={12}>
+                                                     <TextField 
+                                                         label="Popis tovaru" 
+                                                         value={item.description} 
+                                                         onChange={handleGoodsChange('unloading', index, goodsIndex, 'description')} 
+                                                         fullWidth
+                                                         size="small"
+                                                     />
+                                                 </Grid>
+                                             </Grid>
+                                         </Paper>
+                                     ))}
+                                 </Box>
+                             </Paper>
+                         </Grid>
+                     ))}
 
-                            {/* Dopravca */}
-                             <FormSection>
-                                 <StyledLegend variant="h6">Dopravca (Vykonávateľ)</StyledLegend>
-                                 <Grid container spacing={2}>
-                                     <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Názov firmy dopravcu" name="carrierCompany" value={formData.carrierCompany || ''} onChange={handleInputChange} /></Grid>
-                                     <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Kontakt na dopravcu" name="carrierContact" value={formData.carrierContact || ''} onChange={handleInputChange} /></Grid>
-                                     <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="EČV Vozidla" name="carrierVehicleReg" value={formData.carrierVehicleReg || ''} onChange={handleInputChange} /></Grid>
-                                     <Grid item xs={12} sm={6}><TextField size="small" fullWidth label="Cena za prepravu (€)" name="carrierPrice" type="number" value={formData.carrierPrice || ''} onChange={handleInputChange} inputProps={{ min: 0, step: "0.01" }}/></Grid>
-                                 </Grid>
-                             </FormSection>
-
-                            {/* Navigation Buttons */}
-                            <Box sx={{ 
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                mt: 2,
-                                position: 'fixed',
-                                bottom: isModal ? 20 : 40,
-                                right: isModal ? 40 : 60,
-                                zIndex: 2,
-                                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(22, 28, 36, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                                p: 2,
-                                borderRadius: '8px',
-                                boxShadow: '0 3px 10px rgba(0,0,0,0.2)',
-                                minWidth: '200px'
-                            }}>
-                                <Button onClick={handleBack} sx={{ mr: 2 }}>Späť</Button>
-                                <NextButton type="submit" disabled={isSubmitting}>
-                                    {isSubmitting ? 
-                                      <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 
-                                      isEdit ? 'Uložiť zmeny' : 'Vytvoriť objednávku'
-                                    }
-                                </NextButton>
-                            </Box>
-                        </Box>
-                    </Collapse>
-                </form>
+                    {/* Dopravca */}
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle1" sx={{ mt: 3, mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
+                            Dopravca (Vykonávateľ)
+                        </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}><TextField fullWidth label="Názov firmy dopravcu" name="carrierCompany" value={formData.carrierCompany || ''} onChange={handleInputChange} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField fullWidth label="Kontakt na dopravcu" name="carrierContact" value={formData.carrierContact || ''} onChange={handleInputChange} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField fullWidth label="EČV Vozidla" name="carrierVehicleReg" value={formData.carrierVehicleReg || ''} onChange={handleInputChange} /></Grid>
+                    <Grid item xs={12} sm={6}><TextField fullWidth label="Cena za prepravu (€)" name="carrierPrice" type="number" value={formData.carrierPrice || ''} onChange={handleInputChange} inputProps={{ min: 0, step: "0.01" }}/></Grid>
+                </Grid>
             </Box>
-        );
+            
+            {/* Tlačidlá na spodku formulára */}
+            <Box sx={{ 
+                p: 3, 
+                borderTop: '1px solid', 
+                borderColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.1)' 
+                    : 'rgba(0, 0, 0, 0.1)', 
+                display: 'flex',
+                justifyContent: 'flex-end',
+                backgroundColor: theme.palette.background.paper // Aby tlačidlá mali pozadie
+            }}>
+                <Button 
+                  onClick={onClose} 
+                  sx={{ 
+                    mr: 1,
+                    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)'
+                  }}
+                >
+                  Zrušiť
+                </Button>
+                <Button 
+                  type="submit" 
+                  variant="contained" 
+                  disabled={isSubmitting}
+                  sx={{ 
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.8)' : '#ff9f43',
+                    color: '#ffffff',
+                    '&:hover': { 
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.9)' : '#f7b067',
+                    } 
+                  }}
+                >
+                  {isSubmitting ? 
+                    <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 
+                    isEdit ? 'Uložiť zmeny' : 'Vytvoriť objednávku'
+                  }
+                </Button>
+            </Box>
+        </Box>
+    );
 };
 
 export default NewOrderForm;
