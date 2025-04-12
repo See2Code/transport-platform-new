@@ -564,7 +564,7 @@ const OrdersList: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  // State pre objednávky
+  // State pre objednávky, zákazníkov, dopravcov, filtre, atď.
   const [orders, setOrders] = useState<OrderFormData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -587,16 +587,12 @@ const OrdersList: React.FC = () => {
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [companySettings, setCompanySettings] = useState<any>(null);
-  
-  // State pre zákazníkov
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [selectedCustomerForEdit, setSelectedCustomerForEdit] = useState<Customer | null>(null);
   const [showCustomerDeleteConfirm, setShowCustomerDeleteConfirm] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<string>('');
-  
-  // State pre dopravcov
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [carrierSearchQuery, setCarrierSearchQuery] = useState('');
   const [showCarrierForm, setShowCarrierForm] = useState(false);
@@ -619,12 +615,142 @@ const OrdersList: React.FC = () => {
   const [selectedCarrierForEdit, setSelectedCarrierForEdit] = useState<Carrier | null>(null);
   const [showCarrierDeleteConfirm, setShowCarrierDeleteConfirm] = useState(false);
   const [carrierToDelete, setCarrierToDelete] = useState<string>('');
+
+  // --- FETCH FUNKCIE (presunuté SEM HORE) ---
+
+  const fetchTeamMembers = useCallback(async () => {
+    if (!userData?.companyID) return;
+    try {
+      const usersQuery = query(collection(db, 'users'), where('companyID', '==', userData.companyID));
+      const usersSnapshot = await getDocs(usersQuery);
+      const usersData: {[id: string]: {name: string, email: string}} = {};
+      usersSnapshot.docs.forEach(doc => {
+        const userDoc = doc.data();
+        let userName = '';
+        if (userDoc.firstName || userDoc.lastName) userName = `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim();
+        if (!userName && userDoc.displayName) userName = userDoc.displayName;
+        if (!userName && userDoc.email) {
+          const emailParts = userDoc.email.split('@');
+          if (emailParts.length > 0) {
+            const nameParts = emailParts[0].split(/[._-]/);
+            userName = nameParts.map((part: string) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
+          }
+        }
+        if (!userName) userName = userDoc.email ? userDoc.email.split('@')[0] : 'Používateľ';
+        usersData[doc.id] = { name: userName, email: userDoc.email || '' };
+      });
+      if (userData.uid && !usersData[userData.uid]) {
+        let currentUserName = '';
+        if ((userData as any).firstName || (userData as any).lastName) currentUserName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
+        if (!currentUserName && (userData as any).displayName) currentUserName = (userData as any).displayName;
+        if (!currentUserName && userData.email) {
+          const emailParts = userData.email.split('@');
+          if (emailParts.length > 0) {
+            const nameParts = emailParts[0].split(/[._-]/);
+            currentUserName = nameParts.map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
+          }
+        }
+        if (!currentUserName) currentUserName = userData.email ? userData.email.split('@')[0] : 'Aktuálny používateľ';
+        usersData[userData.uid] = { name: currentUserName, email: userData.email || '' };
+      }
+      setTeamMembers(usersData);
+    } catch (err) { console.error('Chyba pri načítaní členov tímu:', err); }
+  }, [userData]);
+
+  const fetchCustomers = useCallback(async () => {
+    if (!userData?.companyID) { setCustomers([]); return; }
+    try {
+      const q = query(collection(db, 'customers'), where('companyID', '==', userData.companyID), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const customersData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { id: doc.id, ...data, createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt } as Customer;
+      });
+      setCustomers(customersData);
+    } catch (error) { console.error('Chyba pri načítaní zákazníkov:', error); }
+  }, [userData]);
+
+  const fetchCarriers = useCallback(async () => {
+    if (!userData?.companyID) { setCarriers([]); return; }
+    try {
+      const q = query(collection(db, 'carriers'), where('companyID', '==', userData.companyID), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const carriersData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { id: doc.id, ...data, createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt } as Carrier;
+      });
+      setCarriers(carriersData);
+    } catch (error) { console.error('Chyba pri načítaní dopravcov:', error); }
+  }, [userData]);
+
+  const fetchOrders = useCallback(async () => {
+    if (!userData?.companyID) { setOrders([]); setLoading(false); setError('Nemáte priradenú firmu.'); return; }
+    setLoading(true); setError(null);
+    try {
+      let ordersQuery = query(collection(db, 'orders'), where('companyID', '==', userData.companyID));
+      if (startDate) ordersQuery = query(ordersQuery, where('createdAt', '>=', Timestamp.fromDate(new Date(startDate.setHours(0,0,0,0)))));
+      if (endDate) {
+           const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
+           ordersQuery = query(ordersQuery, where('createdAt', '<=', Timestamp.fromDate(endOfDay)));
+      }
+      ordersQuery = query(ordersQuery, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(ordersQuery);
+      const currentTeamMembers = teamMembers;
+      const ordersData: OrderFormData[] = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        const createdByName = (data.createdBy && currentTeamMembers[data.createdBy]?.name) || data.createdByName || ''; 
+        const loadingPlacesWithDates = (data.loadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
+        const unloadingPlacesWithDates = (data.unloadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
+        const createdAtTimestamp = data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(convertToDate(data.createdAt) || new Date());
+        const order: OrderFormData = {
+          id: doc.id, companyID: data.companyID, createdBy: data.createdBy, createdAt: createdAtTimestamp, loadingPlaces: loadingPlacesWithDates, unloadingPlaces: unloadingPlacesWithDates, customerCompany: data.zakaznik || data.customerCompany || '', customerPrice: data.suma || data.customerPrice || '', customerContactName: data.customerContactName || '', customerContactSurname: data.customerContactSurname || '', customerVatId: data.customerVatId || '', customerStreet: data.customerStreet || '', customerCity: data.customerCity || '', customerZip: data.customerZip || '', customerCountry: data.customerCountry || 'Slovensko', customerEmail: data.customerEmail || '', customerPhone: data.customerPhone || '', goodsDescription: data.goodsDescription || '', weightKg: data.weightKg || '', dimensionsL: data.dimensionsL || '', dimensionsW: data.dimensionsW || '', dimensionsH: data.dimensionsH || '', quantity: data.quantity || '', carrierCompany: data.carrierCompany || '', carrierContact: data.carrierContact || '', carrierVehicleReg: data.carrierVehicleReg || '', carrierPrice: data.carrierPrice || '', reminderDateTime: convertToDate(data.reminderDateTime),
+        };
+        (order as any).zakaznik = data.zakaznik || data.customerCompany || '';
+        (order as any).kontaktnaOsoba = data.kontaktnaOsoba || `${data.customerContactName || ''} ${data.customerContactSurname || ''}`.trim();
+        (order as any).suma = data.suma || data.customerPrice || '';
+        (order as any).createdByName = createdByName;
+        (order as any).orderNumberFormatted = data.orderNumberFormatted || '';
+        return order;
+      });
+      setOrders(ordersData);
+    } catch (err) { console.error('Chyba pri načítaní objednávok:', err); setError('Nastala chyba pri načítaní objednávok'); }
+    finally { setLoading(false); }
+  }, [userData, startDate, endDate, teamMembers]); 
+
+  // --- useEffect HOOKY (teraz sú definované PO fetch funkciách) ---
   
+  useEffect(() => {
+    fetchTeamMembers();
+  }, [fetchTeamMembers]);
+
+  useEffect(() => {
+    console.log("Running initial data fetch on component mount.");
+    fetchCustomers(); 
+    fetchCarriers();
+    fetchOrders(); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (userData) { 
+      console.log("Running data fetch due to user change.");
+      // Funkcie sa zavolajú automaticky vďaka závislosti na userData v ich useCallback
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    console.log("Running fetchOrders due to filter change (startDate, endDate).");
+    // FetchOrders závisí od startDate/endDate, zavolá sa automaticky
+    fetchOrders(); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
+
+  // --- OSTATNÉ FUNKCIE --- 
+
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-  
-  // Funkcia na filtrovanie objednávok zákazníkov
+
   const getFilteredCustomerOrders = () => {
     return filteredOrders.filter(order => {
       // Filter pre zákazníkov - zobrazujeme len objednávky, ktoré majú zákazníka (customerCompany) alebo (zakaznik)
@@ -632,232 +758,12 @@ const OrdersList: React.FC = () => {
     });
   };
 
-  // Funkcia na filtrovanie objednávok dopravcov (zatiaľ prázdna)
   const getFilteredCarrierOrders = () => {
     return filteredOrders.filter(order => {
       // Filter pre dopravcov - v budúcnosti budeme filtrovať podľa toho, či má order.carrierCompany
       return order.carrierCompany && order.carrierPrice;
     });
   };
-  
-  const fetchTeamMembers = useCallback(async () => {
-    if (!userData?.companyID) return;
-    
-    try {
-      console.log('Aktuálny userData:', userData);
-      
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('companyID', '==', userData.companyID)
-      );
-      
-      const usersSnapshot = await getDocs(usersQuery);
-      const usersData: {[id: string]: {name: string, email: string}} = {};
-      
-      usersSnapshot.docs.forEach(doc => {
-        const userDoc = doc.data();
-        console.log(`Používateľ ${doc.id}:`, userDoc);
-        
-        // Prioritizujeme firstName a lastName polia
-        let userName = '';
-        
-        // 1. Najprv skúsime firstName + lastName
-        if (userDoc.firstName || userDoc.lastName) {
-          userName = `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim();
-        }
-        
-        // 2. Ak to nefunguje, skúsime displayName
-        if (!userName && userDoc.displayName) {
-          userName = userDoc.displayName;
-        }
-        
-        // 3. Ak nie je firstName+lastName ani displayName, skúsime extrahovať meno z emailu
-        if (!userName && userDoc.email) {
-          // Extrahujeme časti emailu
-          const emailParts = userDoc.email.split('@');
-          if (emailParts.length > 0) {
-            // Rozdelíme časť pred @ podľa bodiek alebo podčiarnikov
-            const nameParts = emailParts[0].split(/[._-]/);
-            // Upravíme prvé písmeno každej časti na veľké
-            userName = nameParts.map((part: string) => 
-              part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
-            ).join(' ');
-          }
-        }
-        
-        // Ak stále nemáme meno, použijeme ID alebo email ako zálohu
-        if (!userName) {
-          userName = userDoc.email ? userDoc.email.split('@')[0] : 'Používateľ';
-        }
-        
-        usersData[doc.id] = {
-          name: userName,
-          email: userDoc.email || ''
-        };
-        
-        console.log(`Spracovaný používateľ ${doc.id}: ${userName} (${userDoc.email || 'bez emailu'})`);
-      });
-      
-      console.log('Spracovaní členovia tímu:', usersData);
-      
-      // Pridať aktuálneho používateľa, ak náhodou chýba v zozname
-      if (userData.uid && !usersData[userData.uid]) {
-        // Extrahovanie mena pre aktuálneho používateľa
-        let currentUserName = '';
-        
-        // 1. Najprv skúsime firstName + lastName z userData
-        if ((userData as any).firstName || (userData as any).lastName) {
-          currentUserName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
-        }
-        
-        // 2. Ak to nefunguje, skúsime displayName
-        if (!currentUserName && (userData as any).displayName) {
-          currentUserName = (userData as any).displayName;
-        }
-        
-        // 3. Ak nie je ani displayName, extrahujeme z emailu
-        if (!currentUserName && userData.email) {
-          const emailParts = userData.email.split('@');
-          if (emailParts.length > 0) {
-            const nameParts = emailParts[0].split(/[._-]/);
-            currentUserName = nameParts.map(part => 
-              part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
-            ).join(' ');
-          }
-        }
-        
-        // Ak stále nemáme meno, použijeme email alebo záložnú hodnotu
-        if (!currentUserName) {
-          currentUserName = userData.email ? userData.email.split('@')[0] : 'Aktuálny používateľ';
-        }
-        
-        usersData[userData.uid] = {
-          name: currentUserName,
-          email: userData.email || ''
-        };
-        
-        console.log('Pridaný aktuálny používateľ:', usersData[userData.uid]);
-      }
-      
-      setTeamMembers(usersData);
-    } catch (err) {
-      console.error('Chyba pri načítaní členov tímu:', err);
-    }
-  }, [userData]);
-  
-  useEffect(() => {
-    fetchTeamMembers();
-  }, [fetchTeamMembers]);
-  
-  const fetchOrders = useCallback(async () => {
-    if (!userData?.companyID) {
-      console.log('Chýba companyID');
-      setError('Nemáte priradenú firmu.');
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      let ordersQuery = query(
-        collection(db, 'orders'),
-        where('companyID', '==', userData.companyID)
-      );
-
-      if (startDate) {
-          ordersQuery = query(ordersQuery, where('createdAt', '>=', Timestamp.fromDate(new Date(startDate.setHours(0,0,0,0)))));
-      }
-      if (endDate) {
-           const endOfDay = new Date(endDate);
-           endOfDay.setHours(23, 59, 59, 999);
-           ordersQuery = query(ordersQuery, where('createdAt', '<=', Timestamp.fromDate(endOfDay)));
-      }
-      
-      ordersQuery = query(ordersQuery, orderBy('createdAt', 'desc'));
-
-      const querySnapshot = await getDocs(ordersQuery);
-      const ordersData: OrderFormData[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('Originálne dáta z Firebase:', data);
-        console.log('Originálna hodnota zákazníka:', data.zakaznik);
-        console.log('Originálna hodnota customerCompany:', data.customerCompany);
-        
-        const loadingPlacesWithDates = (data.loadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
-        const unloadingPlacesWithDates = (data.unloadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
-        
-        const createdAtTimestamp = data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(convertToDate(data.createdAt) || new Date());
-
-        const order: OrderFormData = {
-          id: doc.id,
-          customerCompany: data.zakaznik || data.customerCompany || '',
-          customerVatId: data.customerVatId || '',
-          customerStreet: data.customerStreet || '',
-          customerCity: data.customerCity || '',
-          customerZip: data.customerZip || '',
-          customerCountry: data.customerCountry || 'Slovensko',
-          customerContactName: data.customerContactName || '',
-          customerContactSurname: data.customerContactSurname || '',
-          customerEmail: data.customerEmail || '',
-          customerPhone: data.customerPhone || '',
-          customerPrice: data.suma || data.customerPrice || '',
-          loadingPlaces: loadingPlacesWithDates,
-          unloadingPlaces: unloadingPlacesWithDates,
-          goodsDescription: data.goodsDescription || '',
-          weightKg: data.weightKg || '',
-          dimensionsL: data.dimensionsL || '',
-          dimensionsW: data.dimensionsW || '',
-          dimensionsH: data.dimensionsH || '',
-          quantity: data.quantity || '',
-          carrierCompany: data.carrierCompany || '',
-          carrierContact: data.carrierContact || '',
-          carrierVehicleReg: data.carrierVehicleReg || '',
-          carrierPrice: data.carrierPrice || '',
-          createdAt: createdAtTimestamp,
-          reminderDateTime: convertToDate(data.reminderDateTime),
-          companyID: data.companyID,
-          createdBy: data.createdBy
-        };
-        
-        (order as any).zakaznik = data.zakaznik || data.customerCompany || '';
-        (order as any).kontaktnaOsoba = data.kontaktnaOsoba || 
-          `${data.customerContactName || ''} ${data.customerContactSurname || ''}`.trim();
-        (order as any).suma = data.suma || data.customerPrice || '';
-        (order as any).createdByName = data.createdByName || '';
-        (order as any).orderNumberFormatted = data.orderNumberFormatted || '';
-        
-        console.log('Spracované dáta pre zobrazenie:', {
-          id: order.id,
-          zakaznik: (order as any).zakaznik, 
-          kontaktnaOsoba: (order as any).kontaktnaOsoba,
-          customerCompany: order.customerCompany,
-          customerContactName: order.customerContactName,
-          customerContactSurname: order.customerContactSurname,
-          suma: (order as any).suma,
-          customerPrice: order.customerPrice,
-          carrierPrice: order.carrierPrice
-        });
-        
-        return order;
-      });
-      console.log('--- DEBUGOVANIE ŠPEDITÉRA ---');
-      ordersData.forEach(order => {
-        console.log(`Objednávka ${order.id}:`);
-        console.log(`  createdBy: ${order.createdBy}`);
-        console.log(`  createdByName: ${(order as any).createdByName}`);
-        console.log(`  Team member data:`, order.createdBy ? teamMembers[order.createdBy] : 'N/A');
-      });
-      console.log('--- KONIEC DEBUGOVANIA ---');
-      setOrders(ordersData);
-    } catch (err) {
-      console.error('Chyba pri načítaní objednávok:', err);
-      setError('Nastala chyba pri načítaní objednávok');
-    } finally {
-      setLoading(false);
-    }
-  }, [userData, startDate, endDate, teamMembers]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
 
   const filteredOrders = orders.filter(order => {
     if (!order) return false;
@@ -1571,26 +1477,6 @@ const OrdersList: React.FC = () => {
     setShowCustomerForm(true);
   };
 
-  const fetchCustomers = useCallback(async () => {
-    try {
-      const customersRef = collection(db, 'customers');
-      const q = query(customersRef, orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      const customersData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
-        } as Customer;
-      });
-      console.log('Zákazníci načítaní:', customersData.length);
-      setCustomers(customersData);
-    } catch (error) {
-      console.error('Chyba pri načítaní zákazníkov:', error);
-    }
-  }, []);
-
   const handleCustomerSubmit = async (customerData: CustomerData) => {
     if (!userData?.companyID) {
       alert("Chyba: Nemáte priradenú firmu.");
@@ -1664,36 +1550,6 @@ const OrdersList: React.FC = () => {
       (customer.icDph && customer.icDph.toLowerCase().includes(searchLower))
     );
   });
-
-  // Odstránený useCallback
-  const fetchCarriers = async () => {
-    if (!userData?.companyID) {
-      console.log("Chýba companyID pre načítanie dopravcov.");
-      setCarriers([]); 
-      return;
-    }
-    try {
-      const carriersRef = collection(db, 'carriers');
-      const q = query(
-        carriersRef, 
-        where('companyID', '==', userData.companyID), 
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
-      const carriersData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
-        } as Carrier;
-      });
-      console.log(`Dopravcovia načítaní pre ${userData.companyID}:`, carriersData.length);
-      setCarriers(carriersData);
-    } catch (error) {
-      console.error('Chyba pri načítaní dopravcov:', error);
-    }
-  }; // Ukončenie funkcie
 
   const handleAddCarrier = () => {
     setShowCarrierForm(true);

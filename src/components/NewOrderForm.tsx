@@ -658,7 +658,7 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                         </Typography>
                     </Grid>
                     <Grid item xs={12} sm={4}><TextField fullWidth label="Suma *" name="suma" type="number" value={formData.suma || ''} onChange={handleInputChange} required inputProps={{ min: 0, step: "0.01" }} /></Grid>
-                    <Grid item xs={6} sm={3}><FormControl fullWidth required><InputLabel>Mena *</InputLabel><Select name="mena" value={formData.mena || 'EUR'} label="Mena *" onChange={handleSelectChange}><MenuItem value="EUR">EUR</MenuItem><MenuItem value="CZK">CZK</MenuItem>{/* ... */}</Select></FormControl></Grid>
+                    <Grid item xs={6} sm={3}><FormControl fullWidth required><InputLabel>Mena *</InputLabel><Select name="mena" value={formData.mena || 'EUR'} label="Mena *" onChange={handleSelectChange}><MenuItem value="EUR">EUR</MenuItem><MenuItem value="CZK">CZK</MenuItem></Select></FormControl></Grid>
                     <Grid item xs={6} sm={5}><FormControlLabel control={<Checkbox name="vyuctovaniePodlaMnozstva" checked={formData.vyuctovaniePodlaMnozstva || false} onChange={handleInputChange} />} label="Vyúčtovanie podľa množstva" /></Grid>
                 
                     {/* Náklad */}
@@ -725,10 +725,17 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                                 Body Nakládky
                             </Typography>
                             <Button 
+                                variant="outlined"
                                 startIcon={<AddIcon />} 
                                 onClick={() => addPlace('loading')} 
-                                size="small"
-                                sx={{ color: '#ff9f43' }}
+                                sx={{ 
+                                     borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.5)' : '#ff9f43',
+                                     color: '#ff9f43', 
+                                     '&:hover': {
+                                         borderColor: '#ff9f43',
+                                         backgroundColor: 'rgba(255, 159, 67, 0.08)'
+                                     }
+                                }}
                             >
                                 Pridať Nakládku
                             </Button>
@@ -736,40 +743,18 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                     </Grid>
                     {formData.loadingPlaces?.map((place, index) => (
                         <Grid item xs={12} key={place.id || index}>
-                           <Paper sx={{ p: 2, mb: 1, position: 'relative' }}>
-                                <Typography 
-                                    variant="body1" 
-                                    sx={{ mb: 2, fontWeight: 500 }}
-                                >
-                                    Nakládka #{index + 1}
-                                    {formData.loadingPlaces && formData.loadingPlaces.length > 1 && (
-                                        <IconButton 
-                                            size="small" 
-                                            onClick={() => removePlace('loading', index)} 
-                                            color="error"
-                                            sx={{ position: 'absolute', top: 8, right: 8 }}
-                                        >
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
-                                    )}
-                                </Typography>
+                           <Box sx={{ p: 2, mb: 1, position: 'relative' }}>
+                                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}> Nakládka #{index + 1} </Typography>
                                 <Grid container spacing={2}>
-                                    {/* Fields for Loading Place */}
                                     <Grid item xs={12} sm={6}><TextField fullWidth label="Ulica a číslo *" value={place.street} onChange={handlePlaceInputChange('loading', index, 'street')} required /></Grid>
                                     <Grid item xs={6} sm={3}><TextField fullWidth label="Mesto *" value={place.city} onChange={handlePlaceInputChange('loading', index, 'city')} required /></Grid>
                                     <Grid item xs={6} sm={3}><TextField fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('loading', index, 'zip')} required /></Grid>
                                     <Grid item xs={12} sm={6}>
-                                        <Autocomplete options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('loading', index, 'country')} 
-                                            renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
+                                        <Autocomplete options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('loading', index, 'country')} renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
                                         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                                            <DateTimePicker 
-                                                label="Dátum a čas nakládky *"
-                                                value={place.dateTime as Date | null}
-                                                onChange={handleDateTimeChange('loading', index)}
-                                                slotProps={{ textField: { fullWidth: true, required: true } }}
-                                            />
+                                            <DateTimePicker label="Dátum a čas nakládky *" value={place.dateTime as Date | null} onChange={handleDateTimeChange('loading', index)} slotProps={{ textField: { fullWidth: true, required: true } }}/>
                                         </LocalizationProvider>
                                     </Grid>
                                     <Grid item xs={12}><TextField fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('loading', index, 'contactPerson')} required /></Grid>
@@ -777,10 +762,10 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                                  {/* Goods Items Section */}
                                 <Box sx={{ mt: 2 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>Tovar na naloženie:</Typography>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 500, color: theme.palette.text.secondary }}>Tovar na naloženie:</Typography>
                                         <Button 
+                                            variant="text"
                                             startIcon={<AddIcon />} 
-                                            size="small" 
                                             onClick={() => addGoodsItem('loading', index)}
                                             sx={{ color: '#ff9f43' }}
                                         >
@@ -789,100 +774,39 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                                     </Box>
                                     
                                     {place.goods?.map((item, goodsIndex) => (
-                                        <Paper 
+                                        <Box 
                                             key={item.id || goodsIndex}
-                                            sx={{ p: 1.5, mb: 1, position: 'relative' }}
-                                            elevation={0}
-                                            variant="outlined"
+                                            sx={{ mb: 2, pt: 1, position: 'relative' }} 
                                         >
-                                            <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>
+                                            <Typography variant="caption" sx={{ mb: 1, display: 'block' }}> 
                                                 Tovar #{goodsIndex + 1}
                                                 {place.goods && place.goods.length > 1 && (
                                                     <IconButton 
                                                         size="small" 
                                                         onClick={() => removeGoodsItem('loading', index, goodsIndex)} 
                                                         color="error"
-                                                        sx={{ position: 'absolute', top: 4, right: 4 }}
+                                                        sx={{ position: 'absolute', top: 0, right: 0 }}
                                                     >
                                                         <DeleteIcon fontSize="small" />
                                                     </IconButton>
                                                 )}
                                             </Typography>
                                             
-                                            <Grid container spacing={1}>
-                                                <Grid item xs={12} sm={6}>
-                                                    <TextField 
-                                                        label="Názov tovaru *" 
-                                                        value={item.name} 
-                                                        onChange={handleGoodsChange('loading', index, goodsIndex, 'name')} 
-                                                        required 
-                                                        fullWidth
-                                                        size="small"
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={6} sm={3}>
-                                                    <TextField 
-                                                        label="Množstvo *" 
-                                                        type="number" 
-                                                        value={item.quantity} 
-                                                        onChange={handleGoodsChange('loading', index, goodsIndex, 'quantity')} 
-                                                        required 
-                                                        inputProps={{min: 0, step: 1}}
-                                                        fullWidth
-                                                        size="small"
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={6} sm={3}>
-                                                    <FormControl fullWidth size="small">
-                                                        <InputLabel>Jednotka *</InputLabel>
-                                                        <Select 
-                                                            value={item.unit} 
-                                                            label="Jednotka *" 
-                                                            onChange={handleGoodsChange('loading', index, goodsIndex, 'unit')} 
-                                                            required
-                                                        >
-                                                            <MenuItem value="ks">ks</MenuItem>
-                                                            <MenuItem value="pal">pal</MenuItem>
-                                                            <MenuItem value="kg">kg</MenuItem>
-                                                        </Select>
-                                                    </FormControl>
-                                                </Grid>
-                                                <Grid item xs={12} sm={6}>
-                                                    <FormControl fullWidth size="small">
-                                                        <InputLabel>Výmena paliet</InputLabel>
-                                                        <Select 
-                                                            value={item.palletExchange} 
-                                                            label="Výmena paliet" 
-                                                            onChange={handleGoodsChange('loading', index, goodsIndex, 'palletExchange')}
-                                                        >
-                                                            <MenuItem value="Bez výmeny">Bez výmeny</MenuItem>
-                                                            <MenuItem value="Výmena">Výmena</MenuItem>
-                                                        </Select>
-                                                    </FormControl>
-                                                </Grid>
-                                                <Grid item xs={12} sm={6}>
-                                                    <TextField 
-                                                        label="Rozmer" 
-                                                        value={item.dimensions} 
-                                                        onChange={handleGoodsChange('loading', index, goodsIndex, 'dimensions')} 
-                                                        fullWidth
-                                                        size="small"
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={12}>
-                                                    <TextField 
-                                                        label="Popis tovaru" 
-                                                        value={item.description} 
-                                                        onChange={handleGoodsChange('loading', index, goodsIndex, 'description')} 
-                                                        fullWidth
-                                                        size="small"
-                                                    />
-                                                </Grid>
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={12} sm={6}><TextField label="Názov tovaru *" value={item.name} onChange={handleGoodsChange('loading', index, goodsIndex, 'name')} required fullWidth/></Grid>
+                                                <Grid item xs={6} sm={3}><TextField label="Množstvo *" type="number" value={item.quantity} onChange={handleGoodsChange('loading', index, goodsIndex, 'quantity')} required inputProps={{min: 0, step: 1}} fullWidth/></Grid>
+                                                <Grid item xs={6} sm={3}><FormControl fullWidth><InputLabel>Jednotka *</InputLabel><Select value={item.unit} label="Jednotka *" onChange={handleGoodsChange('loading', index, goodsIndex, 'unit')} required><MenuItem value="ks">ks</MenuItem><MenuItem value="pal">pal</MenuItem><MenuItem value="kg">kg</MenuItem></Select></FormControl></Grid>
+                                                <Grid item xs={12} sm={6}><FormControl fullWidth><InputLabel>Výmena paliet</InputLabel><Select value={item.palletExchange} label="Výmena paliet" onChange={handleGoodsChange('loading', index, goodsIndex, 'palletExchange')}><MenuItem value="Bez výmeny">Bez výmeny</MenuItem><MenuItem value="Výmena">Výmena</MenuItem></Select></FormControl></Grid>
+                                                <Grid item xs={12} sm={6}><TextField label="Rozmer" value={item.dimensions} onChange={handleGoodsChange('loading', index, goodsIndex, 'dimensions')} fullWidth/></Grid>
+                                                <Grid item xs={12}><TextField label="Popis tovaru" value={item.description} onChange={handleGoodsChange('loading', index, goodsIndex, 'description')} fullWidth/></Grid>
                                             </Grid>
-                                        </Paper>
+                                            {place.goods && goodsIndex < place.goods.length - 1 && (
+                                                 <Divider sx={{ my: 2 }} />
+                                            )}
+                                        </Box>
                                     ))}
                                 </Box>
-                            </Paper>
+                            </Box>
                         </Grid>
                     ))}
 
@@ -893,10 +817,17 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                                  Body Vykládky
                              </Typography>
                              <Button 
+                                 variant="outlined"
                                  startIcon={<AddIcon />} 
                                  onClick={() => addPlace('unloading')} 
-                                 size="small"
-                                 sx={{ color: '#ff9f43' }}
+                                 sx={{ 
+                                     borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.5)' : '#ff9f43',
+                                     color: '#ff9f43', 
+                                     '&:hover': {
+                                         borderColor: '#ff9f43',
+                                         backgroundColor: 'rgba(255, 159, 67, 0.08)'
+                                     }
+                                 }}
                              >
                                  Pridať Vykládku
                              </Button>
@@ -904,131 +835,61 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                      </Grid>
                     {formData.unloadingPlaces?.map((place, index) => (
                         <Grid item xs={12} key={place.id || index}>
-                            <Paper sx={{ p: 2, mb: 1, position: 'relative' }}>
-                                <Typography 
-                                    variant="body1" 
-                                    sx={{ mb: 2, fontWeight: 500 }}
-                                >
-                                    Vykládka #{index + 1}
-                                    {formData.unloadingPlaces && formData.unloadingPlaces.length > 1 && (
-                                        <IconButton 
-                                            size="small" 
-                                            onClick={() => removePlace('unloading', index)} 
-                                            color="error"
-                                            sx={{ position: 'absolute', top: 8, right: 8 }}
-                                        >
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
-                                    )}
-                                </Typography>
+                            <Box sx={{ p: 2, mb: 1, position: 'relative' }}>
+                                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}> Vykládka #{index + 1} </Typography>
                                 <Grid container spacing={2}>
-                                    {/* Fields for Unloading Place */}
                                     <Grid item xs={12} sm={6}><TextField fullWidth label="Ulica a číslo *" value={place.street} onChange={handlePlaceInputChange('unloading', index, 'street')} required /></Grid>
                                     <Grid item xs={6} sm={3}><TextField fullWidth label="Mesto *" value={place.city} onChange={handlePlaceInputChange('unloading', index, 'city')} required /></Grid>
                                     <Grid item xs={6} sm={3}><TextField fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('unloading', index, 'zip')} required /></Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <Autocomplete options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('unloading', index, 'country')} 
-                                            renderInput={(params) => <TextField {...params} label="Krajina *" required />} />
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
-                                         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                                             <DateTimePicker 
-                                                 label="Dátum a čas vykládky *"
-                                                 value={place.dateTime as Date | null}
-                                                 onChange={handleDateTimeChange('unloading', index)}
-                                                 slotProps={{ textField: { fullWidth: true, required: true } }}
-                                             />
-                                         </LocalizationProvider>
-                                     </Grid>
+                                    <Grid item xs={12} sm={6}><Autocomplete options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('unloading', index, 'country')} renderInput={(params) => <TextField {...params} label="Krajina *" required />} /></Grid>
+                                    <Grid item xs={12} sm={6}><LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}><DateTimePicker label="Dátum a čas vykládky *" value={place.dateTime as Date | null} onChange={handleDateTimeChange('unloading', index)} slotProps={{ textField: { fullWidth: true, required: true } }}/></LocalizationProvider></Grid>
                                     <Grid item xs={12}><TextField fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('unloading', index, 'contactPerson')} required /></Grid>
                                 </Grid>
-                                 {/* Goods Items Section */}
+                                 {/* Goods Items Section */} 
                                  <Box sx={{ mt: 2 }}>
                                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                         <Typography variant="body2" sx={{ fontWeight: 500 }}>Tovar na vyloženie:</Typography>
+                                         <Typography variant="subtitle2" sx={{ fontWeight: 500, color: theme.palette.text.secondary }}>Tovar na vyloženie:</Typography>
                                          <Button 
+                                             variant="text"
                                              startIcon={<AddIcon />} 
-                                             size="small" 
                                              onClick={() => addGoodsItem('unloading', index)}
                                              sx={{ color: '#ff9f43' }}
                                          >
                                              Pridať tovar
                                          </Button>
                                      </Box>
-                                     
                                      {place.goods?.map((item, goodsIndex) => (
-                                         <Paper 
+                                         <Box 
                                              key={item.id || goodsIndex}
-                                             sx={{ p: 1.5, mb: 1, position: 'relative' }}
-                                             elevation={0}
-                                             variant="outlined"
+                                             sx={{ mb: 2, pt: 1, position: 'relative' }}
                                          >
-                                             <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>
+                                             <Typography variant="caption" sx={{ mb: 1, display: 'block' }}> 
                                                  Tovar #{goodsIndex + 1}
                                                  {place.goods && place.goods.length > 1 && (
                                                      <IconButton 
                                                          size="small" 
                                                          onClick={() => removeGoodsItem('unloading', index, goodsIndex)} 
                                                          color="error"
-                                                         sx={{ position: 'absolute', top: 4, right: 4 }}
+                                                         sx={{ position: 'absolute', top: 0, right: 0 }}
                                                      >
                                                          <DeleteIcon fontSize="small" />
                                                      </IconButton>
                                                  )}
                                              </Typography>
                                              
-                                             <Grid container spacing={1}>
-                                                 <Grid item xs={12} sm={6}>
-                                                     <TextField 
-                                                         label="Názov tovaru *" 
-                                                         value={item.name} 
-                                                         onChange={handleGoodsChange('unloading', index, goodsIndex, 'name')} 
-                                                         required 
-                                                         fullWidth
-                                                         size="small"
-                                                     />
-                                                 </Grid>
-                                                 <Grid item xs={6} sm={3}>
-                                                     <TextField 
-                                                         label="Množstvo *" 
-                                                         type="number" 
-                                                         value={item.quantity} 
-                                                         onChange={handleGoodsChange('unloading', index, goodsIndex, 'quantity')} 
-                                                         required 
-                                                         inputProps={{min: 0, step: 1}}
-                                                         fullWidth
-                                                         size="small"
-                                                     />
-                                                 </Grid>
-                                                 <Grid item xs={6} sm={3}>
-                                                     <FormControl fullWidth size="small">
-                                                         <InputLabel>Jednotka *</InputLabel>
-                                                         <Select 
-                                                             value={item.unit} 
-                                                             label="Jednotka *" 
-                                                             onChange={handleGoodsChange('unloading', index, goodsIndex, 'unit')} 
-                                                             required
-                                                         >
-                                                             <MenuItem value="ks">ks</MenuItem>
-                                                             <MenuItem value="pal">pal</MenuItem>
-                                                             <MenuItem value="kg">kg</MenuItem>
-                                                         </Select>
-                                                     </FormControl>
-                                                 </Grid>
-                                                 <Grid item xs={12}>
-                                                     <TextField 
-                                                         label="Popis tovaru" 
-                                                         value={item.description} 
-                                                         onChange={handleGoodsChange('unloading', index, goodsIndex, 'description')} 
-                                                         fullWidth
-                                                         size="small"
-                                                     />
-                                                 </Grid>
+                                             <Grid container spacing={2}>
+                                                 <Grid item xs={12} sm={6}><TextField label="Názov tovaru *" value={item.name} onChange={handleGoodsChange('unloading', index, goodsIndex, 'name')} required fullWidth/></Grid>
+                                                 <Grid item xs={6} sm={3}><TextField label="Množstvo *" type="number" value={item.quantity} onChange={handleGoodsChange('unloading', index, goodsIndex, 'quantity')} required inputProps={{min: 0, step: 1}} fullWidth/></Grid>
+                                                 <Grid item xs={6} sm={3}><FormControl fullWidth><InputLabel>Jednotka *</InputLabel><Select value={item.unit} label="Jednotka *" onChange={handleGoodsChange('unloading', index, goodsIndex, 'unit')} required><MenuItem value="ks">ks</MenuItem><MenuItem value="pal">pal</MenuItem><MenuItem value="kg">kg</MenuItem></Select></FormControl></Grid>
+                                                 <Grid item xs={12}><TextField label="Popis tovaru" value={item.description} onChange={handleGoodsChange('unloading', index, goodsIndex, 'description')} fullWidth/></Grid>
                                              </Grid>
-                                         </Paper>
+                                             {place.goods && goodsIndex < place.goods.length - 1 && (
+                                                 <Divider sx={{ my: 2 }} />
+                                             )}
+                                         </Box>
                                      ))}
                                  </Box>
-                             </Paper>
+                             </Box>
                          </Grid>
                      ))}
 
@@ -1054,7 +915,6 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                     : 'rgba(0, 0, 0, 0.1)', 
                 display: 'flex',
                 justifyContent: 'flex-end',
-                backgroundColor: theme.palette.background.paper // Aby tlačidlá mali pozadie
             }}>
                 <Button 
                   onClick={onClose} 
@@ -1070,10 +930,10 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                   variant="contained" 
                   disabled={isSubmitting}
                   sx={{ 
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.8)' : '#ff9f43',
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.8)' : '#ff9f43', 
                     color: '#ffffff',
                     '&:hover': { 
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.9)' : '#f7b067',
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.9)' : '#f7b067', 
                     } 
                   }}
                 >
