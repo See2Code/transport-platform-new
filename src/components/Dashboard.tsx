@@ -59,8 +59,16 @@ interface VehicleLocation {
   lastOnline?: Timestamp | any;
 }
 
-const PageWrapper = styled(Box)(({ theme }) => ({
+const PageWrapper = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme }) => ({
   padding: '24px',
+  minHeight: '100vh',
+  background: 'transparent',
+  color: isDarkMode ? '#ffffff' : '#333333',
+  position: 'relative',
+  '& > *': {
+    position: 'relative',
+    zIndex: 1,
+  },
   '@media (max-width: 600px)': {
     padding: '16px',
     paddingBottom: '80px',
@@ -496,7 +504,7 @@ export default function Dashboard() {
   };
 
   return (
-    <PageWrapper>
+    <PageWrapper isDarkMode={isDarkMode}>
       <PageHeader>
         <PageTitle isDarkMode={isDarkMode}>Dashboard</PageTitle>
       </PageHeader>

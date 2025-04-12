@@ -38,8 +38,11 @@ const AppContainer = ({ isDarkMode, children }: AppContainerProps) => (
       flexDirection: 'column',
       minHeight: '100vh',
       width: '100%',
-      backgroundColor: isDarkMode ? '#12121f' : '#ffffff',
+      background: isDarkMode
+        ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)'
+        : '#ffffff',
       position: 'relative',
+      backgroundAttachment: 'fixed',
     }}
   >
     {children}
@@ -52,15 +55,36 @@ const PageContent = ({ isDarkMode, children }: PageContentProps) => (
       flexGrow: 1,
       marginTop: '48px',
       padding: '24px 16px',
-      backgroundColor: isDarkMode ? '#12121f' : '#ffffff',
+      background: isDarkMode
+        ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)'
+        : '#ffffff',
       position: 'relative',
       zIndex: 1,
+      minHeight: 'calc(100vh - 48px)',
+      backgroundAttachment: 'fixed',
       '@media (max-width: 600px)': {
         marginTop: '40px',
         padding: '16px',
+        minHeight: 'calc(100vh - 40px)',
       },
     }}
   >
+    {isDarkMode && (
+      <Box 
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
+          opacity: 0.03,
+          background: `radial-gradient(circle at 20% 30%, rgba(255, 159, 67, 0.8) 0%, transparent 100px),
+                      radial-gradient(circle at 80% 40%, rgba(48, 43, 99, 0.8) 0%, transparent 200px)`,
+          pointerEvents: 'none',
+        }}
+      />
+    )}
     {children}
   </Box>
 );
@@ -72,7 +96,7 @@ const AppContent: React.FC = () => {
     palette: {
       mode: isDarkMode ? 'dark' : 'light',
       background: {
-        default: isDarkMode ? '#12121f' : '#ffffff',
+        default: isDarkMode ? '#0F0C29' : '#ffffff',
         paper: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#f5f5f5',
       },
       text: {
@@ -84,7 +108,10 @@ const AppContent: React.FC = () => {
       MuiCssBaseline: {
         styleOverrides: {
           body: {
-            backgroundColor: isDarkMode ? '#12121f' : '#ffffff',
+            background: isDarkMode 
+              ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
+              : '#ffffff',
+            backgroundAttachment: 'fixed',
             margin: 0,
             padding: 0,
           },
@@ -100,12 +127,15 @@ const AppContent: React.FC = () => {
       padding: 0,
     },
     'html, body': {
-      backgroundColor: isDarkMode ? '#12121f' : '#ffffff',
+      background: isDarkMode 
+        ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
+        : '#ffffff',
+      backgroundAttachment: 'fixed',
       minHeight: '100vh',
       width: '100%',
     },
     '#root': {
-      backgroundColor: isDarkMode ? '#12121f' : '#ffffff',
+      background: 'transparent',
       minHeight: '100vh',
       width: '100%',
     },

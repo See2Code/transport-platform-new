@@ -13,7 +13,7 @@ const LayoutContainer = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) =>
   minHeight: '100vh',
   overflow: 'hidden',
   background: isDarkMode 
-    ? 'linear-gradient(135deg, rgba(28, 28, 45, 0.95) 0%, rgba(28, 28, 45, 0.97) 100%)'
+    ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
     : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 245, 0.97) 100%)',
   backdropFilter: 'blur(10px)',
 }));
@@ -51,6 +51,22 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <LayoutContainer isDarkMode={isDarkMode}>
+      {isDarkMode && (
+        <Box 
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 0,
+            opacity: 0.03,
+            background: `radial-gradient(circle at 20% 30%, rgba(255, 159, 67, 0.8) 0%, transparent 100px),
+                        radial-gradient(circle at 80% 40%, rgba(48, 43, 99, 0.8) 0%, transparent 200px)`,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       <MainContent 
         component="main"
         isDarkMode={isDarkMode}
