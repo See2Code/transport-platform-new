@@ -323,58 +323,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             <Dialog
               open={!!logoutNotification}
               onClose={() => setLogoutNotification(null)}
-              aria-labelledby="alert-dialog-title"
-              aria-describedby="alert-dialog-description"
+              aria-labelledby="logout-dialog-title"
+              aria-describedby="logout-dialog-description"
               PaperProps={{
                 sx: {
-                  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                  backdropFilter: 'blur(10px)',
-                  border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '12px',
-                  minWidth: '320px',
+                  background: 'none',
+                  boxShadow: 'none',
+                  margin: { xs: '8px', sm: '16px' },
+                  borderRadius: '24px'
+                }
+              }}
+              BackdropProps={{
+                sx: {
+                  backdropFilter: 'blur(8px)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.6)'
                 }
               }}
             >
-              <DialogTitle id="alert-dialog-title" 
-                sx={{ 
-                  borderBottom: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
-                  padding: '16px 24px',
-                  fontWeight: 600
-                }}
-              >
-                {"Odhlásenie"}
-              </DialogTitle>
-              <DialogContent sx={{ padding: '24px', paddingBottom: '16px' }}>
-                <DialogContentText id="alert-dialog-description"
+              <Box sx={{
+                  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                  color: isDarkMode ? '#ffffff' : '#000000',
+                  padding: '0px',
+                  borderRadius: '24px',
+                  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+               }}>
+                <DialogTitle id="logout-dialog-title" 
                   sx={{ 
-                    color: isDarkMode ? '#ffffff' : '#333333',
-                    fontSize: '16px',
-                    fontWeight: 500
+                    padding: '24px 24px 16px 24px',
+                    fontSize: '1.25rem',
+                    fontWeight: 600
                   }}
                 >
-                  {logoutNotification}
-                </DialogContentText>
-              </DialogContent>
-              <DialogActions sx={{ padding: '8px 24px 16px' }}>
-                <Button 
-                  onClick={() => {
-                    setLogoutNotification(null);
-                    navigate('/login');
-                  }}
-                  autoFocus
-                  sx={{
-                    backgroundColor: '#ff9f43',
-                    color: '#fff',
-                    fontWeight: 500,
-                    '&:hover': {
-                      backgroundColor: '#f9872f',
-                    }
+                  {"Odhlásenie"}
+                </DialogTitle>
+                <DialogContent sx={{ 
+                    padding: '16px 24px',
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+                    overflowY: 'auto', 
                   }}
                 >
-                  OK
-                </Button>
-              </DialogActions>
+                  <DialogContentText id="logout-dialog-description"
+                    sx={{ 
+                      color: 'inherit',
+                      fontSize: '1rem',
+                    }}
+                  >
+                    {logoutNotification}
+                  </DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ 
+                    padding: '16px 24px 24px 24px',
+                  }}
+                >
+                  <Button 
+                    onClick={() => {
+                      setLogoutNotification(null);
+                      navigate('/login');
+                    }}
+                    autoFocus
+                    variant="contained"
+                    sx={{
+                      backgroundColor: '#ff9f43',
+                      color: '#fff',
+                      fontWeight: 500,
+                      borderRadius: '12px',
+                      padding: '8px 20px',
+                      '&:hover': {
+                        backgroundColor: '#f9872f',
+                      }
+                    }}
+                  >
+                    OK
+                  </Button>
+                </DialogActions>
+              </Box>
             </Dialog>
           )}
           {children}

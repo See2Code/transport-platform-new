@@ -2602,19 +2602,32 @@ const OrdersList: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog pre mazanie OBJEDNÁVKY - už by mal používať StyledDialogContent */}
+      {/* Dialog pre mazanie OBJEDNÁVKY */}
       <Dialog
         open={showDeleteConfirm}
         onClose={handleDeleteCancel}
         aria-labelledby="confirm-order-delete-title"
         aria-describedby="confirm-order-delete-description"
-        PaperProps={{ sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '16px' } }}
-        BackdropProps={{ sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' } }}
+        // Props pre vzhľad z Contacts.tsx
+        PaperProps={{
+          sx: {
+            background: 'none', // Priehľadné pozadie samotného dialógu
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            borderRadius: '24px' // Použité väčšie zaoblenie
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(8px)', // Blur pozadia
+            backgroundColor: 'rgba(0, 0, 0, 0.6)' // Tmavé priehľadné pozadie
+          }
+        }}
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
           <DialogTitle id="confirm-order-delete-title">Potvrdiť odstránenie objednávky</DialogTitle>
           <DialogContent>
-            <DialogContentText id="confirm-order-delete-description"> {/* Použitie DialogContentText */} 
+            <DialogContentText id="confirm-order-delete-description"> 
               Naozaj chcete odstrániť túto objednávku?
             </DialogContentText>
           </DialogContent>
@@ -3003,19 +3016,24 @@ const OrdersList: React.FC = () => {
       </DialogActions>
     </Dialog>
 
-    {/* Potvrdzovací dialóg pre vymazanie ZÁKAZNÍKA - už by mal používať StyledDialogContent */}
+    {/* Potvrdzovací dialóg pre vymazanie ZÁKAZNÍKA */}
     <Dialog
         open={showCustomerDeleteConfirm}
         onClose={handleCustomerDeleteCancel}
         aria-labelledby="confirm-customer-delete-title"
         aria-describedby="confirm-customer-delete-description"
-        PaperProps={{ sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '16px' } }}
-        BackdropProps={{ sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' } }}
+        // Props pre vzhľad z Contacts.tsx
+        PaperProps={{
+          sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '24px' }
+        }}
+        BackdropProps={{
+          sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+        }}
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
           <DialogTitle id="confirm-customer-delete-title">Potvrdiť odstránenie zákazníka</DialogTitle>
           <DialogContent>
-            <DialogContentText id="confirm-customer-delete-description"> {/* Použitie DialogContentText */} 
+            <DialogContentText id="confirm-customer-delete-description"> 
               Naozaj chcete odstrániť tohto zákazníka?
             </DialogContentText>
           </DialogContent>
@@ -3037,19 +3055,24 @@ const OrdersList: React.FC = () => {
         </StyledDialogContent>
       </Dialog>
 
-    {/* Potvrdzovací dialóg pre vymazanie DOPRAVCU - už by mal používať StyledDialogContent */}
+    {/* Potvrdzovací dialóg pre vymazanie DOPRAVCU */}
     <Dialog
         open={showCarrierDeleteConfirm}
         onClose={handleCarrierDeleteCancel}
         aria-labelledby="confirm-carrier-delete-title"
         aria-describedby="confirm-carrier-delete-description"
-        PaperProps={{ sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '16px' } }}
-        BackdropProps={{ sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' } }}
+        // Props pre vzhľad z Contacts.tsx
+        PaperProps={{
+          sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '24px' }
+        }}
+        BackdropProps={{
+          sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+        }}
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
           <DialogTitle id="confirm-carrier-delete-title">Potvrdiť odstránenie dopravcu</DialogTitle>
           <DialogContent>
-            <DialogContentText id="confirm-carrier-delete-description"> {/* Použitie DialogContentText */} 
+            <DialogContentText id="confirm-carrier-delete-description"> 
               Naozaj chcete odstrániť tohto dopravcu?
             </DialogContentText>
           </DialogContent>
