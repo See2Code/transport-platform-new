@@ -617,7 +617,7 @@ const OrdersList: React.FC = () => {
   const [carrierToDelete, setCarrierToDelete] = useState<string>('');
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
-
+  
   const fetchTeamMembers = useCallback(async () => {
     if (!userData?.companyID) return;
     try {
@@ -658,29 +658,61 @@ const OrdersList: React.FC = () => {
   }, [userData]);
 
   const fetchCustomers = useCallback(async () => {
-    if (!userData?.companyID) { setCustomers([]); return; }
+    console.log("Attempting to fetch customers..."); // Log začiatku
+    if (!userData?.companyID) {
+      console.log("Fetch Customers: No companyID found.");
+      setCustomers([]);
+      return;
+    } 
     try {
-      const q = query(collection(db, 'customers'), where('companyID', '==', userData.companyID), orderBy('createdAt', 'desc'));
+      const customersRef = collection(db, 'customers');
+      const q = query(
+        customersRef, 
+        where('companyID', '==', userData.companyID),
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       const customersData = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return { id: doc.id, ...data, createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt } as Customer;
       });
+      console.log(`Fetched ${customersData.length} customers for company ${userData.companyID}.`); // Log výsledku
       setCustomers(customersData);
-    } catch (error) { console.error('Chyba pri načítaní zákazníkov:', error); }
+    } catch (error) {
+      console.error('Fetch Customers Error:', error); // Log chyby
+    }
   }, [userData]);
-
+  
   const fetchCarriers = useCallback(async () => {
-    if (!userData?.companyID) { setCarriers([]); return; }
+    console.log("Attempting to fetch carriers..."); // Log začiatku
+    if (!userData?.companyID) {
+      console.log("Fetch Carriers: No companyID found.");
+      setCarriers([]); 
+      return;
+    }
     try {
-      const q = query(collection(db, 'carriers'), where('companyID', '==', userData.companyID), orderBy('createdAt', 'desc'));
+      const carriersRef = collection(db, 'carriers');
+      const q = query(
+        carriersRef, 
+        where('companyID', '==', userData.companyID), 
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       const carriersData = querySnapshot.docs.map(doc => {
         const data = doc.data();
-        return { id: doc.id, ...data, createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt } as Carrier;
+        const carrier = { // Vytvoríme premennú pre logovanie
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
+        } as Carrier;
+        console.log("Mapping carrier:", carrier); // Logujeme spracovaný objekt
+        return carrier;
       });
+      console.log(`Fetched ${carriersData.length} carriers for company ${userData.companyID}.`); 
       setCarriers(carriersData);
-    } catch (error) { console.error('Chyba pri načítaní dopravcov:', error); }
+    } catch (error) {
+      console.error('Fetch Carriers Error:', error); 
+    }
   }, [userData]);
 
   const fetchOrders = useCallback(async () => {
@@ -715,10 +747,10 @@ const OrdersList: React.FC = () => {
       setOrders(ordersData);
     } catch (err) { console.error('Chyba pri načítaní objednávok:', err); setError('Nastala chyba pri načítaní objednávok'); }
     finally { setLoading(false); }
-  }, [userData, startDate, endDate, teamMembers]); 
+  }, [userData, startDate, endDate, teamMembers]);
 
   // --- useEffect HOOKY (teraz sú definované PO fetch funkciách) ---
-  
+
   useEffect(() => {
     fetchTeamMembers();
   }, [fetchTeamMembers]);
@@ -727,7 +759,7 @@ const OrdersList: React.FC = () => {
     console.log("Running initial data fetch on component mount.");
     fetchCustomers(); 
     fetchCarriers();
-    fetchOrders(); 
+    fetchOrders();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -865,10 +897,10 @@ const OrdersList: React.FC = () => {
 
   const updateOrderNumber = async () => {
     if (!orderToUpdateId || !newOrderNumber || !userData?.companyID) return;
-
+    
     try {
       setLoading(true);
-
+      
       const parts = newOrderNumber.split('/');
       if (parts.length !== 3) {
         setError('Neplatný formát čísla. Použite formát 0001/04/2025');
@@ -1523,6 +1555,7 @@ const OrdersList: React.FC = () => {
       }
       
       // Načítame aktualizovaných zákazníkov
+      console.log("Calling fetchCustomers after successful add..."); // Pridaný log
       await fetchCustomers();
       
       // Resetujeme stav editácie a zatvoríme formulár
@@ -1588,6 +1621,7 @@ const OrdersList: React.FC = () => {
       console.log('Dopravca bol úspešne uložený s ID:', docRef.id);
       
       // Načítame aktualizovaných dopravcov
+      console.log("Calling fetchCarriers after successful add..."); // Pridaný log
       await fetchCarriers();
       
       // Až potom zatvoríme formulár
@@ -1751,9 +1785,9 @@ const OrdersList: React.FC = () => {
       <DialogGlobalStyles open={showNewOrderDialog} />
       <PageHeader>
         <PageTitle isDarkMode={isDarkMode}>Objednávky</PageTitle>
-        <PageDescription>
+              <PageDescription>
           V tejto sekcii môžete spravovať všetky objednávky vašej spoločnosti. Môžete vytvárať nové objednávky, upravovať existujúce alebo ich odstrániť.
-        </PageDescription>
+              </PageDescription>
       </PageHeader>
 
       <StyledPaper>
@@ -1787,24 +1821,24 @@ const OrdersList: React.FC = () => {
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Button 
-                  variant="contained" 
-                  startIcon={<AddIcon />}
-                  onClick={handleOpenNewOrderForm}
-                  sx={{
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenNewOrderForm}
+            sx={{
                     backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.8)' : '#ff9f43',
                     color: '#ffffff',
                     fontWeight: 500,
-                    '&:hover': {
+              '&:hover': {
                       backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.9)' : '#f7b067',
                     }
-                  }}
-                >
-                  Nová objednávka
-                </Button>
-              </Box>
+            }}
+          >
+            Nová objednávka
+          </Button>
+        </Box>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-                <TextField
+              <TextField
                   label="Vyhľadať objednávku (Číslo, Firma, Kontakt, Špediter...)"
                   variant="outlined"
                   size="small"
@@ -1812,127 +1846,129 @@ const OrdersList: React.FC = () => {
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                   sx={{ flexGrow: 1, minWidth: '250px', maxWidth: '500px' }}
                   InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
+                      startAdornment: (
+                          <InputAdornment position="start">
+                              <SearchIcon />
+                          </InputAdornment>
+                      ),
                   }}
-                />
-                <IconButton onClick={() => setShowFilters(!showFilters)}>
+              />
+              <IconButton onClick={() => setShowFilters(!showFilters)}>
                   <FilterListIcon />
-                </IconButton>
+              </IconButton>
               </Box>
-            </Box>
+          </Box>
 
-            <Collapse in={showFilters}>
+          <Collapse in={showFilters}>
               <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                  <DatePicker
-                    label="Od dátumu"
-                    value={startDate}
-                    onChange={(newValue) => setStartDate(newValue)}
-                    slotProps={{ textField: { size: 'small' } }}
-                  />
-                  <DatePicker
-                    label="Do dátumu"
-                    value={endDate}
-                    onChange={(newValue) => setEndDate(newValue)}
-                    slotProps={{ textField: { size: 'small' } }}
-                  />
-                </LocalizationProvider>
-                <Button 
-                  onClick={() => { setStartDate(null); setEndDate(null); }} 
-                  size="small"
-                  sx={{ 
-                    color: '#ff9f43',
-                    '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
-                  }}
-                >
-                  Vymazať filter
-                </Button>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                      <DatePicker
+                          label="Od dátumu"
+                          value={startDate}
+                          onChange={(newValue) => setStartDate(newValue)}
+                          slotProps={{ textField: { size: 'small' } }}
+                      />
+                      <DatePicker
+                          label="Do dátumu"
+                          value={endDate}
+                          onChange={(newValue) => setEndDate(newValue)}
+                          slotProps={{ textField: { size: 'small' } }}
+                      />
+                  </LocalizationProvider>
+                  <Button 
+                    onClick={() => { setStartDate(null); setEndDate(null); }} 
+                    size="small"
+                    sx={{ 
+                      color: '#ff9f43',
+                      '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
+                    }}
+                  >
+                    Vymazať filter
+                  </Button>
               </Box>
-            </Collapse>
+          </Collapse>
           
-            {loading && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-                <CircularProgress sx={{ color: '#ff9f43' }} />
-              </Box>
-            )}
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress sx={{ color: '#ff9f43' }} />
+            </Box>
+          )}
           
-            {error && (
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  borderRadius: '10px',
-                  my: 2,
-                  '& .MuiAlert-icon': {
-                    color: '#ff9f43'
-                  }
-                }}
-              >
-                {error}
-              </Alert>
-            )}
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                borderRadius: '10px',
+                my: 2,
+                '& .MuiAlert-icon': {
+                  color: '#ff9f43'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          )}
           
-            {!loading && !error && (
+          {!loading && !error && (
               <TableContainer 
-                sx={{
-                  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                  borderRadius: '20px',
-                  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                  backdropFilter: 'blur(20px)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                  '& .MuiTableCell-root': {
-                    color: isDarkMode ? '#ffffff' : '#000000',
-                    borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    padding: '16px',
-                    fontSize: '0.9rem',
-                    whiteSpace: 'nowrap'
-                  },
-                  '& .MuiTableHead-root .MuiTableCell-root': {
-                    fontWeight: 600,
+                  component={Paper} // Zachováme Paper ako kontajner
+                  sx={{
+                    // Štýly skopírované z BusinessCases.tsx
+                    display: { xs: 'none', md: 'block' }, // Zachováme pôvodnú responzivitu ak treba, alebo zmeníme
                     backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                    borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                  },
-                  '& .MuiTableBody-root .MuiTableRow-root': {
-                    transition: 'all 0.2s ease-in-out',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    borderRadius: '20px',
+                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                    '& .MuiTableCell-root': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      padding: '16px',
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      fontWeight: 600,
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    },
+                    '& .MuiTableBody-root .MuiTableRow-root': {
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }
                     }
-                  }
-                }}
+                  }}
               >
-                <Table stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Číslo obj.</TableCell>
-                      <TableCell>Zákazník</TableCell>
-                      <TableCell>Kontaktná osoba</TableCell>
-                      <TableCell>Nakládka</TableCell>
-                      <TableCell>Čas nakládky</TableCell>
-                      <TableCell>Vykládka</TableCell>
-                      <TableCell>Čas vykládky</TableCell>
-                      <TableCell>Tovar</TableCell>
-                      <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>Cena zák.</TableCell>
-                      <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>Cena dopr.</TableCell>
-                      <TableCell sx={{ color: '#2ecc71', fontWeight: 'bold' }}>Zisk</TableCell>
-                      <TableCell>Špediter</TableCell>
-                      <TableCell>Dátum vytvorenia</TableCell>
-                      <TableCell>Akcie</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
+                  <Table stickyHeader>
+                      <TableHead>
+                          <TableRow>
+                              <TableCell>Číslo obj.</TableCell>
+                              <TableCell>Zákazník</TableCell>
+                              <TableCell>Kontaktná osoba</TableCell>
+                              <TableCell>Nakládka</TableCell>
+                              <TableCell>Čas nakládky</TableCell>
+                              <TableCell>Vykládka</TableCell>
+                              <TableCell>Čas vykládky</TableCell>
+                              <TableCell>Tovar</TableCell>
+                              <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>Cena zák.</TableCell>
+                              <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>Cena dopr.</TableCell>
+                              <TableCell sx={{ color: '#2ecc71', fontWeight: 'bold' }}>Zisk</TableCell>
+                              <TableCell>Špediter</TableCell>
+                              <TableCell>Dátum vytvorenia</TableCell>
+                              <TableCell>Akcie</TableCell>
+                          </TableRow>
+                      </TableHead>
+                      <TableBody>
                     {getFilteredCustomerOrders().map((order) => (
-                      <React.Fragment key={order.id}>
-                        <TableRow 
-                          hover 
-                          onClick={() => handleRowClick(order)} 
-                          sx={{ 
+                                  <React.Fragment key={order.id}>
+                                      <TableRow 
+                                          hover 
+                                          onClick={() => handleRowClick(order)}
+                                          sx={{
                             cursor: 'pointer', 
                             backgroundColor: selectedOrderId === order.id ? (theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.1)' : 'rgba(255, 159, 67, 0.05)') : undefined,
                             '& .MuiTableCell-root': {
@@ -1952,15 +1988,15 @@ const OrdersList: React.FC = () => {
                             <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{`${(order as any).suma || order.customerPrice || '0'} €`}</TableCell>
                             <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>{`${order.carrierPrice || '0'} €`}</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>{(() => { const c = parseFloat((order as any).suma || order.customerPrice || '0'); const p = parseFloat(order.carrierPrice || '0'); return !isNaN(c) && !isNaN(p) ? `${(c - p).toFixed(2)} €` : '-'; })()}</TableCell>
-                            <TableCell>
+                                          <TableCell>
                               {
                                 // Logika na zobrazenie mena namiesto emailu v tabuľke
                                 (order.createdBy && teamMembers[order.createdBy]?.name) ||
                                 ((order as any).createdByName && !(order as any).createdByName.includes('@') ? (order as any).createdByName : null) ||
                                 ((order as any).createdByName && (order as any).createdByName.includes('@') ? (order as any).createdByName.split('@')[0] : null) || // Fallback na časť emailu pred @
                                 'Neznámy'
-                              }
-                            </TableCell>
+                                              }
+                                          </TableCell>
                             <TableCell>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy') : 'N/A'}</TableCell>
                             <TableCell> {/* Akcie */} 
                               <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -1968,8 +2004,8 @@ const OrdersList: React.FC = () => {
                                 <Tooltip title="Náhľad PDF"><IconButton onClick={(e) => { e.stopPropagation(); handlePreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></Tooltip>
                                 <Tooltip title="Stiahnuť PDF"><IconButton onClick={(e) => { e.stopPropagation(); handleDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></Tooltip>
                                 <Tooltip title="Vymazať"><IconButton onClick={(e) => { e.stopPropagation(); openDeleteConfirmation(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></Tooltip>
-                              </Box>
-                            </TableCell>
+                                                      </Box>
+                                          </TableCell>
                         </TableRow>
                         
                         {/* Podmienené zobrazenie detailu */}
@@ -1983,23 +2019,23 @@ const OrdersList: React.FC = () => {
                               timeout="auto" 
                               unmountOnExit
                             >
-                              {selectedOrderId === order.id && selectedOrderDetail && (
-                                <OrderDetailPanel>
+                                      {selectedOrderId === order.id && selectedOrderDetail && (
+                                                  <OrderDetailPanel>
                                   {/* Vrátenie pôvodného obsahu */}
                                   <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                                      Detail objednávky {(selectedOrderDetail as any).orderNumberFormatted || selectedOrderDetail.id?.substring(0, 8)}
-                                  </Typography>
-                                  <Grid container spacing={3}>
+                                                              Detail objednávky {(selectedOrderDetail as any).orderNumberFormatted || selectedOrderDetail.id?.substring(0, 8)}
+                                                          </Typography>
+                                                      <Grid container spacing={3}>
                                       {/* Sekcia Základné informácie */}
                                       <Grid item xs={12} md={6} lg={4}>
-                                          <DetailSection>
+                                                              <DetailSection>
                                               <DetailSectionTitle>Základné informácie</DetailSectionTitle>
-                                              <DetailRow>
-                                                  <DetailLabel>Dátum vytvorenia:</DetailLabel>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Dátum vytvorenia:</DetailLabel>
                                                   <DetailValue>{selectedOrderDetail.createdAt ? format(convertToDate(selectedOrderDetail.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}</DetailValue>
-                                              </DetailRow>
-                                              <DetailRow>
-                                                  <DetailLabel>Vytvoril:</DetailLabel>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Vytvoril:</DetailLabel>
                                                   <DetailValue sx={{ display: 'flex', flexDirection: 'column' }}>
                                                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                           <PersonIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} /> 
@@ -2009,67 +2045,67 @@ const OrdersList: React.FC = () => {
                                                             ((selectedOrderDetail as any).createdByName && !(selectedOrderDetail as any).createdByName.includes('@') ? (selectedOrderDetail as any).createdByName : null) ||
                                                             'Neznámy'
                                                           }
-                                                      </Box>
-                                                      {selectedOrderDetail.createdBy && teamMembers[selectedOrderDetail.createdBy]?.email && (
+                                                                              </Box>
+                                                                              {selectedOrderDetail.createdBy && teamMembers[selectedOrderDetail.createdBy]?.email && (
                                                         <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
                                                           <EmailIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }}/>
                                                           {teamMembers[selectedOrderDetail.createdBy]?.email}
-                                                        </Box>
-                                                      )}
+                                                                                  </Box>
+                                                                              )}
                                                       {/* Zobraziť createdByName ako fallback email, ak meno nie je dostupné */}
                                                       {!(selectedOrderDetail.createdBy && teamMembers[selectedOrderDetail.createdBy]?.name) && (selectedOrderDetail as any).createdByName && (selectedOrderDetail as any).createdByName.includes('@') && (
                                                           <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
                                                               <EmailIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }}/>
-                                                              {(selectedOrderDetail as any).createdByName}
-                                                          </Box>
-                                                      )}
-                                                  </DetailValue>
-                                              </DetailRow>
+                                                                                      {(selectedOrderDetail as any).createdByName}
+                                                                                  </Box>
+                                                                              )}
+                                                                      </DetailValue>
+                                                                  </DetailRow>
                                               {/* Pridať ďalšie základné info ak treba */}
-                                          </DetailSection>
+                                                              </DetailSection>
                                       </Grid>
-
+                                                          
                                       {/* Sekcia Zákazník */}
                                       <Grid item xs={12} md={6} lg={4}>
-                                          <DetailSection>
+                                                              <DetailSection>
                                               <DetailSectionTitle>Zákazník</DetailSectionTitle>
-                                              <DetailRow>
-                                                  <DetailLabel>Názov spoločnosti:</DetailLabel>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Názov spoločnosti:</DetailLabel>
                                                   <DetailValue>{(selectedOrderDetail as any).zakaznik || selectedOrderDetail.customerCompany}</DetailValue>
-                                              </DetailRow>
-                                              <DetailRow>
-                                                  <DetailLabel>Kontaktná osoba:</DetailLabel>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
+                                                                      <DetailLabel>Kontaktná osoba:</DetailLabel>
                                                   <DetailValue>{(selectedOrderDetail as any).kontaktnaOsoba || `${selectedOrderDetail.customerContactName} ${selectedOrderDetail.customerContactSurname}`}</DetailValue>
-                                              </DetailRow>
+                                                                  </DetailRow>
                                               {selectedOrderDetail.customerStreet && <DetailRow><DetailLabel>Adresa:</DetailLabel><DetailValue>{`${selectedOrderDetail.customerStreet}, ${selectedOrderDetail.customerZip} ${selectedOrderDetail.customerCity}, ${selectedOrderDetail.customerCountry}`}</DetailValue></DetailRow>}
                                               {selectedOrderDetail.customerVatId && <DetailRow><DetailLabel>IČ DPH:</DetailLabel><DetailValue>{selectedOrderDetail.customerVatId}</DetailValue></DetailRow>}
-                                          </DetailSection>
+                                                              </DetailSection>
                                       </Grid>
-                                      
+                                                          
                                       {/* Sekcia Dopravca (ak existuje) */}
                                       {selectedOrderDetail.carrierCompany && (
                                           <Grid item xs={12} md={6} lg={4}>
-                                              <DetailSection>
+                                                              <DetailSection>
                                                   <DetailSectionTitle>Dopravca</DetailSectionTitle>
-                                                  <DetailRow>
+                                                                  <DetailRow>
                                                       <DetailLabel>Názov:</DetailLabel>
                                                       <DetailValue>{selectedOrderDetail.carrierCompany}</DetailValue>
-                                                  </DetailRow>
-                                                  <DetailRow>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
                                                       <DetailLabel>Kontakt:</DetailLabel>
                                                       <DetailValue>{selectedOrderDetail.carrierContact}</DetailValue>
-                                                  </DetailRow>
-                                                  <DetailRow>
+                                                                  </DetailRow>
+                                                                  <DetailRow>
                                                       <DetailLabel>EČV:</DetailLabel>
                                                       <DetailValue>{selectedOrderDetail.carrierVehicleReg}</DetailValue>
-                                                  </DetailRow>
-                                              </DetailSection>
-                                          </Grid>
+                                                                  </DetailRow>
+                                                              </DetailSection>
+                                                          </Grid>
                                       )}
-                                      
+                                                          
                                       {/* Sekcia Miesta nakládky */}
-                                      <Grid item xs={12} md={6}>
-                                          <DetailSection>
+                                                          <Grid item xs={12} md={6}>
+                                                              <DetailSection>
                                               <DetailSectionTitle>Miesta nakládky</DetailSectionTitle>
                                               {selectedOrderDetail.loadingPlaces?.map((place, idx) => (
                                                   <Box key={`load-detail-${idx}`} sx={{ mb: 2, borderBottom: idx !== selectedOrderDetail.loadingPlaces.length - 1 ? '1px dashed rgba(128,128,128,0.3)' : 'none', pb: idx !== selectedOrderDetail.loadingPlaces.length - 1 ? 2 : 0 }}>
@@ -2086,8 +2122,8 @@ const OrdersList: React.FC = () => {
                                                         <span style={{ fontWeight: 500, color: theme.palette.text.secondary, minWidth: '100px', display: 'inline-block', fontSize: '0.875rem' }}>Kontakt:</span> 
                                                         {place.contactPerson}
                                                       </Typography>
-                                                      
-                                                      {place.goods && place.goods.length > 0 && (
+                                                                              
+                                                                              {place.goods && place.goods.length > 0 && (
                                                           <Box sx={{ mt: 1 }}>
                                                               <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.secondary, fontSize: '0.875rem' }}>Tovar:</Typography>
                                                               {place.goods.map((item, gIdx) => (
@@ -2096,18 +2132,18 @@ const OrdersList: React.FC = () => {
                                                                       {item.palletExchange && item.palletExchange !== 'Bez výmeny' && ` (${item.palletExchange})`}
                                                                       {item.dimensions && ` [${item.dimensions}]`}
                                                                       {item.description && ` - ${item.description}`} 
-                                                                  </Typography>
-                                                              ))}
+                                                                                          </Typography>
+                                                                                      ))}
                                                           </Box>
-                                                      )}
-                                                  </Box>
+                                                                              )}
+                                                                          </Box>
                                               ))}
-                                          </DetailSection>
+                                                              </DetailSection>
                                       </Grid>
-                                      
+                                                              
                                       {/* Sekcia Miesta vykládky */}
                                       <Grid item xs={12} md={6}>
-                                          <DetailSection>
+                                                              <DetailSection>
                                               <DetailSectionTitle>Miesta vykládky</DetailSectionTitle>
                                               {selectedOrderDetail.unloadingPlaces?.map((place, idx) => (
                                                   <Box key={`unload-detail-${idx}`} sx={{ mb: 2, borderBottom: idx !== selectedOrderDetail.unloadingPlaces.length - 1 ? '1px dashed rgba(128,128,128,0.3)' : 'none', pb: idx !== selectedOrderDetail.unloadingPlaces.length - 1 ? 2 : 0 }}>
@@ -2133,16 +2169,16 @@ const OrdersList: React.FC = () => {
                                                                       {item.description && ` - ${item.description}`}
                                                                   </Typography>
                                                               ))}
-                                                          </Box>
+                                                                          </Box>
                                                       )}
                                                   </Box>
                                               ))}
-                                          </DetailSection>
+                                                              </DetailSection>
                                       </Grid>
-                                      
+                                                              
                                       {/* Sekcia Ostatné */}
                                       <Grid item xs={12}>
-                                          <DetailSection>
+                                                              <DetailSection>
                                               <DetailSectionTitle>Ostatné informácie</DetailSectionTitle>
                                               {(selectedOrderDetail as any).cisloNakladuZakaznika && 
                                                   <DetailRow><DetailLabel>Číslo nákladu zák.:</DetailLabel><DetailValue>{(selectedOrderDetail as any).cisloNakladuZakaznika}</DetailValue></DetailRow>
@@ -2157,20 +2193,20 @@ const OrdersList: React.FC = () => {
                                                   <DetailRow><DetailLabel>Požiadavky:</DetailLabel><DetailValue>{(selectedOrderDetail as any).poziadavky}</DetailValue></DetailRow>
                                               }
                                               {/* Pridať ďalšie ostatné info ak treba */}
-                                          </DetailSection>
-                                      </Grid>
-                                  </Grid>
-                                </OrderDetailPanel>
+                                                              </DetailSection>
+                                                          </Grid>
+                                                      </Grid>
+                                                  </OrderDetailPanel>
                               )}
                             </Collapse>
-                          </TableCell>
-                        </TableRow>
-                      </React.Fragment>
+                                              </TableCell>
+                                          </TableRow>
+                                  </React.Fragment>
                     ))}
-                  </TableBody>
-                </Table>
+                      </TableBody>
+                  </Table>
               </TableContainer>
-            )}
+          )}
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
@@ -2212,11 +2248,37 @@ const OrdersList: React.FC = () => {
                 </Box>
               </Box>
 
-              <TableContainer component={Paper} sx={{ 
-                backgroundColor: isDarkMode ? 'rgba(22, 28, 36, 0.7)' : 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(10px)',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
-              }}>
+              <TableContainer 
+                component={Paper} 
+                sx={{ // Tu začína správny sx objekt
+                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                    borderRadius: '20px',
+                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                    '& .MuiTableCell-root': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      padding: '16px',
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      fontWeight: 600,
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    },
+                    '& .MuiTableBody-root .MuiTableRow-root': {
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }
+                    }
+                  }} // Tu končí správny sx objekt
+              >
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -2327,11 +2389,38 @@ const OrdersList: React.FC = () => {
                 </Box>
               </Box>
 
-              <TableContainer component={Paper} sx={{ 
-                backgroundColor: isDarkMode ? 'rgba(22, 28, 36, 0.7)' : 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(10px)',
-                border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
-              }}>
+              <TableContainer 
+                component={Paper} 
+                sx={{
+                    // Štýly skopírované z BusinessCases.tsx
+                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                    borderRadius: '20px',
+                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                    '& .MuiTableCell-root': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      padding: '16px',
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      fontWeight: 600,
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    },
+                    '& .MuiTableBody-root .MuiTableRow-root': {
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }
+                    }
+                  }}
+              >
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -2485,12 +2574,30 @@ const OrdersList: React.FC = () => {
         onClose={handleDeleteCancel}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
+        sx={{
+          // Štýl pre pozadie za dialógom (môže zostať priehľadné)
+          '& .MuiBackdrop-root': {
+            backdropFilter: 'blur(3px)', 
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+          },
+          // Štýl pre samotný dialóg (papier)
+          '& .MuiPaper-root': {
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            border: theme.palette.mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.1)' 
+              : '1px solid rgba(0, 0, 0, 0.1)',
+            // Nastavenie plne nepriehľadného pozadia
+            backgroundColor: theme.palette.background.paper, 
+            // backdropFilter už neaplikujeme na papier
+          }
+        }}
       >
         <DialogTitle id="alert-dialog-title">{"Potvrdiť odstránenie objednávky"}</DialogTitle>
         <DialogContent>
-          <Typography>
+          <DialogContentText id="alert-dialog-description">
             Naozaj chcete odstrániť túto objednávku?
-          </Typography>
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button 
@@ -2881,16 +2988,32 @@ const OrdersList: React.FC = () => {
     <Dialog
       open={showCustomerDeleteConfirm}
       onClose={handleCustomerDeleteCancel}
-      aria-labelledby="customer-delete-dialog-title"
-      aria-describedby="customer-delete-dialog-description"
+      aria-labelledby="confirm-customer-delete-title"
+      aria-describedby="confirm-customer-delete-description"
+      sx={{
+        // Štýl pre pozadie za dialógom
+        '& .MuiBackdrop-root': {
+          backdropFilter: 'blur(3px)', 
+          backgroundColor: 'rgba(0, 0, 0, 0.5)'
+        },
+        // Štýl pre samotný dialóg (papier)
+        '& .MuiPaper-root': {
+          borderRadius: '12px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          border: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.1)' 
+            : '1px solid rgba(0, 0, 0, 0.1)',
+          backgroundColor: theme.palette.background.paper, 
+        }
+      }}
     >
-      <DialogTitle id="customer-delete-dialog-title">{"Potvrdiť odstránenie zákazníka"}</DialogTitle>
+      <DialogTitle id="confirm-customer-delete-title">Potvrdiť odstránenie zákazníka</DialogTitle>
       <DialogContent>
-        <Typography>
+        <DialogContentText id="confirm-customer-delete-description">
           Naozaj chcete odstrániť tohto zákazníka?
-        </Typography>
+        </DialogContentText>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ p: 2 }}>
         <Button 
           onClick={handleCustomerDeleteCancel}
           sx={{ 
@@ -2918,16 +3041,32 @@ const OrdersList: React.FC = () => {
     <Dialog
       open={showCarrierDeleteConfirm}
       onClose={handleCarrierDeleteCancel}
-      aria-labelledby="carrier-delete-dialog-title"
-      aria-describedby="carrier-delete-dialog-description"
+      aria-labelledby="confirm-carrier-delete-title"
+      aria-describedby="confirm-carrier-delete-description"
+      sx={{
+        // Štýl pre pozadie za dialógom
+        '& .MuiBackdrop-root': {
+          backdropFilter: 'blur(3px)', 
+          backgroundColor: 'rgba(0, 0, 0, 0.5)'
+        },
+        // Štýl pre samotný dialóg (papier)
+        '& .MuiPaper-root': {
+          borderRadius: '12px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          border: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.1)' 
+            : '1px solid rgba(0, 0, 0, 0.1)',
+          backgroundColor: theme.palette.background.paper, 
+        }
+      }}
     >
-      <DialogTitle id="carrier-delete-dialog-title">{"Potvrdiť odstránenie dopravcu"}</DialogTitle>
+      <DialogTitle id="confirm-carrier-delete-title">Potvrdiť odstránenie dopravcu</DialogTitle>
       <DialogContent>
-        <Typography>
+        <DialogContentText id="confirm-carrier-delete-description">
           Naozaj chcete odstrániť tohto dopravcu?
-        </Typography>
+        </DialogContentText>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ p: 2 }}>
         <Button 
           onClick={handleCarrierDeleteCancel}
           sx={{ 
