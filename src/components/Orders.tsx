@@ -1592,6 +1592,10 @@ const OrdersList: React.FC = () => {
   }, []);
 
   const handleCustomerSubmit = async (customerData: CustomerData) => {
+    if (!userData?.companyID) {
+      alert("Chyba: Nemáte priradenú firmu.");
+      return;
+    }
     try {
       console.log('Začínam ukladanie/aktualizáciu zákazníka:', customerData);
       
@@ -1607,6 +1611,7 @@ const OrdersList: React.FC = () => {
         ico: customerData.ico || '',
         dic: customerData.dic || '',
         icDph: customerData.icDph || '',
+        companyID: userData.companyID // Pridanie companyID
       };
 
       // Ak máme selectedCustomerForEdit, ideme aktualizovať existujúceho zákazníka
@@ -1614,7 +1619,7 @@ const OrdersList: React.FC = () => {
         const customerRef = doc(db, 'customers', selectedCustomerForEdit.id);
         
         await updateDoc(customerRef, {
-          ...customerDataToSave,
+          ...customerDataToSave, // companyID sa prenesie
           updatedAt: Timestamp.fromDate(new Date())
         });
         
@@ -1623,7 +1628,7 @@ const OrdersList: React.FC = () => {
         // Ide o nového zákazníka
         const customersRef = collection(db, 'customers');
         const newCustomer = {
-          ...customerDataToSave,
+          ...customerDataToSave, // companyID sa prenesie
           createdAt: Timestamp.fromDate(new Date())
         };
         
@@ -1660,10 +1665,20 @@ const OrdersList: React.FC = () => {
     );
   });
 
-  const fetchCarriers = useCallback(async () => {
+  // Odstránený useCallback
+  const fetchCarriers = async () => {
+    if (!userData?.companyID) {
+      console.log("Chýba companyID pre načítanie dopravcov.");
+      setCarriers([]); 
+      return;
+    }
     try {
       const carriersRef = collection(db, 'carriers');
-      const q = query(carriersRef, orderBy('createdAt', 'desc'));
+      const q = query(
+        carriersRef, 
+        where('companyID', '==', userData.companyID), 
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       const carriersData = querySnapshot.docs.map(doc => {
         const data = doc.data();
@@ -1673,23 +1688,28 @@ const OrdersList: React.FC = () => {
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
         } as Carrier;
       });
-      console.log('Dopravcovia načítaní:', carriersData.length);
+      console.log(`Dopravcovia načítaní pre ${userData.companyID}:`, carriersData.length);
       setCarriers(carriersData);
     } catch (error) {
       console.error('Chyba pri načítaní dopravcov:', error);
     }
-  }, []);
+  }; // Ukončenie funkcie
 
   const handleAddCarrier = () => {
     setShowCarrierForm(true);
   };
 
   const handleCarrierSubmit = async (carrierData: any) => {
+    if (!userData?.companyID) {
+      alert("Chyba: Nemáte priradenú firmu.");
+      return;
+    }
     try {
       console.log('Začínam ukladanie dopravcu:', carrierData);
       
       const carriersRef = collection(db, 'carriers');
-      const newCarrier = {
+      // Správny objekt pre ukladanie - premenované pre jasnoť
+      const carrierDataToSave = {
         companyName: carrierData.companyName,
         street: carrierData.street,
         city: carrierData.city,
@@ -1704,10 +1724,11 @@ const OrdersList: React.FC = () => {
         icDph: carrierData.icDph || '',
         vehicleTypes: carrierData.vehicleTypes || [],
         notes: carrierData.notes || '',
-        createdAt: Timestamp.fromDate(new Date())
+        createdAt: Timestamp.fromDate(new Date()),
+        companyID: userData.companyID // Pridanie companyID
       };
       
-      const docRef = await addDoc(carriersRef, newCarrier);
+      const docRef = await addDoc(carriersRef, carrierDataToSave);
       console.log('Dopravca bol úspešne uložený s ID:', docRef.id);
       
       // Načítame aktualizovaných dopravcov
@@ -1723,8 +1744,9 @@ const OrdersList: React.FC = () => {
 
   useEffect(() => {
     fetchCustomers();
-    fetchCarriers();
-  }, [fetchCustomers, fetchCarriers]);
+    fetchCarriers(); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps 
+  }, [userData]); // fetchCarriers už nie je v závislostiach, ale userData áno, aby sa znovu načítali pri zmene usera
 
   const filteredCarriers = carriers.filter(carrier => {
     const searchLower = carrierSearchQuery.toLowerCase();
