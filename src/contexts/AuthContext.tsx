@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User as FirebaseUser } from 'firebase/auth';
-import { auth, db } from '../firebase';
-import { CircularProgress, Box, Typography, Button } from '@mui/material';
+import { auth, db, functions } from '../firebase';
+import { CircularProgress, Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@mui/material';
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { signOut, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import { signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 export interface UserData {
   uid: string;
@@ -68,6 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentSession, setCurrentSession] = useState<string | null>(null);
+  const [logoutNotification, setLogoutNotification] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const generateDeviceId = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -121,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if ((sortedSessions[0].lastActive as Timestamp).toDate() > (session.lastActive as Timestamp).toDate()) {
           await signOut(auth);
-          alert('Vaše konto bolo prihlásené na inom zariadení.');
+          setLogoutNotification('Vaše konto bolo prihlásené na inom zariadení.');
           return;
         }
 
@@ -281,6 +284,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signOut(auth);
     setUserData(null);
     setCurrentSession(null);
+    setLogoutNotification('Boli ste úspešne odhlásení.');
   };
 
   const value: AuthContextType = {
@@ -312,7 +316,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           </Button>
         </Box>
       ) : (
-        children
+        <>
+          {logoutNotification && (
+            <Dialog
+              open={!!logoutNotification}
+              onClose={() => setLogoutNotification(null)}
+              aria-labelledby="alert-dialog-title"
+              aria-describedby="alert-dialog-description"
+            >
+              <DialogTitle id="alert-dialog-title">{"Odhlásenie"}</DialogTitle>
+              <DialogContent>
+                <DialogContentText id="alert-dialog-description">
+                  {logoutNotification}
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => {
+                  setLogoutNotification(null);
+                  navigate('/login');
+                }} autoFocus>
+                  OK
+                </Button>
+              </DialogActions>
+            </Dialog>
+          )}
+          {children}
+        </>
       )}
     </AuthContext.Provider>
   );

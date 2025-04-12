@@ -38,11 +38,9 @@ const AppContainer = ({ isDarkMode, children }: AppContainerProps) => (
       flexDirection: 'column',
       minHeight: '100vh',
       width: '100%',
-      background: isDarkMode
-        ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)'
-        : '#ffffff',
+      background: isDarkMode ? 'transparent' : '#ffffff',
       position: 'relative',
-      backgroundAttachment: 'fixed',
+      overflow: 'hidden',
     }}
   >
     {children}
@@ -55,13 +53,11 @@ const PageContent = ({ isDarkMode, children }: PageContentProps) => (
       flexGrow: 1,
       marginTop: '48px',
       padding: '24px 16px',
-      background: isDarkMode
-        ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)'
-        : '#ffffff',
+      background: isDarkMode ? 'transparent' : '#ffffff',
       position: 'relative',
       zIndex: 1,
       minHeight: 'calc(100vh - 48px)',
-      backgroundAttachment: 'fixed',
+      overflowX: 'hidden',
       '@media (max-width: 600px)': {
         marginTop: '40px',
         padding: '16px',
@@ -107,13 +103,40 @@ const AppContent: React.FC = () => {
     components: {
       MuiCssBaseline: {
         styleOverrides: {
-          body: {
+          'html, body': {
             background: isDarkMode 
               ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
               : '#ffffff',
             backgroundAttachment: 'fixed',
+            backgroundSize: 'cover',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center center',
             margin: 0,
             padding: 0,
+            minHeight: '100vh',
+            width: '100%',
+            overflowX: 'hidden',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: isDarkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: isDarkMode ? 'rgba(255, 159, 67, 0.5)' : 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '4px',
+              '&:hover': {
+                background: isDarkMode ? 'rgba(255, 159, 67, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+              },
+            },
+          },
+          '#root': {
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: '100vh',
+            width: '100%',
+            background: 'transparent',
           },
         },
       },
@@ -131,13 +154,18 @@ const AppContent: React.FC = () => {
         ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
         : '#ffffff',
       backgroundAttachment: 'fixed',
+      backgroundSize: 'cover',
+      backgroundRepeat: 'no-repeat',
       minHeight: '100vh',
       width: '100%',
+      overflowX: 'hidden',
     },
     '#root': {
       background: 'transparent',
       minHeight: '100vh',
       width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
     },
   };
 
@@ -145,6 +173,21 @@ const AppContent: React.FC = () => {
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <GlobalStyles styles={globalStyles} />
+      {isDarkMode && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: -1,
+            background: 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)',
+          }}
+        />
+      )}
       <AppContainer isDarkMode={isDarkMode}>
         <Routes>
           {/* Verejné cesty */}
