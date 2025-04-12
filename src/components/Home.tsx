@@ -1,239 +1,1004 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Box,
   Typography,
   Button,
-  Paper,
+  Grid,
   useTheme,
   styled,
+  Card,
+  CardContent,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Avatar,
+  useMediaQuery,
+  Fade,
+  AppBar,
+  Toolbar,
+  IconButton,
+  Menu,
+  MenuItem,
+  Link,
+  Drawer,
+  ListItemButton,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  LocalShipping,
+  People,
+  Map,
+  Business,
+  Payment,
+  Speed,
+  PhoneAndroid,
+  Verified,
+  MenuBook,
+  QueryStats,
+  DataSaverOn,
+  Biotech,
+  Menu as MenuIcon,
+  Close as CloseIcon,
+  KeyboardArrowDown as ArrowDownIcon,
+} from '@mui/icons-material';
+import { motion } from 'framer-motion';
 
-// Styled komponenty
-const LogoContainer = styled(Box)({
-  width: '150px',
-  height: 'auto',
-  marginBottom: '20px',
-  opacity: 0.8,
-  transition: 'opacity 0.3s ease-in-out',
-  '&:hover': {
-    opacity: 1,
-  },
-});
-
-const LogoImage = styled('img')<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  width: '100%',
-  height: 'auto',
-  filter: isDarkMode ? 'brightness(0) invert(1)' : 'brightness(0)',
-  cursor: 'pointer',
-}));
-
-const GradientButton = styled(Button)(({ theme }) => ({
-  padding: '15px 40px',
-  fontSize: '1.1rem',
-  width: '100%',
-  maxWidth: '300px',
-  marginBottom: '20px',
-  borderRadius: '12px',
-  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-3px)',
-    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.1)',
-  },
-}));
-
-const GreenGradientButton = styled(GradientButton)({
-  background: 'linear-gradient(135deg, #00b894 0%, #55efc4 100%)',
-  color: 'white',
-});
-
-const OrangeGradientButton = styled(GradientButton)({
-  background: 'linear-gradient(135deg, #ff9f43 0%, #ffa502 100%)',
-  color: 'white',
-});
-
-const StyledBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  background: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-  color: isDarkMode ? '#ffffff' : '#000000',
-  borderRadius: '20px',
-  padding: '32px',
-  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-  backdropFilter: 'blur(20px)',
-  boxShadow: isDarkMode 
-    ? '0 8px 32px rgba(0, 0, 0, 0.3)' 
-    : '0 8px 32px rgba(0, 0, 0, 0.1)',
-  transition: 'all 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: isDarkMode 
-      ? '0 12px 40px rgba(0, 0, 0, 0.4)' 
-      : '0 12px 40px rgba(0, 0, 0, 0.15)',
-  },
-  '@media (max-width: 600px)': {
-    padding: '24px',
+// Navigation Menu
+const NavbarContainer = styled(AppBar)(({ theme }) => ({
+  background: 'transparent',
+  boxShadow: 'none',
+  padding: '15px 0',
+  transition: 'all 0.3s ease',
+  position: 'fixed',
+  '&.scrolled': {
+    background: theme.palette.mode === 'dark' 
+      ? 'rgba(16, 14, 60, 0.9)' 
+      : 'rgba(255, 255, 255, 0.9)',
+    backdropFilter: 'blur(10px)',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+    padding: '10px 0',
   }
 }));
 
-const AnimatedBox = styled(Box)({
-  animation: 'fadeIn 0.6s ease-out',
-  '@keyframes fadeIn': {
-    from: {
-      opacity: 0,
-      transform: 'translateY(20px)',
-    },
-    to: {
-      opacity: 1,
-      transform: 'translateY(0)',
-    },
+const NavButton = styled(Button)(({ theme }) => ({
+  marginLeft: theme.spacing(2),
+  color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+  fontSize: '0.95rem',
+  fontWeight: 500,
+  textTransform: 'none',
+  '&:hover': {
+    background: 'rgba(255, 159, 67, 0.1)',
   },
+  '&.active': {
+    color: '#ff9f43',
+    fontWeight: 600,
+  }
+}));
+
+const ScrollToTopButton = styled(IconButton)(({ theme }) => ({
+  position: 'fixed',
+  bottom: '30px',
+  right: '30px',
+  background: theme.palette.mode === 'dark' 
+    ? 'rgba(16, 14, 60, 0.8)' 
+    : 'rgba(255, 255, 255, 0.9)',
+  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
+  color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+  zIndex: 1000,
+  '&:hover': {
+    background: theme.palette.mode === 'dark' 
+      ? 'rgba(16, 14, 60, 0.9)' 
+      : 'rgba(255, 255, 255, 1)',
+  }
+}));
+
+// Logo container
+const LogoContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  marginBottom: '20px',
+  '@media (max-width: 900px)': {
+    marginBottom: '10px',
+  }
+}));
+
+const LogoImage = styled('img')<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  width: '120px',
+  height: 'auto',
+  filter: isDarkMode ? 'brightness(0) invert(1)' : 'brightness(0)',
+  cursor: 'pointer',
+  transition: 'transform 0.3s ease-in-out',
+  '&:hover': {
+    transform: 'scale(1.05)',
+  },
+}));
+
+// Section styling
+const Section = styled(Box)(({ theme }) => ({
+  padding: '100px 0',
+  position: 'relative',
+  '@media (max-width: 900px)': {
+    padding: '60px 0',
+  },
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    bottom: 0,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '150px',
+    height: '1px',
+    background: 'linear-gradient(90deg, transparent, rgba(255, 159, 67, 0.5), transparent)',
+  }
+}));
+
+// Hero section styling
+const HeroSection = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textAlign: 'center',
+  padding: '120px 0 80px',
+  position: 'relative',
+  '@media (max-width: 900px)': {
+    padding: '100px 0 60px',
+  },
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '100px',
+    background: 'linear-gradient(to top, rgba(16, 14, 60, 0.1), transparent)',
+    pointerEvents: 'none',
+  }
+}));
+
+// App screenshot box
+const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme }) => ({
+  position: 'relative',
+  overflow: 'hidden',
+  borderRadius: '20px',
+  boxShadow: isDarkMode 
+    ? '0 20px 80px rgba(0, 0, 0, 0.6)' 
+    : '0 20px 80px rgba(0, 0, 0, 0.15)',
+  width: '100%',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: isDarkMode
+      ? 'linear-gradient(145deg, rgba(255, 159, 67, 0.1) 0%, rgba(255, 107, 107, 0.1) 100%)'
+      : 'none',
+    pointerEvents: 'none',
+    zIndex: 1,
+  },
+  '& img': {
+    width: '100%',
+    height: 'auto',
+    display: 'block',
+    transition: 'transform 0.5s ease',
+  },
+  '&:hover img': {
+    transform: 'scale(1.02)',
+  },
+}));
+
+// Feature cards
+const FeatureCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  height: '100%',
+  background: isDarkMode 
+    ? 'rgba(28, 28, 45, 0.8)' 
+    : 'rgba(255, 255, 255, 0.9)',
+  backdropFilter: 'blur(10px)',
+  borderRadius: '16px',
+  overflow: 'hidden',
+  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+  boxShadow: isDarkMode
+    ? '0 10px 30px rgba(0, 0, 0, 0.3)'
+    : '0 10px 30px rgba(0, 0, 0, 0.08)',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'translateY(-10px)',
+    boxShadow: isDarkMode
+      ? '0 15px 40px rgba(0, 0, 0, 0.4)'
+      : '0 15px 40px rgba(0, 0, 0, 0.12)',
+    border: `1px solid ${isDarkMode ? 'rgba(255, 159, 67, 0.3)' : 'rgba(255, 159, 67, 0.3)'}`,
+  }
+}));
+
+const FeatureIcon = styled(Avatar)(({ theme }) => ({
+  backgroundColor: '#ff9f43',
+  width: 56,
+  height: 56,
+  marginBottom: 16,
+  boxShadow: '0 8px 20px rgba(255, 159, 67, 0.3)',
+}));
+
+const SectionTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  fontSize: '2.5rem',
+  fontWeight: 700,
+  marginBottom: '15px',
+  position: 'relative',
+  display: 'inline-block',
+  color: isDarkMode ? '#ffffff' : '#333333',
+  '@media (max-width: 900px)': {
+    fontSize: '2rem',
+  },
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    bottom: '-10px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '80px',
+    height: '4px',
+    background: 'linear-gradient(90deg, #ff9f43, #ff6b6b)',
+    borderRadius: '2px',
+  }
+}));
+
+const SectionSubtitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  fontSize: '1.2rem',
+  fontWeight: 400,
+  maxWidth: '700px',
+  margin: '0 auto 40px',
+  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+  '@media (max-width: 900px)': {
+    fontSize: '1rem',
+    marginBottom: '30px',
+  }
+}));
+
+// CTA buttons
+const GradientButton = styled(Button)(({ theme }) => ({
+  padding: '12px 35px',
+  fontSize: '1.1rem',
+  borderRadius: '12px',
+  textTransform: 'none',
+  fontWeight: 600,
+  boxShadow: '0 10px 20px rgba(0, 0, 0, 0.1)',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'translateY(-3px)',
+    boxShadow: '0 15px 30px rgba(0, 0, 0, 0.2)',
+  },
+  '@media (max-width: 900px)': {
+    padding: '10px 30px',
+    fontSize: '1rem',
+  }
+}));
+
+const PrimaryButton = styled(GradientButton)({
+  background: 'linear-gradient(45deg, #00b894 0%, #55efc4 100%)',
+  color: 'white',
+  '&:hover': {
+    background: 'linear-gradient(45deg, #00a382 0%, #4bd4af 100%)',
+  }
 });
+
+const SecondaryButton = styled(GradientButton)({
+  background: 'linear-gradient(45deg, #ff9f43 0%, #ffbe76 100%)',
+  color: 'white',
+  '&:hover': {
+    background: 'linear-gradient(45deg, #f39839 0%, #f2b56e 100%)',
+  }
+});
+
+// Testimonial section
+const TestimonialCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  padding: '30px',
+  backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+  borderRadius: '16px',
+  boxShadow: isDarkMode 
+    ? '0 10px 30px rgba(0, 0, 0, 0.25)' 
+    : '0 10px 30px rgba(0, 0, 0, 0.05)',
+  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '5px',
+    background: 'linear-gradient(90deg, #ff9f43, #ff6b6b)',
+    borderTopLeftRadius: '16px',
+    borderTopRightRadius: '16px',
+  }
+}));
+
+// Benefit list
+const StyledListItem = styled(ListItem)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  padding: '10px 0',
+  '& .MuiListItemIcon-root': {
+    minWidth: '40px',
+    color: '#ff9f43',
+  },
+  '& .MuiListItemText-primary': {
+    fontSize: '1.1rem',
+    fontWeight: 500,
+    color: isDarkMode ? '#ffffff' : '#333333',
+  },
+  '& .MuiListItemText-secondary': {
+    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+  }
+}));
+
+// Animation variants for framer-motion
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5
+    }
+  }
+};
 
 function Home() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const { currentUser } = useAuth();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Handle scroll events for navbar and scroll-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 100) {
+        setScrolled(true);
+        setShowScrollTop(true);
+      } else {
+        setScrolled(false);
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Scroll to section functions
+  const scrollToSection = (sectionId: string) => {
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth' });
+    }
+    // Close mobile menu if open
+    setMobileMenuOpen(false);
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleLogoClick = () => {
     if (currentUser) {
       navigate('/dashboard');
+    } else {
+      scrollToTop();
     }
   };
 
+  // Benefity pre používateľov
+  const benefits = [
+    { 
+      icon: <LocalShipping fontSize="large" />, 
+      title: 'Správa vozového parku',
+      description: 'Sledujte pohyb, údržbu a náklady všetkých vašich vozidiel v reálnom čase.' 
+    },
+    { 
+      icon: <People fontSize="large" />, 
+      title: 'Evidencia vodičov',
+      description: 'Kompletná správa vodičov, ich časov jázd a zostatkov dovoleniek.' 
+    },
+    { 
+      icon: <Map fontSize="large" />, 
+      title: 'Plánovanie trás',
+      description: 'Optimalizujte trasy pre maximálnu efektivitu a minimálne náklady.' 
+    },
+    { 
+      icon: <Business fontSize="large" />, 
+      title: 'Správa zákazníkov',
+      description: 'Organizovaná databáza všetkých vašich klientov, kontaktov a histórie.' 
+    },
+    { 
+      icon: <Payment fontSize="large" />, 
+      title: 'Fakturácia',
+      description: 'Automatizované vytváranie a odosielanie faktúr priamo zo systému.' 
+    },
+    { 
+      icon: <QueryStats fontSize="large" />, 
+      title: 'Analytické reporty',
+      description: 'Podrobné štatistiky a reporty pre informované obchodné rozhodnutia.' 
+    },
+    { 
+      icon: <DataSaverOn fontSize="large" />, 
+      title: 'Cloud riešenie',
+      description: 'Prístup ku všetkým dátam kedykoľvek a kdekoľvek.' 
+    },
+    { 
+      icon: <PhoneAndroid fontSize="large" />, 
+      title: 'Mobilná aplikácia',
+      description: 'Pre vodičov a dispečerov - kompletná funkcionalita na cestách.' 
+    },
+  ];
+
+  const features = [
+    {
+      icon: <Speed fontSize="large" />,
+      title: 'Efektivita prevádzky',
+      description: 'Optimalizujte každý aspekt vašich logistických operácií a šetrite až 25% nákladov.'
+    },
+    {
+      icon: <MenuBook fontSize="large" />,
+      title: 'Komplexná evidencia',
+      description: 'Všetky informácie o objednávkach, zákazkách, vodičoch a vozidlách na jednom mieste.'
+    },
+    {
+      icon: <Verified fontSize="large" />,
+      title: 'Jednoduchosť použitia',
+      description: 'Intuitívne rozhranie navrhnuté pre rýchlu a efektívnu prácu bez dlhého školenia.'
+    },
+    {
+      icon: <Biotech fontSize="large" />,
+      title: 'Špičkové technológie',
+      description: 'Využívame najmodernejšie technológie a postupy pre maximálnu spoľahlivosť a bezpečnosť.'
+    }
+  ];
+
+  // Menu items for navigation
+  const menuItems = [
+    { label: 'Domov', id: 'hero' },
+    { label: 'Výhody', id: 'features' },
+    { label: 'Funkcie', id: 'benefits' },
+    { label: 'Referencie', id: 'testimonials' },
+    { label: 'Začať', id: 'cta' },
+  ];
+
   return (
-    <Container maxWidth="lg">
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          py: 4
-        }}
+    <Box 
+      sx={{ 
+        minHeight: '100vh',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
+          : 'linear-gradient(135deg, #f5f7fa 0%, #e4e5e6 100%)',
+        color: isDarkMode ? '#ffffff' : '#333333',
+        overflow: 'hidden',
+        position: 'relative'
+      }}
+    >
+      {/* Fixed Navigation */}
+      <NavbarContainer 
+        className={scrolled ? 'scrolled' : ''}
+        position="fixed"
       >
-        <StyledBox isDarkMode={isDarkMode}>
-          <AnimatedBox
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              mb: 6
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+        <Container maxWidth="lg">
+          <Toolbar sx={{ justifyContent: 'space-between', px: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <LogoImage 
                 src="/AESA black.svg" 
                 alt="AESA Logo" 
                 isDarkMode={isDarkMode} 
                 onClick={handleLogoClick}
+                sx={{ width: '80px', mr: 2 }}
               />
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: isDarkMode ? '#fff' : '#333',
+                  display: { xs: 'none', sm: 'block' }
+                }}
+              >
+                CORE
+              </Typography>
             </Box>
-            <Typography
-              variant="h4"
-              component="h1"
-              gutterBottom
-              sx={{
-                textAlign: 'center',
-                color: isDarkMode ? '#ffffff' : '#000000',
-                fontWeight: 600,
-                mb: 4
-              }}
-            >
-              CORE
-            </Typography>
-            <Typography
-              variant="h5"
-              sx={{
-                mb: 4,
-                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                maxWidth: '600px'
-              }}
-            >
-              Komplexné riešenie pre správu vašej dopravnej spoločnosti
-            </Typography>
-          </AnimatedBox>
 
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 2
+            {/* Desktop Menu */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+              {menuItems.map((item) => (
+                <NavButton 
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                >
+                  {item.label}
+                </NavButton>
+              ))}
+              <NavButton 
+                onClick={() => navigate('/login')}
+                sx={{ 
+                  ml: 3, 
+                  color: isDarkMode ? '#ff9f43' : '#ff9f43',
+                  fontWeight: 600
+                }}
+              >
+                Prihlásiť sa
+              </NavButton>
+            </Box>
+
+            {/* Mobile Menu Toggle */}
+            <IconButton 
+              edge="end" 
+              color="inherit" 
+              aria-label="menu"
+              onClick={() => setMobileMenuOpen(true)}
+              sx={{ display: { xs: 'flex', md: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+          </Toolbar>
+        </Container>
+      </NavbarContainer>
+
+      {/* Mobile Drawer Menu */}
+      <Drawer
+        anchor="right"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: '70%',
+            maxWidth: '300px',
+            background: isDarkMode 
+              ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 100%)' 
+              : 'linear-gradient(135deg, #f5f7fa 0%, #e4e5e6 100%)',
+            boxShadow: '0 0 25px rgba(0, 0, 0, 0.15)',
+            padding: '20px',
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <IconButton 
+            onClick={() => setMobileMenuOpen(false)}
+            sx={{ color: isDarkMode ? '#fff' : '#333' }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <List>
+          {menuItems.map((item) => (
+            <ListItemButton 
+              key={item.id} 
+              onClick={() => scrollToSection(item.id)}
+              sx={{ 
+                py: 1.5,
+                borderRadius: '8px',
+                mb: 1,
+                '&:hover': {
+                  background: isDarkMode 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : 'rgba(0, 0, 0, 0.05)',
+                }
+              }}
+            >
+              <Typography 
+                sx={{ 
+                  color: isDarkMode ? '#fff' : '#333',
+                  fontWeight: 500,
+                }}
+              >
+                {item.label}
+              </Typography>
+            </ListItemButton>
+          ))}
+          <Divider sx={{ my: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+          <ListItemButton 
+            onClick={() => {
+              navigate('/login');
+              setMobileMenuOpen(false);
+            }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              background: 'rgba(255, 159, 67, 0.1)',
+              '&:hover': {
+                background: 'rgba(255, 159, 67, 0.2)',
+              }
             }}
           >
-            <GreenGradientButton
-              onClick={() => navigate('/login')}
-              variant="contained"
+            <Typography 
+              sx={{ 
+                color: '#ff9f43',
+                fontWeight: 600,
+              }}
             >
               Prihlásiť sa
-            </GreenGradientButton>
+            </Typography>
+          </ListItemButton>
+        </List>
+      </Drawer>
 
-            <OrangeGradientButton
-              onClick={() => navigate('/register')}
-              variant="contained"
-            >
-              Registrovať firmu
-            </OrangeGradientButton>
+      {/* Scroll to top button */}
+      {showScrollTop && (
+        <Fade in={showScrollTop}>
+          <ScrollToTopButton 
+            onClick={scrollToTop}
+            size="medium"
+          >
+            <ArrowDownIcon sx={{ transform: 'rotate(180deg)' }} />
+          </ScrollToTopButton>
+        </Fade>
+      )}
+
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+        {/* Hero Section */}
+        <HeroSection id="hero">
+          <Fade in={true} timeout={1000}>
+            <Box>
+              <LogoContainer>
+                <LogoImage 
+                  src="/AESA black.svg" 
+                  alt="AESA Logo" 
+                  isDarkMode={isDarkMode} 
+                  onClick={handleLogoClick}
+                />
+              </LogoContainer>
+              
+              <Typography 
+                variant="h1" 
+                component="h1" 
+                sx={{ 
+                  fontSize: { xs: '2.5rem', md: '4rem' }, 
+                  fontWeight: 800,
+                  letterSpacing: '-0.02em',
+                  mb: 2,
+                  bgGradient: 'linear(to-r, #ff9f43, #ff6b6b)',
+                  bgClip: 'text',
+                  textAlign: 'center'
+                }}
+              >
+                CORE
+              </Typography>
+              
+              <Typography 
+                variant="h2" 
+                sx={{ 
+                  fontSize: { xs: '1.5rem', md: '2rem' }, 
+                  mb: 3,
+                  fontWeight: 600,
+                  color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.85)',
+                  maxWidth: '800px',
+                  mx: 'auto',
+                  textAlign: 'center'
+                }}
+              >
+                Komplexné riešenie pre moderne riadenú špedičnú spoločnosť
+              </Typography>
+
+              <Typography
+                variant="body1"
+                sx={{
+                  fontSize: { xs: '1rem', md: '1.1rem' },
+                  mb: 5,
+                  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                  maxWidth: '700px',
+                  mx: 'auto',
+                  textAlign: 'center'
+                }}
+              >
+                Optimalizujte logistiku, zefektívnite správu vozidiel a vodičov a zvýšte ziskovosť vašej špedičnej spoločnosti s profesionálnym systémom CORE od AESA.
+              </Typography>
+
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+                <PrimaryButton onClick={() => navigate('/login')}>
+                  Prihlásiť sa
+                </PrimaryButton>
+                <SecondaryButton onClick={() => navigate('/register')}>
+                  Registrovať firmu
+                </SecondaryButton>
+              </Box>
+
+              <Box sx={{ mt: 8, textAlign: 'center', opacity: 0.7 }}>
+                <ArrowDownIcon 
+                  fontSize="large"
+                  sx={{ 
+                    animation: 'bounce 2s infinite',
+                    '@keyframes bounce': {
+                      '0%, 20%, 50%, 80%, 100%': {
+                        transform: 'translateY(0)',
+                      },
+                      '40%': {
+                        transform: 'translateY(-20px)',
+                      },
+                      '60%': {
+                        transform: 'translateY(-10px)',
+                      }
+                    },
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => scrollToSection('features')}
+                />
+              </Box>
+            </Box>
+          </Fade>
+        </HeroSection>
+
+        {/* Application Screenshot */}
+        <Box sx={{ mb: 10, mt: { xs: 0, md: -10 } }}>
+          <Fade in={true} timeout={1500}>
+            <ScreenshotBox isDarkMode={isDarkMode}>
+              <img 
+                src="/dashboard-screenshot.jpg" 
+                alt="CORE Dashboard" 
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = "https://via.placeholder.com/1200x600/24243e/ffffff?text=CORE+Dashboard";
+                }}
+              />
+            </ScreenshotBox>
+          </Fade>
+        </Box>
+
+        {/* Features Section */}
+        <Section id="features">
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+              Prečo si vybrať CORE?
+            </SectionTitle>
+            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+              Poskytujeme komplexné a moderné riešenie, ktoré zefektívni každý aspekt vašej špedičnej spoločnosti
+            </SectionSubtitle>
           </Box>
 
-          <Box sx={{ mt: 6, textAlign: 'center' }}>
-            <Typography
-              variant="body1"
-              sx={{
-                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                mb: 2
-              }}
-            >
-              Výhody nášho systému:
-            </Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                gap: 3,
-                textAlign: 'left'
-              }}
-            >
-              {[
-                'Správa vozového parku',
-                'Evidencia vodičov',
-                'Plánovanie trás',
-                'Sledovanie nákladov',
-                'Tímová spolupráca',
-                'Automatické reporty',
-                'Jednoduchá fakturácia',
-                'Mobilná aplikácia'
-              ].map((feature, index) => (
-                <Typography
-                  key={index}
-                  variant="body2"
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <Grid container spacing={4}>
+              {features.map((feature, index) => (
+                <Grid item xs={12} sm={6} md={3} key={index}>
+                  <motion.div variants={itemVariants}>
+                    <FeatureCard isDarkMode={isDarkMode}>
+                      <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                        <FeatureIcon>
+                          {feature.icon}
+                        </FeatureIcon>
+                        <Typography variant="h5" gutterBottom sx={{ 
+                          fontWeight: 600, 
+                          color: isDarkMode ? '#ffffff' : '#333333',
+                          mb: 1
+                        }}>
+                          {feature.title}
+                        </Typography>
+                        <Typography variant="body2" sx={{ 
+                          color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'
+                        }}>
+                          {feature.description}
+                        </Typography>
+                      </CardContent>
+                    </FeatureCard>
+                  </motion.div>
+                </Grid>
+              ))}
+            </Grid>
+          </motion.div>
+        </Section>
+
+        {/* Benefits Section */}
+        <Section id="benefits">
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+              Všetko čo potrebujete
+            </SectionTitle>
+            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+              CORE poskytuje funkcionalitu, ktorá pokrýva každý aspekt prevádzky špedičnej spoločnosti
+            </SectionSubtitle>
+          </Box>
+
+          <Grid container spacing={6} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7 }}
+              >
+                <Box
                   sx={{
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    '&:before': {
-                      content: '""',
-                      display: 'inline-block',
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: index % 2 === 0 ? '#ff9f43' : '#ff6b6b',
-                      marginRight: '10px'
-                    }
+                    backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.5)' : 'rgba(255, 255, 255, 0.5)',
+                    borderRadius: '16px',
+                    p: 3,
+                    boxShadow: isDarkMode ? '0 8px 30px rgba(0, 0, 0, 0.3)' : '0 8px 30px rgba(0, 0, 0, 0.07)',
+                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
                   }}
                 >
-                  {feature}
-                </Typography>
-              ))}
-            </Box>
+                  <List>
+                    {benefits.slice(0, 4).map((benefit, index) => (
+                      <StyledListItem key={index} isDarkMode={isDarkMode}>
+                        <ListItemIcon>
+                          {benefit.icon}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={benefit.title} 
+                          secondary={benefit.description}
+                        />
+                      </StyledListItem>
+                    ))}
+                  </List>
+                </Box>
+              </motion.div>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7 }}
+              >
+                <Box
+                  sx={{
+                    backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.5)' : 'rgba(255, 255, 255, 0.5)',
+                    borderRadius: '16px',
+                    p: 3,
+                    boxShadow: isDarkMode ? '0 8px 30px rgba(0, 0, 0, 0.3)' : '0 8px 30px rgba(0, 0, 0, 0.07)',
+                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+                  }}
+                >
+                  <List>
+                    {benefits.slice(4, 8).map((benefit, index) => (
+                      <StyledListItem key={index} isDarkMode={isDarkMode}>
+                        <ListItemIcon>
+                          {benefit.icon}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={benefit.title} 
+                          secondary={benefit.description}
+                        />
+                      </StyledListItem>
+                    ))}
+                  </List>
+                </Box>
+              </motion.div>
+            </Grid>
+          </Grid>
+        </Section>
+
+        {/* Testimonial */}
+        <Section id="testimonials">
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+              Čo o nás hovoria klienti
+            </SectionTitle>
+            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+              Reálne skúsenosti našich zákazníkov
+            </SectionSubtitle>
           </Box>
-        </StyledBox>
-      </Box>
-    </Container>
+
+          <Grid container spacing={4} justifyContent="center">
+            <Grid item xs={12} md={10} lg={8}>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7 }}
+              >
+                <TestimonialCard isDarkMode={isDarkMode}>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      fontSize: '1.2rem', 
+                      fontStyle: 'italic', 
+                      mb: 3, 
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)'
+                    }}
+                  >
+                    "Systém CORE nám umožnil automatizovať značnú časť administratívy a zefektívniť plánovanie prepravy. 
+                    Sledovanie vozidiel a vodičov v reálnom čase nám výrazne pomáha pri rozhodovaní a komunikácii s klientmi. 
+                    Za rok používania sme znížili náklady o 18% a zvýšili objem prepravy o 23%."
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar 
+                      src="https://via.placeholder.com/60x60" 
+                      alt="Peter Novák" 
+                      sx={{ width: 60, height: 60, mr: 2 }}
+                    />
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#333333' }}>
+                        Peter Novák
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}>
+                        Riaditeľ, SpeedLogistic s.r.o.
+                      </Typography>
+                    </Box>
+                  </Box>
+                </TestimonialCard>
+              </motion.div>
+            </Grid>
+          </Grid>
+        </Section>
+
+        {/* CTA Section */}
+        <Section id="cta" sx={{ pb: 10, '&::after': { display: 'none' } }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Box 
+              sx={{ 
+                p: { xs: 4, md: 8 }, 
+                borderRadius: '20px',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, rgba(48, 43, 99, 0.95) 0%, rgba(36, 36, 62, 0.95) 100%)' 
+                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.95) 100%)',
+                backdropFilter: 'blur(10px)',
+                border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+                boxShadow: isDarkMode 
+                  ? '0 25px 50px rgba(0, 0, 0, 0.3)' 
+                  : '0 25px 50px rgba(0, 0, 0, 0.07)',
+              }}
+            >
+              <Typography 
+                variant="h3" 
+                component="h2" 
+                sx={{ 
+                  fontWeight: 700, 
+                  mb: 2,
+                  color: isDarkMode ? '#ffffff' : '#333333',
+                  fontSize: { xs: '1.75rem', md: '2.5rem' }
+                }}
+              >
+                Pripravení zmodernizovať vašu špedičnú spoločnosť?
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  mb: 4, 
+                  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                  maxWidth: '700px',
+                  mx: 'auto',
+                  fontSize: { xs: '1rem', md: '1.1rem' }
+                }}
+              >
+                Začnite už dnes a získajte náskok pred konkurenciou. Prvých 30 dní zadarmo, bez záväzkov.
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+                <PrimaryButton onClick={() => navigate('/register')} size="large">
+                  Vyskúšajte CORE zadarmo
+                </PrimaryButton>
+                <SecondaryButton onClick={() => navigate('/login')} size="large">
+                  Prejsť do aplikácie
+                </SecondaryButton>
+              </Box>
+            </Box>
+          </motion.div>
+        </Section>
+
+        {/* Footer */}
+        <Box component="footer" sx={{ py: 5, textAlign: 'center' }}>
+          <Divider sx={{ mb: 4, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+          <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' }}>
+            © {new Date().getFullYear()} AESA s.r.o. Všetky práva vyhradené.
+          </Typography>
+        </Box>
+      </Container>
+    </Box>
   );
 }
 
