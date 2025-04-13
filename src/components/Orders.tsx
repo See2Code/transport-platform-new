@@ -1948,32 +1948,32 @@ const OrdersList: React.FC = () => {
                   sx={{
                     // Štýly skopírované z BusinessCases.tsx
                     display: { xs: 'none', md: 'block' }, // Zachováme pôvodnú responzivitu ak treba, alebo zmeníme
-                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                    borderRadius: '20px',
-                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    backdropFilter: 'blur(20px)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                    '& .MuiTableCell-root': {
-                      color: isDarkMode ? '#ffffff' : '#000000',
-                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                      padding: '16px',
-                      fontSize: '0.9rem',
-                      whiteSpace: 'nowrap'
-                    },
-                    '& .MuiTableHead-root .MuiTableCell-root': {
-                      fontWeight: 600,
                       backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    },
-                    '& .MuiTableBody-root .MuiTableRow-root': {
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      borderRadius: '20px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      backdropFilter: 'blur(20px)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                      '& .MuiTableCell-root': {
+                        color: isDarkMode ? '#ffffff' : '#000000',
+                        borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                        padding: '16px',
+                        fontSize: '0.9rem',
+                        whiteSpace: 'nowrap'
+                      },
+                      '& .MuiTableHead-root .MuiTableCell-root': {
+                        fontWeight: 600,
+                        backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      },
+                      '& .MuiTableBody-root .MuiTableRow-root': {
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        }
                       }
-                    }
                   }}
               >
                   <Table stickyHeader>
@@ -2626,23 +2626,23 @@ const OrdersList: React.FC = () => {
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
           <DialogTitle id="confirm-order-delete-title">Potvrdiť odstránenie objednávky</DialogTitle>
-          <DialogContent>
+        <DialogContent>
             <DialogContentText id="confirm-order-delete-description"> 
-              Naozaj chcete odstrániť túto objednávku?
+            Naozaj chcete odstrániť túto objednávku?
             </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={handleDeleteCancel} 
-              sx={{ 
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={handleDeleteCancel}
+            sx={{ 
                 color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
                 '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', }
-              }}
-            >
-              Zrušiť
-            </Button>
-            <Button 
-              onClick={handleDeleteConfirmed} 
+            }}
+          >
+            Zrušiť
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirmed} 
               variant="contained" 
               color="error" 
               disabled={loading} 
@@ -2650,8 +2650,8 @@ const OrdersList: React.FC = () => {
               sx={{ color: '#ffffff' }}
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : "Potvrdiť"} 
-            </Button>
-          </DialogActions>
+          </Button>
+        </DialogActions>
         </StyledDialogContent>
       </Dialog>
 
@@ -3092,7 +3092,7 @@ const OrdersList: React.FC = () => {
             </Button>
           </DialogActions>
         </StyledDialogContent>
-      </Dialog>
+    </Dialog>
     </PageWrapper>
   );
 };

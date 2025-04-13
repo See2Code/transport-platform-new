@@ -66,6 +66,24 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
     : '0 4px 20px rgba(0, 0, 0, 0.1)',
 }));
 
+// Pomocná funkcia na konverziu dátumu
+const convertToDate = (dateTime: Date | Timestamp | string | null | undefined): Date | null => {
+  if (!dateTime) return null;
+  if (dateTime instanceof Date) return dateTime;
+  if (dateTime instanceof Timestamp) return dateTime.toDate();
+  try {
+    // Skúsime parsovať string, ak by to bol ISO string alebo podobný
+    const parsedDate = new Date(dateTime);
+    // Skontrolujeme, či je dátum platný
+    if (!isNaN(parsedDate.getTime())) {
+        return parsedDate;
+    }
+  } catch (e) {
+    console.error("Error parsing date string:", e);
+  }
+  return null; // Vráti null ak konverzia zlyhá
+};
+
 interface Transport {
   id: string;
   orderNumber: string;
@@ -89,10 +107,10 @@ interface Transport {
 interface TransportFormData {
   orderNumber: string;
   loadingAddress: string;
-  loadingDateTime: Date | Timestamp;
+  loadingDateTime?: Date | Timestamp | null;
   loadingReminder: number;
   unloadingAddress: string;
-  unloadingDateTime: Date | Timestamp;
+  unloadingDateTime?: Date | Timestamp | null;
   unloadingReminder: number;
 }
 
@@ -694,6 +712,17 @@ const TrackedTransports: React.FC = () => {
   const [mapTransport, setMapTransport] = useState<Transport & { duration?: string } | null>(null);
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [showAddTransportDialog, setShowAddTransportDialog] = useState(false);
+  const [editingTransport, setEditingTransport] = useState<Transport | null>(null);
+  const [transportFormData, setTransportFormData] = useState<Partial<TransportFormData>>({
+    orderNumber: '',
+    loadingAddress: '',
+    loadingDateTime: null,
+    loadingReminder: 15,
+    unloadingAddress: '',
+    unloadingDateTime: null,
+    unloadingReminder: 15,
+  });
 
   // Funkcia pre logovanie
   const logToStorage = (message: string, data?: any) => {
@@ -744,26 +773,96 @@ const TrackedTransports: React.FC = () => {
     setMapDialogOpen(true);
   };
 
-  const handleAddTransport = async (newTransportData: TransportFormData) => {
+  const handleOpenAddTransportDialog = () => {
+    setEditingTransport(null);
+    setTransportFormData({
+      orderNumber: '',
+      loadingAddress: '',
+      loadingDateTime: null,
+      loadingReminder: 15,
+      unloadingAddress: '',
+      unloadingDateTime: null,
+      unloadingReminder: 15,
+    });
+    setShowAddTransportDialog(true);
+  };
+
+  const handleCloseAddTransportDialog = () => {
+    setShowAddTransportDialog(false);
+  };
+
+  const handleFormChange = (field: keyof TransportFormData, value: any) => {
+    setTransportFormData(prev => ({ ...prev, [field]: value }));
+    // Vymažeme validačnú chybu pri zmene
+    if (validationError) setValidationError(null);
+  };
+
+  const handleAddOrUpdateTransport = async () => {
+    setValidationError(null); // Reset validation error
+
+    // Jednoduchá validácia
+    if (!transportFormData.orderNumber || !transportFormData.loadingAddress || !transportFormData.loadingDateTime || !transportFormData.unloadingAddress || !transportFormData.unloadingDateTime) {
+        setValidationError("Vyplňte všetky povinné polia (označené *).");
+        return;
+    }
+    if (transportFormData.loadingReminder === undefined || transportFormData.unloadingReminder === undefined) {
+      setValidationError("Zadajte platné čísla pre pripomienky.");
+      return;
+    }
+
+    if (!userData?.companyID || !userData.uid) {
+      setValidationError("Chyba: Nepodarilo sa načítať informácie o používateľovi alebo firme.");
+      return;
+    }
+
+    setIsSaving(true); // Začiatok ukladania
+    
     try {
-      if (!userData) return;
-      const newTransport: Transport = {
-        id: '', // Placeholder, Firestore will generate the ID
-        status: 'new', // Default status
-        isDelayed: false, // Default value
-        ...newTransportData,
+      const dataToSave = {
+        orderNumber: transportFormData.orderNumber,
+        loadingAddress: transportFormData.loadingAddress,
+        loadingDateTime: Timestamp.fromDate(convertToDate(transportFormData.loadingDateTime)!), // Konverzia na Timestamp
+        loadingReminder: transportFormData.loadingReminder,
+        unloadingAddress: transportFormData.unloadingAddress,
+        unloadingDateTime: Timestamp.fromDate(convertToDate(transportFormData.unloadingDateTime)!), // Konverzia na Timestamp
+        unloadingReminder: transportFormData.unloadingReminder,
+        status: 'active', // Predvolený status
+        isDelayed: false, // Predvolená hodnota
         companyID: userData.companyID,
-        createdAt: Timestamp.now(),
-        createdBy: {
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-        },
+        // Pridáme createdBy pri vytváraní, updatedAt pri úprave
+        ...(editingTransport 
+            ? { updatedAt: Timestamp.now() } 
+            : { 
+                createdAt: Timestamp.now(), 
+                createdBy: { 
+                    id: userData.uid,
+                    firstName: userData.firstName || '', 
+                    lastName: userData.lastName || '' 
+                } 
+            })
       };
-      const docRef = await addDoc(collection(db, 'transports'), newTransport);
-      newTransport.id = docRef.id; // Assign the generated ID
-      setTransports((prevTransports) => [...prevTransports, newTransport]);
-    } catch (err: any) {
-      setError('Chyba pri pridávaní prepravy: ' + (err.message || err));
+
+      if (editingTransport) {
+        // Logika pre update (ak ju budete potrebovať)
+        const transportRef = doc(db, 'transports', editingTransport.id);
+        await updateDoc(transportRef, dataToSave);
+        setSnackbar({ open: true, message: 'Preprava úspešne aktualizovaná!', severity: 'success' });
+      } else {
+        // Logika pre pridanie
+        const transportsCollection = collection(db, 'transports');
+        await addDoc(transportsCollection, dataToSave);
+        setSnackbar({ open: true, message: 'Preprava úspešne pridaná!', severity: 'success' });
+      }
+      
+      handleCloseAddTransportDialog();
+      fetchTransports(); // Opätovné načítanie dát
+
+    } catch (error: any) {
+      console.error("Chyba pri ukladaní prepravy:", error);
+      setValidationError("Nastala chyba pri ukladaní: " + error.message);
+      setSnackbar({ open: true, message: 'Chyba pri ukladaní prepravy', severity: 'error' });
+    } finally {
+      setIsSaving(false); // Koniec ukladania
     }
   };
 
@@ -1112,27 +1211,62 @@ const TrackedTransports: React.FC = () => {
     </Box>
   );
 
-  useEffect(() => {
-    const fetchTransports = async () => {
-      try {
-        if (!userData) return;
-        const transportsQuery = query(
-          collection(db, 'transports'),
-          where('companyID', '==', userData.companyID),
-          orderBy('createdAt', 'desc')
-        );
-        const querySnapshot = await getDocs(transportsQuery);
-        const transportsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transport[];
-        setTransports(transportsData);
+  // PRIDANÁ FUNKCIA fetchTransports S useCallback
+  const fetchTransports = useCallback(async () => {
+    if (!userData?.companyID) {
+        console.log("Chýba companyID pre načítanie prepráv.");
+        setTransports([]); // Vyprázdniť ak chýba ID
         setLoading(false);
-      } catch (err: any) {
-        setError('Chyba pri načítaní prepráv: ' + (err.message || err));
-        setLoading(false);
-      }
-    };
+        return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const transportsQuery = query(
+        collection(db, 'transports'),
+        where('companyID', '==', userData.companyID),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(transportsQuery);
+      const transportsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transport[];
+      
+      // Aktualizácia stavu pre každú prepravu (asynchrónne)
+      const updatedTransports = await Promise.all(transportsData.map(async (transport) => {
+         // Tu môžeme v budúcnosti pridať logiku na kontrolu statusu/meškania
+         // napr. fetch aktuálnej polohy, porovnanie s časmi, atď.
+         // Pre teraz len vrátime pôvodné dáta
+         return transport;
+      }));
 
-    fetchTransports();
-  }, [userData?.companyID]);
+      setTransports(updatedTransports);
+    } catch (err: any) {
+      setError('Chyba pri načítaní prepráv: ' + (err.message || err));
+      console.error('Chyba pri načítaní prepráv:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [userData?.companyID]); // Závislosť na companyID
+
+  // --- useEffect hooky ---
+  
+  // useEffect(() => {
+  //   fetchTeamMembers();
+  // }, [fetchTeamMembers]); // Ak teamMembers nie sú pre tento komponent potrebné, môžeme odstrániť
+
+  // Hlavný useEffect pre načítanie dát pri montáži a zmene usera
+  useEffect(() => {
+    if (userData?.companyID) {
+      console.log("Running initial/user change data fetch.");
+      fetchTransports(); 
+      // fetchCustomers(); // Ak sú potrebné pre formulár prepravy, inak odstrániť
+      // fetchCarriers();  // Ak sú potrebné pre formulár prepravy, inak odstrániť
+    } else {
+      setTransports([]);
+      // setCustomers([]);
+      // setCarriers([]);
+      setLoading(false); 
+    }
+  }, [userData?.companyID, fetchTransports]); // Pridaná fetchTransports závislosť
 
   if (loading) {
     return (
@@ -1151,7 +1285,7 @@ const TrackedTransports: React.FC = () => {
           <PageTitle isDarkMode={isDarkMode}>Sledované prepravy</PageTitle>
           <AddButton
             startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
+            onClick={handleOpenAddTransportDialog}
           >
             Pridať prepravu
           </AddButton>
@@ -1523,6 +1657,118 @@ const TrackedTransports: React.FC = () => {
           )}
         </DialogContent>
       </MapDialog>
+
+      <Dialog 
+        open={showAddTransportDialog} 
+        onClose={handleCloseAddTransportDialog} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'none', 
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            borderRadius: '24px'
+          }
+        }}
+        BackdropProps={{
+          sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+        }}
+      >
+        <StyledDialogContent isDarkMode={isDarkMode}>
+          <DialogTitle sx={{ mb: 2 }}>{editingTransport ? "Upraviť prepravu" : "Pridať novú prepravu"}</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField 
+                  label="Číslo objednávky" 
+                  value={transportFormData.orderNumber || ''} 
+                  onChange={(e) => handleFormChange('orderNumber', e.target.value)} 
+                  fullWidth 
+                  required
+                />
+              </Grid>
+
+              {/* Nakládka */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ mb: 1, color: colors.accent.main }}>Nakládka</Typography>
+                <TextField 
+                  label="Adresa nakládky" 
+                  value={transportFormData.loadingAddress || ''} 
+                  onChange={(e) => handleFormChange('loadingAddress', e.target.value)} 
+                  fullWidth 
+                  required 
+                  sx={{ mb: 2 }}
+                />
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                  <DateTimePicker 
+                    label="Dátum a čas nakládky" 
+                    value={transportFormData.loadingDateTime ? convertToDate(transportFormData.loadingDateTime) : null}
+                    onChange={(newValue) => handleFormChange('loadingDateTime', newValue)} 
+                    slotProps={{ textField: { fullWidth: true, required: true, sx:{ mb: 2 } } }}
+                  />
+                </LocalizationProvider>
+                <TextField 
+                  label="Pripomienka pred nakládkou (min)" 
+                  type="number" 
+                  value={transportFormData.loadingReminder === undefined ? '' : transportFormData.loadingReminder}
+                  onChange={(e) => handleFormChange('loadingReminder', e.target.value === '' ? undefined : parseInt(e.target.value, 10))} 
+                  fullWidth 
+                  required
+                  InputProps={{ inputProps: { min: 0 } }}
+                />
+              </Grid>
+
+              {/* Vykládka */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" sx={{ mb: 1, color: colors.accent.main }}>Vykládka</Typography>
+                <TextField 
+                  label="Adresa vykládky" 
+                  value={transportFormData.unloadingAddress || ''} 
+                  onChange={(e) => handleFormChange('unloadingAddress', e.target.value)} 
+                  fullWidth 
+                  required 
+                  sx={{ mb: 2 }}
+                />
+                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                  <DateTimePicker 
+                    label="Dátum a čas vykládky" 
+                    value={transportFormData.unloadingDateTime ? convertToDate(transportFormData.unloadingDateTime) : null}
+                    onChange={(newValue) => handleFormChange('unloadingDateTime', newValue)} 
+                    slotProps={{ textField: { fullWidth: true, required: true, sx:{ mb: 2 } } }}
+                  />
+                </LocalizationProvider>
+                <TextField 
+                  label="Pripomienka pred vykládkou (min)" 
+                  type="number" 
+                  value={transportFormData.unloadingReminder === undefined ? '' : transportFormData.unloadingReminder}
+                  onChange={(e) => handleFormChange('unloadingReminder', e.target.value === '' ? undefined : parseInt(e.target.value, 10))} 
+                  fullWidth 
+                  required
+                  InputProps={{ inputProps: { min: 0 } }}
+                />
+              </Grid>
+              {/* Validačná chyba */} 
+              {validationError && (
+                 <Grid item xs={12}>
+                    <Alert severity="error" sx={{ mt: 1 }}>{validationError}</Alert>
+                 </Grid>
+              )}
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseAddTransportDialog} disabled={isSaving} sx={{ /* ... štýl ... */ }}>Zrušiť</Button>
+            <Button 
+              onClick={handleAddOrUpdateTransport} // Volá novú funkciu
+              variant="contained" 
+              sx={{ /* ... štýl ... */ }}
+              disabled={isSaving} 
+            >
+              {isSaving ? <CircularProgress size={24} color="inherit" /> : (editingTransport ? "Uložiť zmeny" : "Pridať prepravu")}
+            </Button>
+          </DialogActions>
+        </StyledDialogContent>
+      </Dialog>
     </>
   );
 }
