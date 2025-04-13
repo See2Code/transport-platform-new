@@ -27,12 +27,15 @@ import {
   TableRow,
   CardContent,
   CardActions,
+  Divider,
+  useTheme,
+  Snackbar,
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { sk } from 'date-fns/locale';
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, Timestamp, orderBy, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc as firestoreDoc, updateDoc, Timestamp, orderBy, deleteDoc, onSnapshot, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
@@ -102,6 +105,7 @@ interface Transport {
   isDelayed: boolean;
   distance?: string;
   companyID: string;
+  duration?: string;
 }
 
 interface TransportFormData {
@@ -698,7 +702,83 @@ const fetchDistanceFromGoogle = async (origin: string, destination: string): Pro
   }
 };
 
+// Hook pre zobrazovanie pripomienok
+interface Reminder {
+  id: string;
+  type: 'loading' | 'unloading';
+  orderNumber: string;
+  address: string;
+  reminderTime?: Timestamp | Date;
+  reminderDateTime?: Timestamp | Date; // podporujeme oba formáty
+  shown?: boolean;  // Ponecháme, ale budeme ignorovať pri kontrole
+  status: string;
+  companyID: string;
+  transportId: string;
+  sent?: boolean;
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+}
+
+// Jednoduchý hook pre notifikácie
+function useNotifications() {
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [hasPermission, setHasPermission] = useState(false);
+  
+  // Kontrola povolení pre notifikácie
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      console.log("Tento prehliadač nepodporuje notifikácie");
+      return;
+    }
+    
+    if (Notification.permission === "granted") {
+      setHasPermission(true);
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        setHasPermission(permission === "granted");
+      });
+    }
+  }, []);
+  
+  // Zobrazenie notifikácie v prehliadači
+  const showNotification = useCallback((title: string, body: string) => {
+    // Zobrazí in-app notifikáciu
+    setNotificationMessage(`${title}: ${body}`);
+    setNotificationVisible(true);
+    
+    // Ak máme povolenie, zobrazí aj prehliadačovú notifikáciu
+    if (hasPermission) {
+      try {
+        const notification = new Notification(title, {
+          body,
+          icon: '/logo192.png'
+        });
+        
+        notification.onclick = () => {
+          window.focus();
+        };
+      } catch (error) {
+        console.error("Chyba pri zobrazení notifikácie:", error);
+      }
+    }
+  }, [hasPermission]);
+  
+  // Skrytie notifikácie
+  const hideNotification = useCallback(() => {
+    setNotificationVisible(false);
+  }, []);
+  
+  return {
+    showNotification,
+    hideNotification,
+    notificationVisible,
+    notificationMessage
+  };
+}
+
 const TrackedTransports: React.FC = () => {
+  const theme = useTheme();
   const { userData } = useAuth();
   const { isDarkMode } = useThemeMode();
   const [transports, setTransports] = useState<Transport[]>([]);
@@ -723,6 +803,95 @@ const TrackedTransports: React.FC = () => {
     unloadingDateTime: null,
     unloadingReminder: 15,
   });
+  const [selectedTransportForMap, setSelectedTransportForMap] = useState<Transport | null>(null);
+  
+  // Používame jednoduchý hook pre notifikácie
+  const { 
+    showNotification, 
+    hideNotification, 
+    notificationVisible, 
+    notificationMessage 
+  } = useNotifications();
+  
+  // Pravidelná kontrola pripomienok
+  useEffect(() => {
+    if (!userData?.companyID) return;
+    
+    console.log("Nastavujem pravidelné kontrolovanie pripomienok...");
+    
+    // Kontrola pripomienok každú minútu
+    const checkInterval = setInterval(() => {
+      checkForDueReminders();
+    }, 30000); // každých 30 sekúnd
+    
+    // Prvá kontrola pri načítaní
+    checkForDueReminders();
+    
+    function checkForDueReminders() {
+      if (!userData?.companyID) return;
+      
+      const now = new Date();
+      const startTime = new Date(now.getTime() - 5 * 60000);  // 5 minút do minulosti
+      const endTime = new Date(now.getTime() + 5 * 60000);    // 5 minút do budúcnosti
+      
+      console.log(`Kontrolujem pripomienky (${now.toLocaleTimeString()})...`);
+      
+      // Dotaz na pripomienky v časovom okne
+      const remindersRef = collection(db, 'reminders');
+      
+      getDocs(query(
+        remindersRef,
+        where('companyID', '==', userData.companyID)
+      )).then(snapshot => {
+        if (snapshot.empty) {
+          console.log("Žiadne pripomienky nenájdené");
+          return;
+        }
+        
+        console.log(`Nájdených celkom pripomienok: ${snapshot.size}`);
+        
+        // Filtrujeme pripomienky v pamäti
+        snapshot.forEach(doc => {
+          const reminder = doc.data();
+          if (!reminder.reminderTime) return;
+          
+          const reminderTime = reminder.reminderTime instanceof Timestamp
+            ? reminder.reminderTime.toDate()
+            : new Date(reminder.reminderTime);
+          
+          // Ak je pripomienka v našom časovom okne a ešte nebola odoslaná
+          if (reminderTime >= startTime && 
+              reminderTime <= endTime && 
+              reminderTime <= now &&
+              reminder.sent !== true) {
+            
+            console.log(`Zobrazujem pripomienku: ${reminder.orderNumber} - ${reminder.type}`);
+            
+            // Zobrazíme notifikáciu
+            const type = reminder.type === 'loading' ? 'nakládky' : 'vykládky';
+            showNotification(
+              `Pripomienka ${type}`,
+              `Objednávka: ${reminder.orderNumber} - Adresa: ${reminder.address}`
+            );
+            
+            // Označíme pripomienku ako zobrazenú
+            updateDoc(firestoreDoc(db, 'reminders', doc.id), {
+              sent: true
+            }).catch(err => {
+              console.error("Chyba pri označovaní pripomienky:", err);
+            });
+          }
+        });
+      }).catch(err => {
+        console.error("Chyba pri načítavaní pripomienok:", err);
+      });
+    }
+    
+    // Vyčistenie pri odmontovaní
+    return () => {
+      clearInterval(checkInterval);
+    };
+  }, [userData?.companyID, showNotification]);
 
   // Funkcia pre logovanie
   const logToStorage = (message: string, data?: any) => {
@@ -744,7 +913,7 @@ const TrackedTransports: React.FC = () => {
 
     try {
       // Vymazanie prepravy
-      await deleteDoc(doc(db, 'transports', transportToDelete.id));
+      await deleteDoc(firestoreDoc(db, 'transports', transportToDelete.id));
 
       // Vymazanie súvisiacich pripomienok
       const remindersQuery = query(
@@ -769,8 +938,10 @@ const TrackedTransports: React.FC = () => {
   };
 
   const handleShowMap = (transport: Transport) => {
+    console.log("handleShowMap called for transport:", transport.id);
     setMapTransport(transport);
     setMapDialogOpen(true);
+    console.log("Map dialog should be open now.");
   };
 
   const handleOpenAddTransportDialog = () => {
@@ -798,9 +969,10 @@ const TrackedTransports: React.FC = () => {
   };
 
   const handleAddOrUpdateTransport = async () => {
-    setValidationError(null); // Reset validation error
+    console.log("handleAddOrUpdateTransport function CALLED!");
+    setValidationError(null);
 
-    // Jednoduchá validácia
+    // Validácia
     if (!transportFormData.orderNumber || !transportFormData.loadingAddress || !transportFormData.loadingDateTime || !transportFormData.unloadingAddress || !transportFormData.unloadingDateTime) {
         setValidationError("Vyplňte všetky povinné polia (označené *).");
         return;
@@ -815,400 +987,291 @@ const TrackedTransports: React.FC = () => {
       return;
     }
 
-    setIsSaving(true); // Začiatok ukladania
+    setIsSaving(true); 
     
     try {
+      const timestamp = Timestamp.now();
+      
       const dataToSave = {
         orderNumber: transportFormData.orderNumber,
         loadingAddress: transportFormData.loadingAddress,
-        loadingDateTime: Timestamp.fromDate(convertToDate(transportFormData.loadingDateTime)!), // Konverzia na Timestamp
+        loadingDateTime: Timestamp.fromDate(convertToDate(transportFormData.loadingDateTime)!),
         loadingReminder: transportFormData.loadingReminder,
         unloadingAddress: transportFormData.unloadingAddress,
-        unloadingDateTime: Timestamp.fromDate(convertToDate(transportFormData.unloadingDateTime)!), // Konverzia na Timestamp
+        unloadingDateTime: Timestamp.fromDate(convertToDate(transportFormData.unloadingDateTime)!),
         unloadingReminder: transportFormData.unloadingReminder,
-        status: 'active', // Predvolený status
-        isDelayed: false, // Predvolená hodnota
+        status: 'active',
+        isDelayed: false,
         companyID: userData.companyID,
-        // Pridáme createdBy pri vytváraní, updatedAt pri úprave
         ...(editingTransport 
-            ? { updatedAt: Timestamp.now() } 
+            ? { 
+                updatedAt: timestamp,
+                updatedBy: {
+                  id: userData.uid,
+                  firstName: userData.firstName || '',
+                  lastName: userData.lastName || ''
+                }
+              } 
             : { 
-                createdAt: Timestamp.now(), 
-                createdBy: { 
-                    id: userData.uid,
-                    firstName: userData.firstName || '', 
-                    lastName: userData.lastName || '' 
-                } 
-            })
+                createdAt: timestamp,
+                createdBy: {
+                  id: userData.uid,
+                  firstName: userData.firstName || '',
+                  lastName: userData.lastName || ''
+                }
+              })
       };
 
+      console.log("Data being saved to Firestore:", dataToSave);
+
+      let transportId: string;
+
       if (editingTransport) {
-        // Logika pre update (ak ju budete potrebovať)
-        const transportRef = doc(db, 'transports', editingTransport.id);
+        transportId = editingTransport.id;
+        const transportRef = firestoreDoc(db, 'transports', transportId);
         await updateDoc(transportRef, dataToSave);
+        
+        // Vymazanie existujúcich pripomienok
+        const existingRemindersQuery = query(
+          collection(db, 'reminders'),
+          where('transportId', '==', transportId)
+        );
+        const existingRemindersSnapshot = await getDocs(existingRemindersQuery);
+        const deletePromises = existingRemindersSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+        
         setSnackbar({ open: true, message: 'Preprava úspešne aktualizovaná!', severity: 'success' });
       } else {
-        // Logika pre pridanie
         const transportsCollection = collection(db, 'transports');
-        await addDoc(transportsCollection, dataToSave);
+        const docRef = await addDoc(transportsCollection, dataToSave);
+        transportId = docRef.id;
         setSnackbar({ open: true, message: 'Preprava úspešne pridaná!', severity: 'success' });
       }
       
+      // Vytvorenie pripomienok
+      const remindersCollection = collection(db, 'reminders');
+      
+      // Pripomienka pre nakládku
+      const loadingReminderTime = new Date(convertToDate(dataToSave.loadingDateTime)!.getTime() - dataToSave.loadingReminder * 60000);
+      const formattedLoadingTime = format(convertToDate(dataToSave.loadingDateTime)!, 'dd.MM.yyyy HH:mm');
+      const loadingReminderData = {
+        type: 'loading',
+        reminderTime: Timestamp.fromDate(new Date(loadingReminderTime)),
+        reminderDateTime: Timestamp.fromDate(new Date(loadingReminderTime)),
+        orderNumber: dataToSave.orderNumber,
+        address: dataToSave.loadingAddress,
+        sent: false,
+        shown: false,
+        createdAt: serverTimestamp(),
+        userEmail: userData?.email,
+        userId: userData?.uid,
+        transportId: transportId,
+        reminderNote: `Pripomienka nakládky pre objednávku ${dataToSave.orderNumber} dňa ${formattedLoadingTime} na adrese ${dataToSave.loadingAddress}`,
+        companyID: userData?.companyID,
+        companyName: userData?.companyName || ''
+      };
+      
+      // Pripomienka pre vykládku
+      const unloadingReminderTime = new Date(convertToDate(dataToSave.unloadingDateTime)!.getTime() - dataToSave.unloadingReminder * 60000);
+      const formattedUnloadingTime = format(convertToDate(dataToSave.unloadingDateTime)!, 'dd.MM.yyyy HH:mm');
+      const unloadingReminderData = {
+        type: 'unloading',
+        reminderTime: Timestamp.fromDate(new Date(unloadingReminderTime)),
+        reminderDateTime: Timestamp.fromDate(new Date(unloadingReminderTime)),
+        orderNumber: dataToSave.orderNumber,
+        address: dataToSave.unloadingAddress,
+        sent: false,
+        shown: false,
+        createdAt: serverTimestamp(),
+        userEmail: userData?.email,
+        userId: userData?.uid,
+        transportId: transportId,
+        reminderNote: `Pripomienka vykládky pre objednávku ${dataToSave.orderNumber} dňa ${formattedUnloadingTime} na adrese ${dataToSave.unloadingAddress}`,
+        companyID: userData?.companyID,
+        companyName: userData?.companyName || ''
+      };
+      
+      // Uloženie pripomienok
+      const loadingReminderRef = await addDoc(remindersCollection, loadingReminderData);
+      const unloadingReminderRef = await addDoc(remindersCollection, unloadingReminderData);
+      
+      console.log("Vytvorené pripomienky:", { 
+        loading: { id: loadingReminderRef.id, ...loadingReminderData },
+        unloading: { id: unloadingReminderRef.id, ...unloadingReminderData }
+      });
+      
       handleCloseAddTransportDialog();
-      fetchTransports(); // Opätovné načítanie dát
+      fetchTransports(); 
 
     } catch (error: any) {
       console.error("Chyba pri ukladaní prepravy:", error);
       setValidationError("Nastala chyba pri ukladaní: " + error.message);
       setSnackbar({ open: true, message: 'Chyba pri ukladaní prepravy', severity: 'error' });
     } finally {
-      setIsSaving(false); // Koniec ukladania
+      setIsSaving(false); 
     }
   };
 
-  const renderMobileTransport = (transport: Transport) => (
-    <MobileTransportCard isDarkMode={isDarkMode}>
-      <MobileTransportHeader isDarkMode={isDarkMode}>
-        <MobileTransportTitle>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {transport.orderNumber ? `Objednávka: ${transport.orderNumber}` : 'Bez čísla objednávky'}
-          </Typography>
-          {transport.distance && (
-            <InfoChip variant="distance">
-              <RouteIcon />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {transport.distance}
-              </Typography>
+  const handleOpenEditTransportDialog = (transport: Transport) => {
+    console.log("Editing transport:", transport);
+    setEditingTransport(transport); 
+    setTransportFormData({ 
+      orderNumber: transport.orderNumber,
+      loadingAddress: transport.loadingAddress,
+      loadingDateTime: transport.loadingDateTime, 
+      loadingReminder: transport.loadingReminder,
+      unloadingAddress: transport.unloadingAddress,
+      unloadingDateTime: transport.unloadingDateTime, 
+      unloadingReminder: transport.unloadingReminder,
+    });
+    setShowAddTransportDialog(true); 
+  };
+
+  // Renderovacia funkcia pre kartu/riadok prepravy
+  const renderTransportItem = (transport: Transport) => (
+    <TransportCard 
+      key={transport.id} 
+      isDarkMode={isDarkMode}
+      sx={{ 
+      }}
+    >
+      <Grid container spacing={2} sx={{ flexGrow: 1 }}>
+        <Grid item xs={12} md={7}>
+          <MobileTransportHeader isDarkMode={isDarkMode}>
+            <MobileTransportTitle>
+              <MobileTransportNumber isDarkMode={isDarkMode}>
+                {transport.orderNumber ? `Objednávka: ${transport.orderNumber}` : 'Bez čísla objednávky'}
+              </MobileTransportNumber>
+              <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                {transport.distance && (
+                  <InfoChip variant="distance" sx={{ p: '4px 8px' }}>
+                    <RouteIcon sx={{ fontSize: '1rem' }}/>
+                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                      {transport.distance}
+                    </Typography>
+                  </InfoChip>
+                )}
+                {transport.duration && (
+                  <InfoChip variant="distance" sx={{ p: '4px 8px' }}>
+                    <AccessTimeIcon sx={{ fontSize: '1rem' }}/>
+                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                      {transport.duration}
+                    </Typography>
+                  </InfoChip>
+                )}
+              </Box>
+            </MobileTransportTitle>
+            <InfoChip variant="status">
+              {transport.status}
             </InfoChip>
-          )}
-        </MobileTransportTitle>
-        <InfoChip variant="status">
-          {transport.status}
-        </InfoChip>
-      </MobileTransportHeader>
-      
-      <MobileTransportInfo isDarkMode={isDarkMode}>
-        <Box>
-          <MobileTransportLocation isDarkMode={isDarkMode}>
-            <LocationOnIcon />
-            <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#000000' }}>
-                Nakládka:
-              </Typography>
-              {transport.loadingAddress}
-            </Box>
-          </MobileTransportLocation>
+          </MobileTransportHeader>
           
-          <MobileTransportTime isDarkMode={isDarkMode}>
-            <div className="time-label">Nakládka:</div>
-            <div className="time-row">
-              <AccessTimeIcon />
-              {transport.loadingDateTime instanceof Date 
-                ? format(transport.loadingDateTime, 'dd.MM.yyyy HH:mm', { locale: sk })
-                : format(transport.loadingDateTime.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk })}
-            </div>
-            <div className="reminder-info">
-              <NotificationsIcon />
-              {transport.loadingReminder} minút pred nakládkou
-              <br />
-              (pripomienka o {
-                transport.loadingDateTime instanceof Date 
-                  ? format(new Date(transport.loadingDateTime.getTime() - transport.loadingReminder * 60000), 'HH:mm', { locale: sk })
-                  : format(new Date(transport.loadingDateTime.toDate().getTime() - transport.loadingReminder * 60000), 'HH:mm', { locale: sk })
-              })
-            </div>
-          </MobileTransportTime>
-        </Box>
-
-        <Box sx={{ mt: 2 }}>
-          <MobileTransportLocation isDarkMode={isDarkMode}>
-            <LocationOnIcon />
+          <MobileTransportInfo isDarkMode={isDarkMode} sx={{ mt: 1 }}>
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#000000' }}>
-                Vykládka:
-              </Typography>
-              {transport.unloadingAddress}
+              <MobileTransportLocation isDarkMode={isDarkMode}>
+                <LocationOnIcon />
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Nakládka:</Typography>
+                  {transport.loadingAddress}
+                </Box>
+              </MobileTransportLocation>
+              <MobileTransportTime isDarkMode={isDarkMode} sx={{ mt: 1 }}>
+                 <div className="time-row">
+                   <AccessTimeIcon />
+                   {format(convertToDate(transport.loadingDateTime)!, 'dd.MM.yyyy HH:mm', { locale: sk })}
+                 </div>
+                 <div className="reminder-info">
+                   <NotificationsIcon />
+                   {transport.loadingReminder} minút pred nakládkou
+                   (o {format(new Date(convertToDate(transport.loadingDateTime)!.getTime() - transport.loadingReminder * 60000), 'HH:mm')})
+                 </div>
+              </MobileTransportTime>
             </Box>
-          </MobileTransportLocation>
-          
-          <MobileTransportTime isDarkMode={isDarkMode}>
-            <div className="time-label">Vykládka:</div>
-            <div className="time-row">
-              <AccessTimeIcon />
-              {transport.unloadingDateTime instanceof Date 
-                ? format(transport.unloadingDateTime, 'dd.MM.yyyy HH:mm', { locale: sk })
-                : format(transport.unloadingDateTime.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk })}
-            </div>
-            <div className="reminder-info">
-              <NotificationsIcon />
-              {transport.unloadingReminder} minút pred vykládkou
-              <br />
-              (pripomienka o {
-                transport.unloadingDateTime instanceof Date 
-                  ? format(new Date(transport.unloadingDateTime.getTime() - transport.unloadingReminder * 60000), 'HH:mm', { locale: sk })
-                  : format(new Date(transport.unloadingDateTime.toDate().getTime() - transport.unloadingReminder * 60000), 'HH:mm', { locale: sk })
-              })
-            </div>
-          </MobileTransportTime>
-        </Box>
-      </MobileTransportInfo>
+            <Divider sx={{ my: 1.5 }} />
+            <Box>
+              <MobileTransportLocation isDarkMode={isDarkMode}>
+                <LocationOnIcon />
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Vykládka:</Typography>
+                  {transport.unloadingAddress}
+                </Box>
+              </MobileTransportLocation>
+              <MobileTransportTime isDarkMode={isDarkMode} sx={{ mt: 1 }}>
+                 <div className="time-row">
+                   <AccessTimeIcon />
+                   {format(convertToDate(transport.unloadingDateTime)!, 'dd.MM.yyyy HH:mm', { locale: sk })}
+                 </div>
+                 <div className="reminder-info">
+                   <NotificationsIcon />
+                   {transport.unloadingReminder} minút pred vykládkou
+                   (o {format(new Date(convertToDate(transport.unloadingDateTime)!.getTime() - transport.unloadingReminder * 60000), 'HH:mm')})
+                 </div>
+              </MobileTransportTime>
+            </Box>
+            <CreatorInfo isDarkMode={isDarkMode} sx={{ mt: 1.5, pt: 1.5, borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` }}>
+               <PersonIcon /> Vytvoril: {transport.createdBy?.firstName} {transport.createdBy?.lastName}
+               <Box component="span" sx={{ mx: 1 }}>•</Box>
+               <AccessTimeIcon /> {format(convertToDate(transport.createdAt)!, 'dd.MM.yyyy HH:mm')}
+            </CreatorInfo>
+          </MobileTransportInfo>
+        </Grid>
 
-      <MobileTransportActions>
-        <IconButton 
-          size="small"
-          onClick={() => handleOpenDialog(transport)}
-          sx={{ color: colors.accent.main }}
-        >
-          <EditIcon fontSize="small" />
-        </IconButton>
-        <IconButton 
-          size="small"
-          onClick={() => handleOpenDialog(transport)}
-          sx={{ color: colors.secondary.main }}
-        >
-          <DeleteIcon fontSize="small" />
-        </IconButton>
-      </MobileTransportActions>
-    </MobileTransportCard>
-  );
-
-  const renderMobileView = () => (
-    <Box>
-      {transports.map((transport) => (
-        <TransportCard key={transport.id} isDarkMode={isDarkMode}>
-          <CardHeader isDarkMode={isDarkMode}>
-            <OrderNumber isDarkMode={isDarkMode}>
-              {transport.orderNumber ? `Objednávka: ${transport.orderNumber}` : 'Bez čísla objednávky'}
-            </OrderNumber>
-            <TransportInfo>
-              {transport.distance && (
-                <InfoChip variant="distance">
-                  <RouteIcon />
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {transport.distance}
-                  </Typography>
-                </InfoChip>
-              )}
-              <InfoChip variant="status">
-                {transport.status}
-              </InfoChip>
-            </TransportInfo>
-          </CardHeader>
-
-          <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3 }}>
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box sx={{ 
-                padding: '20px',
+        <Grid item xs={12} md={5} sx={{ display: { xs: 'none', md: 'block' }, minHeight: '250px' }}>
+           <Box 
+             sx={{ 
+                height: '100%', 
+                width: '100%', 
+                borderRadius: '12px', 
+                overflow: 'hidden', 
+                cursor: 'pointer',
                 position: 'relative',
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  bottom: '-16px',
-                  left: '5%',
-                  width: '90%',
-                  height: '1px',
-                  backgroundColor: colors.accent.main,
-                  borderRadius: '1px'
+                '&:hover': {
+                    boxShadow: `0 4px 15px ${colors.accent.main}33`,
                 }
-              }}>
-                <Typography variant="h6" sx={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  mb: 2,
-                  color: isDarkMode ? '#ffffff' : '#000000',
-                  '& .MuiSvgIcon-root': { color: colors.accent.main }
-                }}>
-                  <LocationOnIcon />
-                  Nakládka
-                </Typography>
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, ml: 2 }}>
-                  <Box sx={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-                    '& .MuiSvgIcon-root': { color: colors.accent.main }
-                  }}>
-                    <LocationOnIcon />
-                    {transport.loadingAddress}
-                  </Box>
-
-                  <Box sx={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-                    '& .MuiSvgIcon-root': { color: colors.accent.main }
-                  }}>
-                    <AccessTimeIcon />
-                    {format(transport.loadingDateTime instanceof Timestamp ? transport.loadingDateTime.toDate() : transport.loadingDateTime, 'dd.MM.yyyy HH:mm')}
-                  </Box>
-
-                  <Box sx={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                    fontSize: '0.9rem',
-                    '& .MuiSvgIcon-root': { color: colors.accent.light }
-                  }}>
-                    <NotificationsIcon />
-                    Pripomienka {transport.loadingReminder} minút pred nakládkou
-                    ({format(new Date((transport.loadingDateTime instanceof Timestamp ? transport.loadingDateTime.toDate() : transport.loadingDateTime).getTime() - transport.loadingReminder * 60000), 'dd.MM.yyyy HH:mm')})
-                  </Box>
-                </Box>
-              </Box>
-
-              <Box sx={{ 
-                padding: '20px',
-                marginTop: '16px'
-              }}>
-                <Typography variant="h6" sx={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  mb: 2,
-                  color: isDarkMode ? '#ffffff' : '#000000',
-                  '& .MuiSvgIcon-root': { color: colors.accent.main }
-                }}>
-                  <LocationOnIcon />
-                  Vykládka
-                </Typography>
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, ml: 2 }}>
-                  <Box sx={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-                    '& .MuiSvgIcon-root': { color: colors.accent.main }
-                  }}>
-                    <LocationOnIcon />
-                    {transport.unloadingAddress}
-                  </Box>
-
-                  <Box sx={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-                    '& .MuiSvgIcon-root': { color: colors.accent.main }
-                  }}>
-                    <AccessTimeIcon />
-                    {format(transport.unloadingDateTime instanceof Timestamp ? transport.unloadingDateTime.toDate() : transport.unloadingDateTime, 'dd.MM.yyyy HH:mm')}
-                  </Box>
-
-                  <Box sx={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                    fontSize: '0.9rem',
-                    '& .MuiSvgIcon-root': { color: colors.accent.light }
-                  }}>
-                    <NotificationsIcon />
-                    Pripomienka {transport.unloadingReminder} minút pred vykládkou
-                    ({format(new Date((transport.unloadingDateTime instanceof Timestamp ? transport.unloadingDateTime.toDate() : transport.unloadingDateTime).getTime() - transport.unloadingReminder * 60000), 'dd.MM.yyyy HH:mm')})
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-
-            <Box sx={{ 
-              width: '50%',
-              height: '100%',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                border: `1px solid ${colors.accent.main}`,
-                transform: 'scale(1.02)',
-                boxShadow: '0 5px 15px rgba(0, 0, 0, 0.2)'
-              }
-            }} onClick={() => handleShowMap(transport)}>
+             }}
+             onClick={() => handleShowMap(transport)}
+           >
               <TransportMap
-                origin={transport.loadingAddress}
-                destination={transport.unloadingAddress}
-                isThumbnail={true}
-                onDirectionsChange={(directions, distance, duration) => {
-                  if ((distance || duration) && !transport.distance) {
-                    // Vytvoríme objekt s aktualizáciami
-                    const updates: { distance?: string; duration?: string } = {};
-                    if (distance) updates.distance = distance;
-                    if (duration) updates.duration = duration;
-                    
-                    // Aktualizovať dokument len ak máme nejaké zmeny
-                    if (Object.keys(updates).length > 0) {
-                      updateDoc(doc(db, 'transports', transport.id), updates);
-                      
-                      // Aktualizovať lokálny stav
-                      setTransports(prevTransports => 
-                        prevTransports.map(t => t.id === transport.id ? { ...t, ...updates } : t)
-                      );
-                    }
-                  }
-                }}
+                  key={`${transport.id}-map`} 
+                  origin={transport.loadingAddress}
+                  destination={transport.unloadingAddress}
+                  isThumbnail={false}
+                  onDirectionsChange={(directions, distance, duration) => {
+                      if (distance && !transport.distance) {
+                          const updates = { distance: distance };
+                          updateDoc(firestoreDoc(db, 'transports', transport.id), updates);
+                          setTransports(prev => prev.map(t => t.id === transport.id ? { ...t, ...updates } : t));
+                      }
+                  }}
               />
-            </Box>
-          </Box>
+           </Box>
+        </Grid>
+      </Grid>
 
-          <CardActions sx={{ 
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mt: 2,
-            pt: 2,
-            borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` 
-          }}>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-              fontSize: '0.9rem'
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <PersonIcon sx={{ fontSize: '1rem' }} />
-                Vytvoril: {transport.createdBy?.firstName} {transport.createdBy?.lastName}
-              </Box>
-              <Box component="span" sx={{ mx: 1 }}>•</Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <AccessTimeIcon sx={{ fontSize: '1rem' }} />
-                Uverejnené: {format(transport.createdAt instanceof Timestamp ? transport.createdAt.toDate() : transport.createdAt, 'dd.MM.yyyy HH:mm')}
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton 
-                size="small"
-                onClick={() => handleOpenDialog(transport)}
-                sx={{ color: colors.accent.main }}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-              <IconButton 
-                size="small"
-                onClick={() => handleOpenDialog(transport)}
-                sx={{ color: colors.secondary.main }}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-              <IconButton 
-                size="small"
-                onClick={() => handleShowMap(transport)}
-                sx={{ color: colors.accent.main }}
-              >
-                <LocationOnIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          </CardActions>
-        </TransportCard>
-      ))}
-    </Box>
+      <MobileTransportActions onClick={() => console.log('Clicked on Actions wrapper!')}>
+         <Tooltip title="Upraviť">
+           <IconButton onClick={(e) => { e.stopPropagation(); handleOpenEditTransportDialog(transport); }} sx={{ color: colors.accent.main }}>
+             <EditIcon />
+           </IconButton>
+         </Tooltip>
+         <Tooltip title="Vymazať">
+           <IconButton onClick={(e) => { e.stopPropagation(); setTransportToDelete(transport); setDeleteConfirmOpen(true); }} sx={{ color: colors.secondary.main }}>
+             <DeleteIcon />
+           </IconButton>
+         </Tooltip>
+         <Tooltip title="Zobraziť na mape (fullscreen)">
+            <IconButton 
+              onClick={(e) => { 
+                console.log('Map IconButton onClick triggered!'); 
+                handleShowMap(transport); 
+              }} 
+              sx={{ color: isDarkMode ? '#90caf9' : '#1976d2' }}
+            >
+                <LocationOnIcon />
+            </IconButton>
+         </Tooltip>
+      </MobileTransportActions>
+    </TransportCard>
   );
 
   // PRIDANÁ FUNKCIA fetchTransports S useCallback
@@ -1268,7 +1331,28 @@ const TrackedTransports: React.FC = () => {
     }
   }, [userData?.companyID, fetchTransports]); // Pridaná fetchTransports závislosť
 
-  if (loading) {
+  // useEffect, ktorý nastaví mapu na prvú prepravu po načítaní
+  useEffect(() => {
+    if (!selectedTransportForMap && transports.length > 0) {
+      setSelectedTransportForMap(transports[0]);
+    }
+    // Ak sa zoznam prepráv vyprázdni, resetneme aj mapu
+    if (transports.length === 0) {
+      setSelectedTransportForMap(null);
+    }
+  }, [transports, selectedTransportForMap]);
+
+  const filteredTransports = transports.filter(transport => {
+      const searchTermLower = searchTerm.toLowerCase();
+      return (
+        transport.orderNumber?.toLowerCase().includes(searchTermLower) ||
+        transport.loadingAddress?.toLowerCase().includes(searchTermLower) ||
+        transport.unloadingAddress?.toLowerCase().includes(searchTermLower) ||
+        `${transport.createdBy?.firstName} ${transport.createdBy?.lastName}`.toLowerCase().includes(searchTermLower)
+      );
+  });
+
+  if (loading && transports.length === 0) { // Zobrazíme loading len ak ešte nemáme žiadne dáta
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -1302,37 +1386,18 @@ const TrackedTransports: React.FC = () => {
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress sx={{ color: '#ff9f43' }} />
-          </Box>
-        ) : (
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            gap: 2,
-            '@media (max-width: 600px)': {
-              gap: 1
-            }
-          }}>
-            {transports.map((transport) => (
-              <Box key={transport.id} sx={{ 
-                display: { 
-                  xs: 'block', // Mobilné zobrazenie
-                  sm: 'none'   // Skryté na väčších obrazovkách
-                }
-              }}>
-                {renderMobileTransport(transport)}
-              </Box>
-            ))}
-            <Box sx={{ 
-              display: { 
-                xs: 'none',    // Skryté na mobilných zariadeniach
-                sm: 'block'    // Zobrazené na väčších obrazovkách
-              }
-            }}>
-              {renderMobileView()}
-            </Box>
+        {loading && transports.length === 0 ? (
+           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+               <CircularProgress sx={{ color: '#ff9f43' }} />
+           </Box>
+        ) : ( 
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+             {filteredTransports.length === 0 && !loading && (
+                  <Typography sx={{ textAlign: 'center', mt: 4, color: theme.palette.text.secondary }}>
+                      Žiadne sledované prepravy nenájdené.
+                  </Typography>
+             )}
+             {filteredTransports.map((transport) => renderTransportItem(transport))} 
           </Box>
         )}
       </PageWrapper>
@@ -1639,7 +1704,7 @@ const TrackedTransports: React.FC = () => {
                       
                       // Ak sú nejaké zmeny, aktualizovať Firestore
                       if (Object.keys(updates).length > 0) {
-                        updateDoc(doc(db, 'transports', mapTransport.id), updates);
+                        updateDoc(firestoreDoc(db, 'transports', mapTransport.id), updates);
                         
                         // Aktualizovať lokálny stav
                         setTransports(prevTransports => 
@@ -1759,7 +1824,10 @@ const TrackedTransports: React.FC = () => {
           <DialogActions>
             <Button onClick={handleCloseAddTransportDialog} disabled={isSaving} sx={{ /* ... štýl ... */ }}>Zrušiť</Button>
             <Button 
-              onClick={handleAddOrUpdateTransport} // Volá novú funkciu
+              onClick={() => {
+                console.log("!!!! SAVE/ADD BUTTON CLICKED !!!!"); 
+                handleAddOrUpdateTransport(); 
+              }}
               variant="contained" 
               sx={{ /* ... štýl ... */ }}
               disabled={isSaving} 
@@ -1769,6 +1837,39 @@ const TrackedTransports: React.FC = () => {
           </DialogActions>
         </StyledDialogContent>
       </Dialog>
+
+      {/* Snackbar pre notifikácie pripomienok */}
+      <Snackbar
+        open={notificationVisible}
+        autoHideDuration={10000}
+        onClose={hideNotification}
+        message={notificationMessage}
+        action={
+          <IconButton size="small" color="inherit" onClick={hideNotification}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: colors.accent.main
+          }
+        }}
+      />
+
+      {/* Snackbar pre operácie */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: snackbar.severity === 'success' ? '#4caf50' : '#f44336'
+          }
+        }}
+      />
     </>
   );
 }

@@ -19,6 +19,7 @@ import OrdersForm from './components/Orders';
 import NewOrderForm from './components/NewOrderForm';
 import InvoicesPage from './components/Invoices';
 import VehicleMap from './components/VehicleMap';
+import Notifications from './components/Notifications';
 import { useThemeMode } from './contexts/ThemeContext';
 
 type AppContainerProps = {
@@ -294,6 +295,14 @@ const AppContent: React.FC = () => {
               <PageContent isDarkMode={isDarkMode}>
                 <Navbar />
                 <VehicleMap />
+              </PageContent>
+            </PrivateRoute>
+          } />
+          <Route path="/notifications" element={
+            <PrivateRoute>
+              <PageContent isDarkMode={isDarkMode}>
+                <Navbar />
+                <Notifications />
               </PageContent>
             </PrivateRoute>
           } />

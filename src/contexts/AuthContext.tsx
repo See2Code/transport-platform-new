@@ -14,6 +14,7 @@ export interface UserData {
   lastName: string;
   phone?: string;
   companyID: string;
+  companyName?: string;
   role: string;
   photoURL?: string;
 }
@@ -204,6 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             lastName: firestoreData.lastName || "",
             phone: firestoreData.phone,
             companyID: firestoreData.companyID || "",
+            companyName: firestoreData.companyName,
             role: firestoreData.role || "",
             photoURL: firestoreData.photoURL
           };
@@ -255,6 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastName: firestoreData.lastName || "",
         phone: firestoreData.phone,
         companyID: firestoreData.companyID || "",
+        companyName: firestoreData.companyName,
         role: firestoreData.role || "",
         photoURL: firestoreData.photoURL
       };

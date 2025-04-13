@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   CssBaseline,
   Divider,
@@ -25,6 +25,12 @@ import {
   DialogActions,
   Button,
   Drawer,
+  Badge,
+  Popover,
+  Paper,
+  Chip,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import GroupIcon from '@mui/icons-material/Group';
@@ -41,12 +47,14 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EuroIcon from '@mui/icons-material/Euro';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import BusinessIcon from '@mui/icons-material/Business';
+import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { MenuProps } from '@mui/material/Menu';
-import BusinessIcon from '@mui/icons-material/Business';
 import MenuIcon from '@mui/icons-material/Menu';
 import PersonIcon from '@mui/icons-material/Person';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -54,6 +62,9 @@ import { useThemeMode } from '../contexts/ThemeContext';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import { useNotifications } from '../contexts/NotificationsContext';
+import { format } from 'date-fns';
+import { Timestamp } from 'firebase/firestore';
 
 const drawerWidth = 240;
 const miniDrawerWidth = 64;
@@ -639,15 +650,130 @@ const logoDarkPath = "/AESA white.svg";  // Alebo /logo-dark.png ak existuje
 const logoMiniLightPath = "/favicon.png"; // Nahraďte správnou cestou k mini logu
 const logoMiniDarkPath = "/AESA white favicon.png"; // Nahraďte správnou cestou k mini tmavému logu
 
+// Nové komponenty pre notifikácie
+const NotificationPopover = styled(Popover)(({ theme }) => ({
+  '& .MuiPopover-paper': {
+    width: '360px',
+    maxHeight: '500px',
+    overflow: 'hidden',
+    marginTop: '10px',
+    borderRadius: '10px',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+  },
+}));
+
+const NotificationHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  padding: '12px 16px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+}));
+
+const NotificationContainer = styled(Box)({
+  maxHeight: '360px',
+  overflowY: 'auto',
+  '&::-webkit-scrollbar': {
+    width: '6px',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'transparent',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: '3px',
+  },
+});
+
+const NotificationItem = styled(Box)<{ isDarkMode: boolean; isRead: boolean }>(({ isDarkMode, isRead }) => ({
+  padding: '12px 16px',
+  borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+  backgroundColor: isRead ? 'transparent' : (isDarkMode ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.04)'),
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+  },
+}));
+
+const NotificationFooter = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  padding: '12px 16px',
+  display: 'flex',
+  justifyContent: 'center',
+  borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+}));
+
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, userData } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
+  const { unreadCount, markAsRead, markAllAsRead, getLatestNotifications } = useNotifications();
+  
+  // Stav pre notifikačný popover
+  const [notificationsEl, setNotificationsEl] = useState<null | HTMLElement>(null);
+  const [notificationsList, setNotificationsList] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  
+  // Funkcia pre načítanie notifikácií
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      const notifications = await getLatestNotifications(5);
+      setNotificationsList(notifications);
+    } catch (error) {
+      console.error("Chyba pri načítavaní notifikácií:", error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  // Otvorenie notifikačného popoveru
+  const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationsEl(event.currentTarget);
+    fetchNotifications();
+  };
+
+  // Zatvorenie notifikačného popoveru
+  const handleNotificationClose = () => {
+    setNotificationsEl(null);
+  };
+
+  // Označenie notifikácie ako prečítanej
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await markAsRead(id);
+      setNotificationsList(prev => prev.map(notification => 
+        notification.id === id ? { ...notification, sent: true } : notification
+      ));
+    } catch (error) {
+      console.error("Chyba pri označovaní notifikácie ako prečítanej:", error);
+    }
+  };
+
+  // Označenie všetkých notifikácií ako prečítané
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+      setNotificationsList(prev => prev.map(notification => ({ ...notification, sent: true })));
+    } catch (error) {
+      console.error("Chyba pri označovaní všetkých notifikácií ako prečítané:", error);
+    }
+  };
+
+  // Formátovanie dátumu
+  const formatDateTime = (date: Timestamp | Date | undefined | null): string => {
+    if (!date) return 'Neznámy čas';
+    
+    if (date instanceof Timestamp) {
+      return format(date.toDate(), 'dd.MM.yyyy HH:mm');
+    }
+    
+    return format(new Date(date), 'dd.MM.yyyy HH:mm');
+  };
 
   const handleMobileMenuClick = () => {
     setMobileMenuOpen(true);
@@ -716,11 +842,58 @@ const Navbar = () => {
                       width: 'auto'
                   }}
                  />
+                 <Typography 
+                  variant="h6" 
+                  noWrap 
+                  component="div"
+                  sx={{ 
+                    color: isDarkMode ? '#ffffff' : '#000000',
+                    fontWeight: 600,
+                    letterSpacing: '-0.5px',
+                    fontSize: {xs: '1rem', sm: '1.1rem', md: '1.2rem'},
+                    ml: 1
+                  }}
+                >
+                  Transport
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                display: 'flex',
+                gap: 0.5,
+                alignItems: 'center',
+                mr: 1
+              }}>
+                <IconButton
+                  onClick={handleNotificationClick}
+                  sx={{ 
+                    padding: {xs: '4px', sm: '6px', md: '8px'}, 
+                    color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                    '&:hover': {
+                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      backgroundColor: isDarkMode 
+                        ? 'rgba(99, 102, 241, 0.1)' 
+                        : 'rgba(99, 102, 241, 0.05)',
+                    }
+                  }}
+                >
+                  <Badge badgeContent={unreadCount} color="error" overlap="circular" 
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        fontSize: '0.6rem',
+                        height: '16px',
+                        minWidth: '16px'
+                      }
+                    }}
+                  >
+                    <NotificationsIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
+                  </Badge>
+                </IconButton>
               </Box>
               <MenuButton
                 edge="end"
                 sx={{
                   color: isDarkMode ? '#ffffff' : '#000000',
+                  padding: {xs: '4px', sm: '6px', md: '8px'},
                   '&:hover': {
                     backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)',
                   }
@@ -728,7 +901,7 @@ const Navbar = () => {
                 aria-label="menu"
                 onClick={handleMobileMenuClick}
               >
-                <MenuIcon />
+                <MenuIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
               </MenuButton>
             </>
           ) : (
@@ -740,14 +913,14 @@ const Navbar = () => {
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 2,
+                    gap: {lg: 1, xl: 2},
                     transition: 'opacity 0.2s ease-in-out',
                     '&:hover': {
                       opacity: 0.8
                     }
                   }}
                 >
-                  <LogoImage src={isDarkMode ? logoDarkPath : logoLightPath} alt="AESA Logo" sx={{ height: '32px' }} />
+                  <LogoImage src={isDarkMode ? logoDarkPath : logoLightPath} alt="AESA Logo" sx={{ height: {lg: '28px', xl: '32px'} }} />
                   <Typography 
                     variant="h6" 
                     noWrap 
@@ -755,7 +928,8 @@ const Navbar = () => {
                     sx={{ 
                       color: isDarkMode ? '#ffffff' : '#000000',
                       fontWeight: 600,
-                      letterSpacing: '-0.5px'
+                      letterSpacing: '-0.5px',
+                      fontSize: {lg: '1.1rem', xl: '1.25rem'}
                     }}
                   >
                     Transport Platform
@@ -764,10 +938,11 @@ const Navbar = () => {
               </BrandContainer>
               <Box sx={{ 
                 display: 'flex', 
-                gap: 1,
+                gap: {lg: 0.5, xl: 1},
                 alignItems: 'center',
                 height: '40px',
-                marginLeft: 'auto'
+                marginLeft: 'auto',
+                flexShrink: 0
               }}>
                 {menuItems.map((item) => (
                   <NavListItem key={item.text} disablePadding isDarkMode={isDarkMode}>
@@ -777,9 +952,9 @@ const Navbar = () => {
                       selected={location.pathname === item.path}
                       onClick={item.onClick}
                       sx={{
-                         borderRadius: '6px',
-                        padding: '8px 12px',
-                        margin: '0 2px',
+                        borderRadius: '6px',
+                        padding: {lg: '6px 8px', xl: '8px 12px'},
+                        margin: '0 1px',
                         minWidth: 'auto',
                         color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
                         '&:hover': {
@@ -797,8 +972,10 @@ const Navbar = () => {
                         }
                       }}
                     >
-                      <ListItemIconStyled sx={{ minWidth: '20px', mr: 1.5 }}>
-                        {item.icon}
+                      <ListItemIconStyled sx={{ minWidth: {lg: '16px', xl: '20px'}, mr: {lg: 0.5, xl: 1.5} }}>
+                        {React.cloneElement(item.icon as React.ReactElement, { 
+                          sx: { fontSize: {lg: '1.1rem', xl: '1.3rem'} } 
+                        })}
                       </ListItemIconStyled>
                     </ListItemButton>
                   </NavListItem>
@@ -807,12 +984,39 @@ const Navbar = () => {
                   display: 'flex',
                   gap: 0.5,
                   alignItems: 'center',
-                  marginLeft: 2
+                  marginLeft: 1,
+                  ml: {lg: 1, xl: 2}
                 }}>
+                   <IconButton
+                     onClick={handleNotificationClick}
+                     sx={{ 
+                         padding: {lg: '4px', xl: '8px'}, 
+                         color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                        '&:hover': {
+                            color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                            backgroundColor: isDarkMode 
+                            ? 'rgba(99, 102, 241, 0.1)' 
+                            : 'rgba(99, 102, 241, 0.05)',
+                         }
+                     }}
+                   >
+                     <Badge badgeContent={unreadCount} color="error" overlap="circular" 
+                        sx={{
+                          '& .MuiBadge-badge': {
+                            fontSize: '0.6rem',
+                            height: '16px',
+                            minWidth: '16px'
+                          }
+                        }}
+                     >
+                       <NotificationsIcon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} />
+                     </Badge>
+                   </IconButton>
+                   
                    <IconButton
                     onClick={toggleTheme}
                     sx={{ 
-                         padding: '8px', 
+                         padding: {lg: '4px', xl: '8px'}, 
                          color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
                         '&:hover': {
                             color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
@@ -822,12 +1026,15 @@ const Navbar = () => {
                          }
                     }}
                   >
-                    {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+                    {isDarkMode ? 
+                      <Brightness7Icon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} /> :
+                      <Brightness4Icon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} />
+                    }
                   </IconButton>
                    <IconButton
                     onClick={handleLogoutClick}
                     sx={{ 
-                        padding: '8px', 
+                        padding: {lg: '4px', xl: '8px'}, 
                         color: isDarkMode ? '#f87171' : '#ef4444',
                         '&:hover': {
                             backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
@@ -835,7 +1042,7 @@ const Navbar = () => {
                         },
                     }}
                   >
-                    <LogoutIcon sx={{ fontSize: '20px' }} />
+                    <LogoutIcon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} />
                   </IconButton>
                 </Box>
               </Box>
@@ -843,6 +1050,130 @@ const Navbar = () => {
           )}
         </StyledToolbar>
       </StyledAppBar>
+
+      {/* Notifikačný popover */}
+      <NotificationPopover
+        open={Boolean(notificationsEl)}
+        anchorEl={notificationsEl}
+        onClose={handleNotificationClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <Paper sx={{ 
+          bgcolor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff', 
+          borderRadius: '10px',
+          backdropFilter: 'blur(10px)',
+        }}>
+          <NotificationHeader isDarkMode={isDarkMode}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <NotificationsIcon color="primary" />
+              <Typography variant="subtitle1" color="textPrimary" fontWeight="600">
+                Notifikácie
+              </Typography>
+              {unreadCount > 0 && (
+                <Chip 
+                  size="small" 
+                  label={`${unreadCount} nových`} 
+                  color="primary" 
+                  sx={{ height: '20px', fontSize: '0.7rem' }} 
+                />
+              )}
+            </Box>
+            {unreadCount > 0 && (
+              <Button
+                variant="text"
+                size="small"
+                startIcon={<MarkEmailReadIcon sx={{ fontSize: '1rem' }} />}
+                onClick={handleMarkAllAsRead}
+                sx={{ 
+                  textTransform: 'none', 
+                  fontSize: '0.8rem',
+                  color: colors.primary.main
+                }}
+              >
+                Označiť všetky
+              </Button>
+            )}
+          </NotificationHeader>
+          
+          <NotificationContainer>
+            {loadingNotifications ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress size={32} />
+              </Box>
+            ) : notificationsList.length === 0 ? (
+              <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Typography color="textSecondary" variant="body2">
+                  Žiadne notifikácie
+                </Typography>
+              </Box>
+            ) : (
+              notificationsList.map((notification) => (
+                <NotificationItem key={notification.id} isDarkMode={isDarkMode} isRead={notification.sent}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: notification.sent ? 'normal' : 'bold' }}>
+                      {notification.type === 'business' 
+                        ? 'Obchodný prípad' 
+                        : notification.type === 'loading' 
+                          ? 'Nakládka' 
+                          : 'Vykládka'}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <AccessTimeIcon sx={{ fontSize: '0.9rem', mr: 0.5, color: 'text.secondary' }} />
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDateTime(notification.reminderTime || notification.reminderDateTime)}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    {notification.type === 'business' 
+                      ? `Firma: ${notification.companyName || 'Neznáma'}` 
+                      : `Objednávka: ${notification.orderNumber || 'Neznáma'}`}
+                  </Typography>
+                  
+                  {notification.address && (
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', mb: 1 }}>
+                      Adresa: {notification.address}
+                    </Typography>
+                  )}
+                  
+                  {!notification.sent && (
+                    <Button
+                      variant="text"
+                      size="small"
+                      startIcon={<MarkEmailReadIcon sx={{ fontSize: '0.9rem' }} />}
+                      onClick={() => handleMarkAsRead(notification.id)}
+                      sx={{ textTransform: 'none', fontSize: '0.8rem', mt: 1, p: 0 }}
+                    >
+                      Označiť ako prečítané
+                    </Button>
+                  )}
+                </NotificationItem>
+              ))
+            )}
+          </NotificationContainer>
+          
+          <NotificationFooter isDarkMode={isDarkMode}>
+            <Button
+              variant="text"
+              onClick={() => {
+                navigate('/notifications');
+                handleNotificationClose();
+              }}
+              sx={{ textTransform: 'none' }}
+            >
+              Zobraziť všetky notifikácie
+            </Button>
+          </NotificationFooter>
+        </Paper>
+      </NotificationPopover>
 
       <MobileDrawer
         anchor="right"
