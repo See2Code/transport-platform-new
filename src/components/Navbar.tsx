@@ -768,7 +768,7 @@ const Navbar = () => {
   const location = useLocation();
   const { logout, userData } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
-  const { unreadCount, markAsRead, markAllAsRead, getLatestNotifications } = useNotifications();
+  const { unreadCount, markAsRead, markAllAsRead, getLatestNotifications, syncNotifications } = useNotifications();
   const { chatOpen, toggleChat, unreadConversationsCount, hasNewMessages } = useChatUI();
   
   // Kombinovaný počet notifikácií
@@ -807,25 +807,8 @@ const Navbar = () => {
         const notifications = await getLatestNotifications(10);
         console.log("Načítané notifikácie cez kontext:", notifications);
         
-        // Tu získame aj chat notifikácie a spojíme ich so systémovými
-        const combinedNotifications = [...notifications];
-        
-        // Zoradenie notifikácií podľa času (od najnovších)
-        combinedNotifications.sort((a, b) => {
-          const getTimestamp = (item: any) => {
-            if (!item.createdAt) return 0;
-            
-            if (typeof item.createdAt === 'object' && 'toDate' in item.createdAt) {
-              return item.createdAt.toDate().getTime();
-            }
-            
-            return new Date(item.createdAt).getTime();
-          };
-          
-          return getTimestamp(b) - getTimestamp(a);
-        });
-        
-        setNotificationsList(combinedNotifications);
+        // Notifikácie sú už spracované a zoradené v kontexte
+        setNotificationsList(notifications);
       } catch (error: any) {
         console.warn("Chyba pri načítavaní notifikácií cez kontext:", error);
         
@@ -851,7 +834,14 @@ const Navbar = () => {
   // Otvorenie notifikačného popoveru
   const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
     setNotificationsEl(event.currentTarget);
-    fetchNotifications();
+    // Použijeme syncNotifications namiesto fetchNotifications
+    syncNotifications();
+  };
+
+  // Navigácia na stránku notifikácií
+  const handleNavigateToNotifications = () => {
+    handleNotificationClose();
+    navigate('/notifications');
   };
 
   // Zatvorenie notifikačného popoveru
@@ -939,7 +929,6 @@ const Navbar = () => {
     { text: 'Kontakty', icon: <ContactsIcon />, path: '/contacts' },
     { text: 'Tím', icon: <GroupIcon />, path: '/team' },
     { text: 'Nastavenia', icon: <SettingsIcon />, path: '/settings' },
-    { text: 'Notifikácie', icon: <NotificationsIcon />, path: '/notifications', access: ['user', 'manager', 'admin', 'super-admin'] },
   ];
 
   // Upraviť renderer pre zobrazenie rôznych typov notifikácií
@@ -1103,6 +1092,7 @@ const Navbar = () => {
                 </IconButton>
                 <IconButton
                   onClick={handleNotificationClick}
+                  aria-label="Zobraziť notifikácie"
                   sx={{ 
                     padding: {xs: '8px', sm: '10px'}, 
                     color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
@@ -1269,7 +1259,13 @@ const Navbar = () => {
                 </IconButton>
                 <IconButton
                   onClick={handleNotificationClick}
-                   sx={{
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    handleNavigateToNotifications();
+                  }}
+                  aria-label="Zobraziť notifikácie"
+                  title="Klik: Zobraziť popover, Pravý klik: Prejsť na stránku notifikácií"
+                  sx={{
                     padding: {xs: '8px', sm: '10px'}, 
                     color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
                     borderRadius: '8px',
@@ -1418,6 +1414,51 @@ const Navbar = () => {
                 </MenuItemWrapper>
               </ListItem>
             ))}
+            {/* Pridáme položku notifikácií do mobilného menu */}
+            <ListItem disablePadding>
+              <MenuItemWrapper 
+                onClick={() => handleNavigation('/notifications')} 
+                isDarkMode={isDarkMode}
+                selected={location.pathname === '/notifications'}
+                sx={{
+                  '&.Mui-selected': {
+                    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+                    color: colors.primary.main,
+                    '& .MuiSvgIcon-root': {
+                      color: colors.primary.main,
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: '4px',
+                      backgroundColor: colors.primary.main,
+                      borderRadius: '0 4px 4px 0',
+                    }
+                  }
+                }}
+              >
+                <MenuItemIcon><NotificationsIcon /></MenuItemIcon>
+                <MenuItemContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        fontWeight: location.pathname === '/notifications' ? 'bold' : 'normal',
+                        color: location.pathname === '/notifications' ? colors.primary.main : 'inherit'
+                      }}
+                    >
+                      Notifikácie
+                    </Typography>
+                    {unreadCount > 0 && (
+                      <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem' } }} />
+                    )}
+                  </Box>
+                </MenuItemContent>
+              </MenuItemWrapper>
+            </ListItem>
           </List>
           <Divider sx={{ mt: 2 }} />
           <BottomActions>
@@ -1455,6 +1496,102 @@ const Navbar = () => {
           <Button onClick={handleLogoutConfirm} color="primary" autoFocus>Odhlásiť</Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Notifikačný popover */}
+      <NotificationPopover
+        open={Boolean(notificationsEl)}
+        anchorEl={notificationsEl}
+        onClose={handleNotificationClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <NotificationHeader isDarkMode={isDarkMode}>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Notifikácie
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}>
+              <NotificationsIcon fontSize="small" />
+            </Badge>
+            {unreadCount > 0 && (
+              <Button size="small" onClick={handleMarkAllAsRead} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+                Označiť všetky ako prečítané
+              </Button>
+            )}
+          </Box>
+        </NotificationHeader>
+        
+        <NotificationContainer>
+          {loadingNotifications ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : notificationsList.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Nemáte žiadne notifikácie
+              </Typography>
+            </Box>
+          ) : (
+            notificationsList.map((notification) => (
+              <NotificationItem 
+                key={notification.id} 
+                isDarkMode={isDarkMode} 
+                isRead={notification.sent}
+              >
+                <Box>
+                  {renderNotificationContent(notification)}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    mt: 1.5, 
+                    pt: 1, 
+                    borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}` 
+                  }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatDateTime(notification.createdAt)}
+                    </Typography>
+                    {!notification.sent && (
+                      <Button 
+                        size="small" 
+                        onClick={() => handleMarkAsRead(notification.id)}
+                        sx={{ 
+                          fontSize: '0.7rem', 
+                          p: 0.5, 
+                          minWidth: 'auto',
+                          color: colors.primary.main
+                        }}
+                      >
+                        Označiť ako prečítané
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+              </NotificationItem>
+            ))
+          )}
+        </NotificationContainer>
+        
+        <NotificationFooter isDarkMode={isDarkMode}>
+          <Button 
+            size="small" 
+            onClick={handleNavigateToNotifications}
+            sx={{ 
+              textTransform: 'none', 
+              fontSize: '0.9rem'
+            }}
+          >
+            Zobraziť všetky notifikácie
+          </Button>
+        </NotificationFooter>
+      </NotificationPopover>
     </PageWrapper>
   );
 };

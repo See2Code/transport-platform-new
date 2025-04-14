@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
@@ -10,6 +10,7 @@ interface NotificationsContextType {
   markAllAsRead: () => Promise<void>;
   loading: boolean;
   getLatestNotifications: (count: number) => Promise<NotificationData[]>;
+  syncNotifications: () => Promise<void>;
 }
 
 // Rozhranie pre notifikačné dáta
@@ -47,17 +48,55 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { userData } = useAuth();
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  
+  // Referencia pre sledovanie prebiehajúcich operácií
+  const isLoadingRef = useRef(false);
+  const lastFetchTimeRef = useRef<number>(0);
+  const fetchDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Minimálny čas medzi načítavaniami (ms)
+  const MIN_FETCH_INTERVAL = 1000;
 
-  // Funkcia na načítanie notifikácií a počítanie neprečítaných
+  // Funkcia na načítanie notifikácií a počítanie neprečítaných - s debouncingom
   const fetchNotifications = useCallback(async () => {
     if (!userData?.companyID) {
       setUnreadCount(0);
       setLoading(false);
       return;
     }
+    
+    // Ak už načítavanie prebieha, preskočíme
+    if (isLoadingRef.current) {
+      console.log("Načítavanie už prebieha, preskakujem duplicitné volanie");
+      return;
+    }
+    
+    // Kontrola času od posledného načítania
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    
+    if (timeSinceLastFetch < MIN_FETCH_INTERVAL) {
+      console.log(`Príliš skoré volanie (${timeSinceLastFetch}ms od posledného), odkladám načítavanie`);
+      
+      // Zrušíme predchádzajúci timeout, ak existuje
+      if (fetchDebounceTimeoutRef.current) {
+        clearTimeout(fetchDebounceTimeoutRef.current);
+      }
+      
+      // Nastavíme nový timeout pre oneskorené načítavanie
+      fetchDebounceTimeoutRef.current = setTimeout(() => {
+        console.log("Spúšťam oneskorené načítavanie notifikácií");
+        fetchNotifications();
+      }, MIN_FETCH_INTERVAL - timeSinceLastFetch);
+      
+      return;
+    }
 
     try {
+      isLoadingRef.current = true;
       setLoading(true);
+      
       const remindersRef = collection(db, 'reminders');
       const q = query(
         remindersRef,
@@ -68,9 +107,11 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       const count = snapshot.docs.filter(doc => !doc.data().sent).length;
 
       setUnreadCount(count);
+      lastFetchTimeRef.current = Date.now();
     } catch (error) {
       console.error("Chyba pri načítavaní počtu notifikácií:", error);
     } finally {
+      isLoadingRef.current = false;
       setLoading(false);
     }
   }, [userData?.companyID]);
@@ -80,8 +121,21 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!userData?.companyID) {
       return [];
     }
+    
+    // Ak už prebieha načítavanie, počkáme kým sa dokončí
+    if (isLoadingRef.current) {
+      console.log("Čakám na dokončenie prebiehajúceho načítavania...");
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (isLoadingRef.current) {
+        console.log("Stále prebieha načítavanie, vraciam prázdny zoznam");
+        return [];
+      }
+    }
 
     try {
+      isLoadingRef.current = true;
+      
       const remindersRef = collection(db, 'reminders');
       
       // Použijeme len where filter bez orderBy, aby sme sa vyhli potrebe indexu
@@ -91,10 +145,8 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       
       const allSnapshot = await getDocs(basicQuery);
-      console.log(`Celkový počet notifikácií v systéme: ${allSnapshot.size}`);
-      
+      // Znížime úroveň logovania pre lepší výkon
       if (allSnapshot.empty) {
-        console.log("Nenašli sa žiadne notifikácie pre tento companyID");
         return [];
       }
       
@@ -103,20 +155,24 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
         const data = doc.data();
         return {
           id: doc.id,
-          ...data
+          ...data,
+          // Zabezpečíme, že všetky základné polia existujú
+          type: data.type || 'business',
+          reminderTime: data.reminderTime || null,
+          reminderDateTime: data.reminderDateTime || null,
+          sent: data.sent || false,
+          shown: data.shown || false,
+          createdAt: data.createdAt || new Date(),
+          orderNumber: data.orderNumber || 'Neznáme číslo',
+          companyName: data.companyName || 'Neznáma spoločnosť',
+          address: data.address || 'Neuvedená adresa',
+          reminderNote: data.reminderNote || ''
         };
       });
       
-      console.log(`Spracovaných ${allNotifications.length} notifikácií`);
-      
       // Zoradíme notifikácie podľa času pripomienky (novšie najprv)
+      // Odstránime nadbytočné logovania pre lepší výkon
       const sortedNotifications = [...allNotifications].sort((a, b) => {
-        // Pre ladenie vypíšeme dáta
-        console.log("Porovnávam:", { 
-          a: { id: a.id, time: a.reminderDateTime || a.reminderTime || a.createdAt },
-          b: { id: b.id, time: b.reminderDateTime || b.reminderTime || b.createdAt }
-        });
-      
         // Použijeme reminderDateTime alebo reminderTime alebo createdAt
         const timeA = a.reminderDateTime || a.reminderTime || a.createdAt;
         const timeB = b.reminderDateTime || b.reminderTime || b.createdAt;
@@ -145,11 +201,6 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
             dateB = new Date(timeB as any);
           }
           
-          console.log("Konvertované dátumy:", { 
-            a: dateA.toString(), 
-            b: dateB.toString() 
-          });
-          
           return dateB.getTime() - dateA.getTime();
         } catch (error) {
           console.error("Chyba pri konverzii dátumov:", error);
@@ -157,13 +208,14 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       });
       
-      console.log("Zoradených notifikácií:", sortedNotifications.length);
-      
+      lastFetchTimeRef.current = Date.now();
       // Vrátime prvých 'count' notifikácií
       return sortedNotifications.slice(0, count);
     } catch (error) {
       console.error("Chyba pri načítavaní najnovších notifikácií:", error);
       return [];
+    } finally {
+      isLoadingRef.current = false;
     }
   };
 
@@ -237,13 +289,27 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => unsubscribe();
   }, [userData?.companyID]);
 
+  // Synchronizácia stavu notifikácií medzi popupom a stránkou
+  const syncNotifications = async () => {
+    // Ignorujeme príliš časté volania synchronizácie
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < MIN_FETCH_INTERVAL) {
+      console.log("Preskakujem syncNotifications - príliš krátky interval od posledného volania");
+      return;
+    }
+    
+    await fetchNotifications();
+    setLastRefreshTime(new Date());
+  };
+
   const value = {
     unreadCount,
     fetchNotifications,
     markAsRead,
     markAllAsRead,
     loading,
-    getLatestNotifications
+    getLatestNotifications,
+    syncNotifications
   };
 
   return (

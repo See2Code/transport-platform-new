@@ -187,7 +187,7 @@ const NotificationActions = styled(Box)({
 const Notifications = () => {
   const { isDarkMode } = useThemeMode();
   const { userData } = useAuth();
-  const { unreadCount, markAsRead, markAllAsRead, fetchNotifications, getLatestNotifications } = useNotificationsContext();
+  const { unreadCount, markAsRead, markAllAsRead, fetchNotifications, getLatestNotifications, syncNotifications } = useNotificationsContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -204,30 +204,28 @@ const Notifications = () => {
     try {
       setLoading(true);
       
-      // Použijeme rovnakú funkciu ako v malom popoveri, ale bez limitu
-      console.log("Začínam načítavanie všetkých notifikácií pomocou getLatestNotifications");
-      const rawNotificationsData = await getLatestNotifications(100); // Načítame až 100 notifikácií
-      console.log(`Načítaných ${rawNotificationsData.length} notifikácií pre plnú stránku`);
+      // Použijeme len syncNotifications, ktorá už má ochranu proti duplicitným volaniam
+      await syncNotifications();
       
-      // Konvertujeme na Notification typ 
-      const notificationsData: Notification[] = rawNotificationsData.map(data => ({
-        id: data.id,
-        type: data.type || 'business', // zabezpečí, že type nikdy nebude undefined
-        reminderTime: data.reminderTime || null,
-        reminderDateTime: data.reminderDateTime || null,
-        orderNumber: data.orderNumber || 'Neznáme číslo',
-        companyName: data.companyName || 'Neznáma spoločnosť',
-        address: data.address || 'Neuvedená adresa',
-        sent: data.sent || false,
-        shown: data.shown || false,
-        createdAt: data.createdAt || new Date(),
-        userEmail: data.userEmail,
-        transportId: data.transportId,
-        businessCaseId: data.businessCaseId,
-        reminderNote: data.reminderNote || ''
-      }));
+      // Synchronizácia už obsahuje načítavanie dát, takže teraz priamo získame najnovšie notifikácie
+      // bez synchronizácie, aby sme zabránili duplicitným volaniam
+      const notificationsData = await getLatestNotifications(100);
       
-      setNotifications(notificationsData);
+      // Aktualizujeme stav len ak sú dáta rozdielne, aby sme predišli zbytočnému prekresľovaniu
+      setNotifications(prev => {
+        // Porovnáme IDs načítaných notifikácií s existujúcimi
+        const currentIds = new Set(prev.map(n => n.id));
+        const newIds = new Set(notificationsData.map(n => n.id));
+        
+        // Porovnáme počet a identifikátory notifikácií
+        const isDifferent = 
+          prev.length !== notificationsData.length || 
+          notificationsData.some(n => !currentIds.has(n.id)) || 
+          prev.some(n => !newIds.has(n.id));
+        
+        // Vrátime nové dáta len ak sa líšia, inak ponecháme existujúci stav
+        return isDifferent ? (notificationsData as Notification[]) : prev;
+      });
     } catch (error) {
       console.error("Chyba pri načítavaní notifikácií:", error);
       setSnackbar({
@@ -238,26 +236,38 @@ const Notifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [userData?.companyID, getLatestNotifications]);
+  }, [userData?.companyID, getLatestNotifications, syncNotifications]);
 
   // Načítanie dát pri mountovaní komponentu
   useEffect(() => {
-    loadNotifications();
+    let isMounted = true;
+    
+    // Použijeme RAF pre plynulejšie načítanie a zabránenie preblikávania UI
+    requestAnimationFrame(() => {
+      if (isMounted) {
+        loadNotifications();
+      }
+    });
+    
+    return () => {
+      isMounted = false;
+    };
   }, [loadNotifications]);
 
   // Označenie notifikácie ako prečítanej
   const handleMarkAsRead = async (notificationId: string) => {
+    // Ako optimalizáciu, najprv aktualizujeme lokálny stav pre okamžitú odozvu
+    // ešte predtým, než začneme komunikovať so serverom
+    setNotifications(prevNotifications => 
+      prevNotifications.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, sent: true, shown: true } 
+          : notification
+      )
+    );
+    
     try {
       await markAsRead(notificationId);
-      
-      // Aktualizácia lokálneho stavu - označíme notifikáciu ako prečítanú
-      setNotifications(prevNotifications => 
-        prevNotifications.map(notification => 
-          notification.id === notificationId 
-            ? { ...notification, sent: true, shown: true } 
-            : notification
-        )
-      );
       
       setSnackbar({
         open: true,
@@ -266,6 +276,16 @@ const Notifications = () => {
       });
     } catch (error) {
       console.error("Chyba pri označovaní notifikácie:", error);
+      
+      // Pri chybe vrátime notifikáciu späť do neprečítaného stavu
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notification => 
+          notification.id === notificationId 
+            ? { ...notification, sent: false, shown: false } 
+            : notification
+        )
+      );
+      
       setSnackbar({
         open: true,
         message: "Nastala chyba pri označovaní notifikácie",
@@ -278,17 +298,18 @@ const Notifications = () => {
   const handleMarkAllAsRead = async () => {
     if (notifications.length === 0) return;
     
+    // Najprv aktualizujeme lokálny stav pre okamžitú odozvu
+    const originalNotifications = [...notifications];
+    setNotifications(prevNotifications => 
+      prevNotifications.map(notification => ({ 
+        ...notification, 
+        sent: true, 
+        shown: true 
+      }))
+    );
+    
     try {
       await markAllAsRead();
-      
-      // Aktualizácia lokálneho stavu - označíme všetky notifikácie ako prečítané
-      setNotifications(prevNotifications => 
-        prevNotifications.map(notification => ({ 
-          ...notification, 
-          sent: true, 
-          shown: true 
-        }))
-      );
       
       setSnackbar({
         open: true,
@@ -297,6 +318,10 @@ const Notifications = () => {
       });
     } catch (error) {
       console.error("Chyba pri označovaní všetkých notifikácií:", error);
+      
+      // Pri chybe vrátime stav späť
+      setNotifications(originalNotifications);
+      
       setSnackbar({
         open: true,
         message: "Nastala chyba pri označovaní notifikácií",
@@ -501,6 +526,7 @@ const Notifications = () => {
             variant="outlined"
             startIcon={<MarkEmailReadIcon />}
             onClick={handleMarkAllAsRead}
+            disabled={loading}
             sx={{ 
               borderRadius: '8px', 
               textTransform: 'none',
@@ -514,7 +540,7 @@ const Notifications = () => {
         )}
       </PageHeader>
 
-      {loading ? (
+      {loading && notifications.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
         </Box>
@@ -524,6 +550,28 @@ const Notifications = () => {
         </Alert>
       ) : (
         <>
+          {/* Zobrazíme diskrétny indikátor načítavania, keď sa aktualizujú existujúce dáta */}
+          {loading && notifications.length > 0 && (
+            <Box sx={{ 
+              position: 'fixed', 
+              top: '80px', 
+              right: '20px', 
+              zIndex: 999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+            }}>
+              <CircularProgress size={16} thickness={5} />
+              <Typography variant="caption" sx={{ color: isDarkMode ? 'white' : 'black' }}>
+                Aktualizujem...
+              </Typography>
+            </Box>
+          )}
+          
           {/* Mobilné zobrazenie - zobrazíme len neprečítané alebo všetky, ak nie sú žiadne neprečítané */}
           <Box sx={{ display: { xs: 'block', md: 'none' } }}>
             {notifications
