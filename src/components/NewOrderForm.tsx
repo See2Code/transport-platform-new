@@ -158,8 +158,9 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
         const value = e.target.value;
          setFormData(prev => {
             const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
-            if (places[placeIndex]?.goods?.[goodsIndex]) {
-                places[placeIndex].goods[goodsIndex] = { ...places[placeIndex].goods[goodsIndex], [field]: value };
+            const place = places[placeIndex];
+            if (place?.goods?.[goodsIndex]) {
+                 place.goods[goodsIndex] = { ...place.goods[goodsIndex], [field]: value };
             }
             return type === 'loading' ? { ...prev, loadingPlaces: places } : { ...prev, unloadingPlaces: places };
         });
@@ -195,8 +196,9 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
      const removeGoodsItem = (type: 'loading' | 'unloading', placeIndex: number, goodsIndex: number) => {
         setFormData(prev => {
             const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
-            if (places[placeIndex]?.goods && places[placeIndex].goods.length > 1) { // Prevent removing the last goods item
-                 places[placeIndex].goods = places[placeIndex].goods.filter((_, i) => i !== goodsIndex);
+            const place = places[placeIndex];
+            if (place?.goods && place.goods.length > 1) {
+                 place.goods = place.goods.filter((_, i) => i !== goodsIndex);
             }
              return type === 'loading' ? { ...prev, loadingPlaces: places } : { ...prev, unloadingPlaces: places };
         });
