@@ -937,13 +937,13 @@ const Navbar = () => {
                       }
                     }}
                   >
-                    <ChatIcon sx={{ fontSize: {xs: '1.5rem', sm: '1.6rem', md: '1.8rem'} }} />
+                    <ChatIcon sx={{ fontSize: '1.5rem' }} />
                   </Badge>
                 </IconButton>
                 <IconButton
                   onClick={handleNotificationClick}
                   sx={{ 
-                    padding: {xs: '4px', sm: '6px', md: '8px'}, 
+                    padding: {xs: '8px', sm: '10px'}, 
                     color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
                     '&:hover': {
                       color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
@@ -958,11 +958,13 @@ const Navbar = () => {
                       '& .MuiBadge-badge': {
                         fontSize: '0.6rem',
                         height: '16px',
-                        minWidth: '16px'
+                        minWidth: '16px',
+                        top: 4,
+                        right: 4
                       }
                     }}
                   >
-                    <NotificationsIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
+                    <NotificationsIcon sx={{ fontSize: '1.5rem' }} />
                   </Badge>
                 </IconButton>
               </Box>
@@ -1092,13 +1094,13 @@ const Navbar = () => {
                          }
                        }}
                      >
-                       <ChatIcon sx={{ fontSize: {xs: '1.5rem', sm: '1.6rem', md: '1.8rem'} }} />
+                       <ChatIcon sx={{ fontSize: '1.5rem' }} />
                      </Badge>
                    </IconButton>
                    <IconButton
                      onClick={handleNotificationClick}
                      sx={{ 
-                         padding: {xs: '4px', sm: '6px', md: '8px'}, 
+                         padding: {xs: '8px', sm: '10px'}, 
                          color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
                         '&:hover': {
                             color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
@@ -1113,18 +1115,20 @@ const Navbar = () => {
                           '& .MuiBadge-badge': {
                             fontSize: '0.6rem',
                             height: '16px',
-                            minWidth: '16px'
+                            minWidth: '16px',
+                            top: 4,
+                            right: 4
                           }
                         }}
                      >
-                       <NotificationsIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
+                       <NotificationsIcon sx={{ fontSize: '1.5rem' }} />
                      </Badge>
                    </IconButton>
                    
                    <IconButton
                     onClick={toggleTheme}
                     sx={{ 
-                         padding: {xs: '4px', sm: '6px', md: '8px'}, 
+                         padding: {xs: '8px', sm: '10px'}, 
                          color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
                         '&:hover': {
                             color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
@@ -1135,14 +1139,14 @@ const Navbar = () => {
                     }}
                   >
                     {isDarkMode ? 
-                      <Brightness7Icon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} /> :
-                      <Brightness4Icon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
+                      <Brightness7Icon sx={{ fontSize: '1.5rem' }} /> :
+                      <Brightness4Icon sx={{ fontSize: '1.5rem' }} />
                     }
                   </IconButton>
                    <IconButton
                     onClick={handleLogoutClick}
                     sx={{ 
-                        padding: {xs: '4px', sm: '6px', md: '8px'}, 
+                        padding: {xs: '8px', sm: '10px'}, 
                         color: isDarkMode ? '#f87171' : '#ef4444',
                         '&:hover': {
                             backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
@@ -1150,7 +1154,7 @@ const Navbar = () => {
                         },
                     }}
                   >
-                    <LogoutIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
+                    <LogoutIcon sx={{ fontSize: '1.5rem' }} />
                   </IconButton>
                 </Box>
               </Box>

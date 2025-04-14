@@ -35,7 +35,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { sk } from 'date-fns/locale';
-import { collection, query, where, getDocs, addDoc, doc as firestoreDoc, updateDoc, Timestamp, orderBy, deleteDoc, onSnapshot, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc as firestoreDoc, updateDoc, Timestamp, orderBy, deleteDoc, onSnapshot, writeBatch, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
@@ -51,6 +51,7 @@ import TransportMap from './common/TransportMap';
 import PersonIcon from '@mui/icons-material/Person';
 import CloseIcon from '@mui/icons-material/Close';
 import { useThemeMode } from '../contexts/ThemeContext';
+import { v4 as uuidv4 } from 'uuid';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -969,83 +970,60 @@ const TrackedTransports: React.FC = () => {
   };
 
   const handleAddOrUpdateTransport = async () => {
-    console.log("handleAddOrUpdateTransport function CALLED!");
+    setIsSaving(true);
     setValidationError(null);
-
-    // Validácia
-    if (!transportFormData.orderNumber || !transportFormData.loadingAddress || !transportFormData.loadingDateTime || !transportFormData.unloadingAddress || !transportFormData.unloadingDateTime) {
-        setValidationError("Vyplňte všetky povinné polia (označené *).");
-        return;
-    }
-    if (transportFormData.loadingReminder === undefined || transportFormData.unloadingReminder === undefined) {
-      setValidationError("Zadajte platné čísla pre pripomienky.");
+    
+    // Validácia formulára
+    if (!transportFormData.orderNumber || !transportFormData.loadingAddress || !transportFormData.unloadingAddress || 
+        !transportFormData.loadingDateTime || !transportFormData.unloadingDateTime) {
+      setValidationError("Vyplňte všetky povinné polia");
+      setIsSaving(false);
       return;
     }
-
-    if (!userData?.companyID || !userData.uid) {
-      setValidationError("Chyba: Nepodarilo sa načítať informácie o používateľovi alebo firme.");
-      return;
-    }
-
-    setIsSaving(true); 
     
     try {
-      const timestamp = Timestamp.now();
+      if (!userData) {
+        throw new Error("Používateľ nie je prihlásený");
+      }
       
-      const dataToSave = {
+      const transportId = editingTransport?.id || uuidv4();
+      
+      // Príprava dát pre uloženie
+      const dataToSave: any = {
         orderNumber: transportFormData.orderNumber,
         loadingAddress: transportFormData.loadingAddress,
-        loadingDateTime: Timestamp.fromDate(convertToDate(transportFormData.loadingDateTime)!),
+        loadingDateTime: convertToDate(transportFormData.loadingDateTime),
         loadingReminder: transportFormData.loadingReminder,
         unloadingAddress: transportFormData.unloadingAddress,
-        unloadingDateTime: Timestamp.fromDate(convertToDate(transportFormData.unloadingDateTime)!),
+        unloadingDateTime: convertToDate(transportFormData.unloadingDateTime),
         unloadingReminder: transportFormData.unloadingReminder,
-        status: 'active',
-        isDelayed: false,
+        status: editingTransport?.status || 'V príprave',
         companyID: userData.companyID,
-        ...(editingTransport 
-            ? { 
-                updatedAt: timestamp,
-                updatedBy: {
-                  id: userData.uid,
-                  firstName: userData.firstName || '',
-                  lastName: userData.lastName || ''
-                }
-              } 
-            : { 
-                createdAt: timestamp,
-                createdBy: {
-                  id: userData.uid,
-                  firstName: userData.firstName || '',
-                  lastName: userData.lastName || ''
-                }
-              })
+        userId: userData.uid, // Pridané userId pre notifikácie
+        userEmail: userData.email, // Pridané userEmail pre notifikácie
+        companyName: userData.companyName || '', // Pridané companyName pre notifikácie
       };
-
-      console.log("Data being saved to Firestore:", dataToSave);
-
-      let transportId: string;
-
+      
+      if (!editingTransport) {
+        // Nová preprava - pridávame ďalšie údaje
+        dataToSave.createdAt = serverTimestamp();
+        dataToSave.createdBy = {
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || ''
+        };
+      }
+      
+      const transportRef = firestoreDoc(db, 'transports', transportId);
+      
+      console.log("Ukladám prepravu:", dataToSave);
+      
+      // Uloženie do Firestore
       if (editingTransport) {
-        transportId = editingTransport.id;
-        const transportRef = firestoreDoc(db, 'transports', transportId);
         await updateDoc(transportRef, dataToSave);
-        
-        // Vymazanie existujúcich pripomienok
-        const existingRemindersQuery = query(
-          collection(db, 'reminders'),
-          where('transportId', '==', transportId)
-        );
-        const existingRemindersSnapshot = await getDocs(existingRemindersQuery);
-        const deletePromises = existingRemindersSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(deletePromises);
-        
-        setSnackbar({ open: true, message: 'Preprava úspešne aktualizovaná!', severity: 'success' });
+        setSnackbar({ open: true, message: 'Preprava bola úspešne aktualizovaná', severity: 'success' });
       } else {
-        const transportsCollection = collection(db, 'transports');
-        const docRef = await addDoc(transportsCollection, dataToSave);
-        transportId = docRef.id;
-        setSnackbar({ open: true, message: 'Preprava úspešne pridaná!', severity: 'success' });
+        await setDoc(transportRef, dataToSave);
+        setSnackbar({ open: true, message: 'Preprava bola úspešne vytvorená', severity: 'success' });
       }
       
       // Vytvorenie pripomienok
@@ -1068,7 +1046,13 @@ const TrackedTransports: React.FC = () => {
         transportId: transportId,
         reminderNote: `Pripomienka nakládky pre objednávku ${dataToSave.orderNumber} dňa ${formattedLoadingTime} na adrese ${dataToSave.loadingAddress}`,
         companyID: userData?.companyID,
-        companyName: userData?.companyName || ''
+        companyName: userData?.companyName || '',
+        transportDetails: {
+          loadingAddress: dataToSave.loadingAddress,
+          loadingDateTime: Timestamp.fromDate(convertToDate(dataToSave.loadingDateTime)!),
+          unloadingAddress: dataToSave.unloadingAddress,
+          unloadingDateTime: Timestamp.fromDate(convertToDate(dataToSave.unloadingDateTime)!)
+        }
       };
       
       // Pripomienka pre vykládku
@@ -1088,7 +1072,13 @@ const TrackedTransports: React.FC = () => {
         transportId: transportId,
         reminderNote: `Pripomienka vykládky pre objednávku ${dataToSave.orderNumber} dňa ${formattedUnloadingTime} na adrese ${dataToSave.unloadingAddress}`,
         companyID: userData?.companyID,
-        companyName: userData?.companyName || ''
+        companyName: userData?.companyName || '',
+        transportDetails: {
+          loadingAddress: dataToSave.loadingAddress,
+          loadingDateTime: Timestamp.fromDate(convertToDate(dataToSave.loadingDateTime)!),
+          unloadingAddress: dataToSave.unloadingAddress,
+          unloadingDateTime: Timestamp.fromDate(convertToDate(dataToSave.unloadingDateTime)!)
+        }
       };
       
       // Uloženie pripomienok

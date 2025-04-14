@@ -5,6 +5,27 @@ const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const db = admin.firestore();
 const REGION = 'europe-west1';
+// Pomocná funkcia na odoslanie notifikácie o novej správe
+async function sendChatNotification(recipientId, senderId, senderName, messageText, conversationId) {
+    try {
+        // Vytvoríme novú notifikáciu v Firestore
+        await db.collection('notifications').add({
+            recipientId,
+            senderId,
+            type: 'new_message',
+            message: `${senderName}: ${messageText.substring(0, 100)}${messageText.length > 100 ? '...' : ''}`,
+            read: false,
+            conversationId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`Notifikácia o novej správe bola vytvorená pre používateľa ${recipientId}`);
+        return true;
+    }
+    catch (error) {
+        console.error('Chyba pri odosielaní notifikácie o novej správe:', error);
+        return false;
+    }
+}
 // Funkcia na vytvorenie novej konverzácie
 exports.createConversation = functions.region(REGION).https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -121,6 +142,12 @@ exports.sendMessage = functions.region(REGION).https.onCall(async (data, context
             updatedAt: timestamp,
             unreadCount: admin.firestore.FieldValue.increment(1),
         });
+        // Získame príjemcu (používateľa, ktorý nie je odosielateľom)
+        const recipientId = conversationData.participants.find((id) => id !== senderId);
+        // Odošleme notifikáciu príjemcovi
+        if (recipientId) {
+            await sendChatNotification(recipientId, senderId, senderName, text.trim(), conversationId);
+        }
         return { messageId: messageRef.id };
     }
     catch (error) {
