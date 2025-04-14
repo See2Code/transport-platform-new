@@ -182,7 +182,34 @@ interface ChatDrawerProps {
   onClose: () => void;
 }
 
-const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
+const ChatDrawer = styled(Drawer)(({ theme }) => ({
+  width: DRAWER_WIDTH,
+  flexShrink: 0,
+  '& .MuiDrawer-paper': {
+    width: DRAWER_WIDTH,
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+    position: 'fixed',
+    top: '64px', // výška navbaru
+    height: 'calc(100% - 64px)',
+    borderLeft: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+    zIndex: theme.zIndex.drawer,
+    boxSizing: 'border-box',
+    overflow: 'hidden'
+  },
+  '&.MuiDrawer-root': {
+    position: 'fixed',
+    right: 0,
+    top: '64px',
+    height: 'calc(100% - 64px)',
+    width: DRAWER_WIDTH,
+    pointerEvents: 'none',
+    '& > *': {
+      pointerEvents: 'auto'
+    }
+  }
+}));
+
+const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
   const theme = useTheme();
   const { isDarkMode } = useThemeMode();
   const { userData } = useAuth();
@@ -281,22 +308,11 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
   };
 
   return (
-    <Drawer
+    <ChatDrawer
       anchor="right"
       open={open}
       onClose={onClose}
       variant="persistent"
-      sx={{
-        width: DRAWER_WIDTH,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: DRAWER_WIDTH,
-          boxSizing: 'border-box',
-          backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(10px)',
-          borderLeft: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-        },
-      }}
     >
       <ChatContainer>
         {currentConversation ? (
@@ -589,8 +605,8 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
           </>
         )}
       </ChatContainer>
-    </Drawer>
+    </ChatDrawer>
   );
 };
 
-export default ChatDrawer; 
+export default ChatDrawerComponent; 

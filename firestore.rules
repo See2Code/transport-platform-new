@@ -23,6 +23,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isUserInCompany(companyID) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyID == companyID;
+    }
+
     // Pravidlá pre používateľov
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -113,6 +119,25 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isInSameCompany(request.resource.data.companyId);
       allow update: if isAuthenticated() && isInSameCompany(resource.data.companyId);
       allow delete: if isAuthenticated() && isInSameCompany(resource.data.companyId);
+    }
+
+    // Pravidlá pre notifikácie
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && 
+        isUserInCompany(resource.data.companyID);
+      
+      allow write: if isAuthenticated() && 
+        isUserInCompany(resource.data.companyID) &&
+        request.resource.data.companyID == resource.data.companyID;
+      
+      allow create: if isAuthenticated() && 
+        isUserInCompany(request.resource.data.companyID);
+      
+      allow update: if isAuthenticated() && 
+        isUserInCompany(resource.data.companyID) &&
+        request.resource.data.companyID == resource.data.companyID &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['read', 'lastReadAt']);
     }
 
     // Pravidlá pre ostatné kolekcie

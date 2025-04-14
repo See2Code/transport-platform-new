@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
@@ -8,94 +8,25 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
-  Divider,
-  Snackbar,
-  Alert
+  Divider
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
   Chat as ChatIcon,
   AccessTime as AccessTimeIcon,
   Business as BusinessIcon,
+  Delete as DeleteIcon,
   Refresh as RefreshIcon,
   MarkEmailRead as MarkEmailReadIcon
 } from '@mui/icons-material';
 import { useNotifications, NotificationData } from '../contexts/NotificationsContext';
 import { useThemeMode } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error';
-}
-
 const Notifications = () => {
+  const { notifications, loading, markAsRead, markAllAsRead, refreshNotifications } = useNotifications();
   const { isDarkMode } = useThemeMode();
-  const { userData } = useAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, refreshNotifications, loading } = useNotifications();
-  const [snackbar, setSnackbar] = useState<SnackbarState>({ 
-    open: false, 
-    message: '', 
-    severity: 'success' 
-  });
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await markAsRead(notificationId);
-      setSnackbar({
-        open: true,
-        message: 'Notifikácia bola označená ako prečítaná',
-        severity: 'success'
-      });
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Nepodarilo sa označiť notifikáciu ako prečítanú',
-        severity: 'error'
-      });
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllAsRead();
-      setSnackbar({
-        open: true,
-        message: 'Všetky notifikácie boli označené ako prečítané',
-        severity: 'success'
-      });
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Nepodarilo sa označiť všetky notifikácie ako prečítané',
-        severity: 'error'
-      });
-    }
-  };
-
-  const handleRefresh = async () => {
-    try {
-      await refreshNotifications();
-      setSnackbar({
-        open: true,
-        message: 'Notifikácie boli obnovené',
-        severity: 'success'
-      });
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Nepodarilo sa obnoviť notifikácie',
-        severity: 'error'
-      });
-    }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -143,13 +74,13 @@ const Notifications = () => {
           <Button
             variant="outlined"
             startIcon={<MarkEmailReadIcon />}
-            onClick={handleMarkAllAsRead}
+            onClick={() => markAllAsRead()}
             disabled={loading || notifications.filter(n => !n.read).length === 0}
           >
             Označiť všetky ako prečítané
           </Button>
           <IconButton 
-            onClick={handleRefresh}
+            onClick={() => refreshNotifications()}
             disabled={loading}
           >
             <RefreshIcon />
@@ -214,7 +145,7 @@ const Notifications = () => {
                     <Tooltip title="Označiť ako prečítané">
                       <IconButton 
                         size="small" 
-                        onClick={() => handleMarkAsRead(notification.id)}
+                        onClick={() => markAsRead(notification.id)}
                       >
                         <MarkEmailReadIcon fontSize="small" />
                       </IconButton>
@@ -259,22 +190,6 @@ const Notifications = () => {
           ))}
         </Box>
       )}
-
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

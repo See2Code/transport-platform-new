@@ -1,11 +1,29 @@
 {
   "indexes": [
     {
-      "collectionGroup": "reminders",
+      "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
         {
           "fieldPath": "companyID",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyID",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "read",
           "order": "ASCENDING"
         },
         {

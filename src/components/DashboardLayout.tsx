@@ -26,6 +26,7 @@ const MainContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   minHeight: 'calc(100vh - 64px)',
   overflow: 'auto',
   position: 'relative',
+  width: '100%',
   '&::-webkit-scrollbar': {
     width: '8px',
     height: '8px',
