@@ -1,22 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { Box, List, ListItem, ListItemButton, ListItemText, Typography, Avatar, Divider, Badge } from '@mui/material';
+import { Box, List, ListItem, ListItemButton, ListItemText, Typography, Avatar, Divider } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { chatService } from '../../services/ChatService';
-import { Chat } from '../../types/chat';
-import { formatDistanceToNow } from 'date-fns';
+import { Chat as ChatType } from '../../types/chat';
 import { useAuth } from '../../contexts/AuthContext';
 
+interface Chat extends ChatType {
+  otherParticipantId?: string;
+}
+
 const ChatList: React.FC = () => {
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUser?.uid || !currentUser?.companyID) return;
 
-    const unsubscribe = chatService.getChatsByUserId(currentUser.uid, (chatList: Chat[]) => {
-      const filteredChats = chatList.filter(chat => chat.companyID === currentUser.companyID);
+    const unsubscribe = chatService.getChatsByUserId(currentUser.uid, (chatList: ChatType[]) => {
+      const filteredChats = chatList
+        .filter(chat => chat.companyID === currentUser.companyID)
+        .map(chat => ({
+          ...chat,
+          otherParticipantId: getOtherParticipantId(chat)
+        }));
       setChats(filteredChats);
       setLoading(false);
     });
@@ -24,36 +32,26 @@ const ChatList: React.FC = () => {
     return () => unsubscribe();
   }, [currentUser]);
 
-  const handleChatClick = (chatId: string) => {
-    navigate(`/chats/${chatId}`);
+  const getOtherParticipantId = (chat: ChatType) => {
+    return chat.participants.find(id => id !== currentUser?.uid) || '';
   };
 
-  const getOtherParticipantId = (chat: Chat) => {
-    return chat.participants.find(id => id !== currentUser?.uid) || '';
+  const handleChatClick = (chatId: string) => {
+    navigate(`/chat/${chatId}`);
   };
 
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-        <Typography>Načítavanie konverzácií...</Typography>
-      </Box>
-    );
-  }
-
-  if (chats.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-        <Typography>Nemáte žiadne konverzácie</Typography>
+        <Typography>Načítavam...</Typography>
       </Box>
     );
   }
 
   return (
-    <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+    <List>
       {chats.map((chat, index) => {
-        const otherParticipantId = getOtherParticipantId(chat);
-        const lastMessageTime = chat.lastMessageTimestamp?.toDate ? 
-          formatDistanceToNow(chat.lastMessageTimestamp.toDate(), { addSuffix: true }) : '';
+        const otherParticipantId = chat.otherParticipantId || '';
 
         return (
           <React.Fragment key={chat.id}>
@@ -62,28 +60,15 @@ const ChatList: React.FC = () => {
                 <Avatar sx={{ mr: 2 }}>
                   {otherParticipantId.substring(0, 2).toUpperCase()}
                 </Avatar>
-                <ListItemText 
+                <ListItemText
                   primary={
                     <Typography component="span" variant="body1">
                       {otherParticipantId}
                     </Typography>
                   }
                   secondary={
-                    <Typography
-                      component="span"
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        width: '100%'
-                      }}
-                    >
-                      <span style={{ maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {chat.lastMessage}
-                      </span>
-                      <span>{lastMessageTime}</span>
+                    <Typography component="span" variant="body2" color="text.secondary">
+                      {chat.lastMessage || 'Začnite konverzáciu...'}
                     </Typography>
                   }
                 />

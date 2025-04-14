@@ -29,9 +29,9 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
         dark: colors.warning.dark,
       },
       info: {
-        main: colors.info.main,
-        light: colors.info.light,
-        dark: colors.info.dark,
+        main: '#ff9f43',
+        light: '#ffbe76',
+        dark: '#f7b067',
       },
       success: {
         main: colors.success.main,
@@ -43,8 +43,8 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
         paper: isDarkMode ? colors.primary.main : '#ffffff',
       },
       text: {
-        primary: isDarkMode ? colors.text.primaryDark : colors.text.primary,
-        secondary: isDarkMode ? colors.text.secondaryDark : colors.text.secondary,
+        primary: isDarkMode ? '#ffffff' : '#000000',
+        secondary: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
         disabled: isDarkMode ? colors.text.disabledDark : colors.text.disabled,
       },
       divider: isDarkMode ? colors.dividerDark : 'rgba(0, 0, 0, 0.15)',
@@ -367,6 +367,26 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
               backgroundColor: 'rgba(0, 0, 0, 0.5) !important',
               backdropFilter: 'none !important'
             }
+          }
+        }
+      },
+      MuiTypography: {
+        styleOverrides: {
+          root: {
+            color: isDarkMode ? '#ffffff' : '#000000'
+          }
+        },
+        defaultProps: {
+          color: 'inherit'
+        }
+      },
+      MuiListItemText: {
+        styleOverrides: {
+          primary: {
+            color: isDarkMode ? '#ffffff' : '#000000'
+          },
+          secondary: {
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'
           }
         }
       },

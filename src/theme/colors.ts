@@ -46,9 +46,9 @@ export const colors = {
     dark: '#388e3c'
   },
   info: {
-    main: '#2196f3',
-    light: '#42a5f5',
-    dark: '#1976d2'
+    main: '#ff9f43',
+    light: '#ffbe76',
+    dark: '#f7b067'
   },
   divider: 'rgba(0, 0, 0, 0.12)',
   dividerDark: 'rgba(255, 255, 255, 0.12)'

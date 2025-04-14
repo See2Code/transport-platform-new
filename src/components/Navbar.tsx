@@ -1142,134 +1142,231 @@ const Navbar = () => {
               
               <Box sx={{
                 display: 'flex',
+                gap: { lg: 0.5, xl: 1 },
                 alignItems: 'center',
-                marginLeft: 'auto',
                 height: '40px',
-                gap: { lg: 0.5, xl: 1 }
+                flexShrink: 1,
+                overflow: 'hidden',
+                minWidth: 0 
               }}>
-                <Box sx={{
-                  display: 'flex',
-                  gap: { lg: 0.5, xl: 1 },
-                  alignItems: 'center',
-                  height: '100%',
-                  flexGrow: 1,
-                  flexShrink: 1,
-                  overflow: 'hidden',
-                  minWidth: 0
-                }}>
-                  {menuItems.map((item) => (
-                    <NavListItem key={item.text} disablePadding isDarkMode={isDarkMode}>
-                      <ListItemButton
-                        component={Link}
-                        to={item.path ?? '#'}
-                        selected={location.pathname === item.path}
-                        onClick={item.onClick}
-                        sx={{
-                          borderRadius: '6px',
-                          padding: {lg: '6px 8px', xl: '8px 12px'},
-                          margin: '0 1px',
-                          minWidth: 'auto',
-                          color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
-                          '&:hover': {
-                            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                            color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
-                          },
-                          '&.Mui-selected': {
-                            backgroundColor: isDarkMode 
-                              ? 'rgba(99, 102, 241, 0.15)' 
-                              : 'rgba(99, 102, 241, 0.1)',
+                {menuItems.map((item) => (
+                  <NavListItem key={item.text} disablePadding isDarkMode={isDarkMode}>
+                    <ListItemButton
+                      component={Link}
+                      to={item.path ?? '#'}
+                      selected={location.pathname === item.path}
+                      onClick={item.onClick}
+                      sx={{
+                        borderRadius: '6px',
+                        padding: {lg: '6px 8px', xl: '8px 12px'},
+                        margin: '0 1px',
+                        minWidth: 'auto',
+                        color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                        '&:hover': {
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                          color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                        },
+                        '&.Mui-selected': {
+                          backgroundColor: isDarkMode 
+                            ? 'rgba(99, 102, 241, 0.15)' 
+                            : 'rgba(99, 102, 241, 0.1)',
+                          color: colors.primary.main,
+                          '& .MuiSvgIcon-root': {
                             color: colors.primary.main,
-                            '& .MuiSvgIcon-root': {
-                              color: colors.primary.main,
-                            }
                           }
-                        }}
-                      >
-                        <ListItemIconStyled sx={{ minWidth: {lg: '16px', xl: '20px'}, mr: {lg: 0.5, xl: 1.5} }}>
-                          {React.cloneElement(item.icon as React.ReactElement, { 
-                            sx: { fontSize: {lg: '1.1rem', xl: '1.3rem'} } 
-                          })}
-                        </ListItemIconStyled>
-                      </ListItemButton>
-                    </NavListItem>
-                  ))}
-                </Box>
-                <Box sx={{
-                  display: 'flex',
-                  gap: { xs: 1, sm: 1.5 },
-                  alignItems: 'center',
-                  flexShrink: 0 
-                }}>
-                  <IconButton
-                    onClick={handleChatToggle}
-                    sx={{
-                      padding: {xs: '8px', sm: '10px'}, 
-                      color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
-                      backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
-                      '&:hover': {
-                        color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
-                        backgroundColor: isDarkMode 
-                          ? 'rgba(99, 102, 241, 0.1)' 
-                          : 'rgba(99, 102, 241, 0.05)',
-                      }
-                    }}
-                  >
-                    <Badge badgeContent={unreadConversationsCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }} >
-                      <ChatIcon sx={{ fontSize: '1.5rem' }} />
-                    </Badge>
-                  </IconButton>
-                  <IconButton
-                    onClick={handleNotificationClick}
-                    sx={{ 
-                      padding: {xs: '8px', sm: '10px'}, 
-                      color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
-                      '&:hover': {
-                        color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
-                        backgroundColor: isDarkMode 
-                          ? 'rgba(99, 102, 241, 0.1)' 
-                          : 'rgba(99, 102, 241, 0.05)',
-                      }
-                    }}
-                  >
-                    <Badge badgeContent={totalUnreadCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }} >
-                      <NotificationsIcon sx={{ fontSize: '1.5rem' }} />
-                    </Badge>
-                  </IconButton>
-                  <IconButton
-                    onClick={toggleTheme}
-                    sx={{ 
-                      padding: {xs: '8px', sm: '10px'}, 
-                      color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
-                      '&:hover': {
-                        color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
-                        backgroundColor: isDarkMode 
-                          ? 'rgba(99, 102, 241, 0.1)' 
-                          : 'rgba(99, 102, 241, 0.05)',
-                      }
-                    }}
-                  >
-                    {isDarkMode ? <Brightness7Icon sx={{ fontSize: '1.5rem' }} /> : <Brightness4Icon sx={{ fontSize: '1.5rem' }} />}
-                  </IconButton>
-                  <IconButton
-                    onClick={handleLogoutClick}
-                    sx={{ 
-                      padding: {xs: '8px', sm: '10px'}, 
-                      color: isDarkMode ? '#f87171' : '#ef4444',
-                      '&:hover': {
-                        backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
-                        color: isDarkMode ? '#ef4444' : '#dc2626'
-                      },
-                    }}
-                  >
-                    <LogoutIcon sx={{ fontSize: '1.5rem' }} />
-                  </IconButton>
-                </Box>
+                        }
+                      }}
+                    >
+                      <ListItemIconStyled sx={{ minWidth: {lg: '16px', xl: '20px'}, mr: {lg: 0.5, xl: 1.5} }}>
+                        {React.cloneElement(item.icon as React.ReactElement, { 
+                          sx: { fontSize: {lg: '1.1rem', xl: '1.3rem'} } 
+                        })}
+                      </ListItemIconStyled>
+                    </ListItemButton>
+                  </NavListItem>
+                ))}
+              </Box>
+
+              <Box sx={{ flexGrow: 1 }} />
+              
+              <Box sx={{
+                display: 'flex',
+                gap: { xs: 1, sm: 1.5 },
+                alignItems: 'center',
+                flexShrink: 0, 
+                paddingRight: chatOpen ? 2 : 0,
+                transition: theme.transitions.create('padding-right', {
+                  easing: theme.transitions.easing.sharp,
+                  duration: theme.transitions.duration.enteringScreen,
+                })
+              }}>
+                <IconButton
+                  onClick={handleChatToggle}
+                  sx={{
+                    padding: {xs: '8px', sm: '10px'}, 
+                    color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
+                    backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
+                    '&:hover': {
+                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      backgroundColor: isDarkMode 
+                        ? 'rgba(99, 102, 241, 0.1)' 
+                        : 'rgba(99, 102, 241, 0.05)',
+                    }
+                  }}
+                >
+                  <Badge badgeContent={unreadConversationsCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }} >
+                    <ChatIcon sx={{ fontSize: '1.5rem' }} />
+                  </Badge>
+                </IconButton>
+                <IconButton
+                  onClick={handleNotificationClick}
+                  sx={{ 
+                    padding: {xs: '8px', sm: '10px'}, 
+                    color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                    '&:hover': {
+                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      backgroundColor: isDarkMode 
+                        ? 'rgba(99, 102, 241, 0.1)' 
+                        : 'rgba(99, 102, 241, 0.05)',
+                    }
+                  }}
+                >
+                  <Badge badgeContent={totalUnreadCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }} >
+                    <NotificationsIcon sx={{ fontSize: '1.5rem' }} />
+                  </Badge>
+                </IconButton>
+                <IconButton
+                  onClick={toggleTheme}
+                  sx={{ 
+                    padding: {xs: '8px', sm: '10px'}, 
+                    color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                    '&:hover': {
+                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      backgroundColor: isDarkMode 
+                        ? 'rgba(99, 102, 241, 0.1)' 
+                        : 'rgba(99, 102, 241, 0.05)',
+                    }
+                  }}
+                >
+                  {isDarkMode ? <Brightness7Icon sx={{ fontSize: '1.5rem' }} /> : <Brightness4Icon sx={{ fontSize: '1.5rem' }} />}
+                </IconButton>
+                <IconButton
+                  onClick={handleLogoutClick}
+                  sx={{ 
+                    padding: {xs: '8px', sm: '10px'}, 
+                    color: isDarkMode ? '#f87171' : '#ef4444',
+                    '&:hover': {
+                      backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+                      color: isDarkMode ? '#ef4444' : '#dc2626'
+                    },
+                  }}
+                >
+                  <LogoutIcon sx={{ fontSize: '1.5rem' }} />
+                </IconButton>
               </Box>
             </>
           )}
         </StyledToolbar>
       </StyledAppBar>
-      {/* ... zvyšok kódu ... */}
+      {/* Mobilné menu drawer */}
+      <MobileDrawer
+        anchor="right"
+        open={mobileMenuOpen}
+        onClose={handleMobileMenuClose}
+        isDarkMode={isDarkMode}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>Menu</Typography>
+            <IconButton onClick={handleMobileMenuClose}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+          <List sx={{ flexGrow: 1 }}>
+            {menuItems.map((item) => (
+              <ListItem disablePadding key={item.text}>
+                <MenuItemWrapper 
+                  onClick={() => handleNavigation(item.path || '/dashboard')} 
+                  isDarkMode={isDarkMode}
+                  selected={location.pathname === item.path}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+                      color: colors.primary.main,
+                      '& .MuiSvgIcon-root': {
+                        color: colors.primary.main,
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: '4px',
+                        backgroundColor: colors.primary.main,
+                        borderRadius: '0 4px 4px 0',
+                      }
+                    }
+                  }}
+                >
+                  <MenuItemIcon>{item.icon}</MenuItemIcon>
+                  <MenuItemContent>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        fontWeight: location.pathname === item.path ? 'bold' : 'normal',
+                        color: location.pathname === item.path ? colors.primary.main : 'inherit'
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
+                    {item.description && (
+                      <Typography variant="caption" color="text.secondary">
+                        {item.description}
+                      </Typography>
+                    )}
+                  </MenuItemContent>
+                </MenuItemWrapper>
+              </ListItem>
+            ))}
+          </List>
+          <Divider sx={{ mt: 2 }} />
+          <BottomActions>
+            <ActionItem 
+              onClick={toggleTheme} 
+              isDarkMode={isDarkMode}
+            >
+              {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+              <Typography>{isDarkMode ? 'Svetlý režim' : 'Tmavý režim'}</Typography>
+            </ActionItem>
+            <ActionItem 
+              onClick={handleLogoutClick} 
+              isDarkMode={isDarkMode} 
+              isLogout
+            >
+              <LogoutIcon />
+              <Typography>Odhlásiť sa</Typography>
+            </ActionItem>
+          </BottomActions>
+        </Box>
+      </MobileDrawer>
+
+      {/* Dialog pre potvrdenie odhlásenia */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={handleLogoutCancel}
+        aria-labelledby="logout-dialog-title"
+      >
+        <DialogTitle id="logout-dialog-title">Potvrdiť odhlásenie</DialogTitle>
+        <DialogContent>
+          <Typography>Naozaj sa chcete odhlásiť?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLogoutCancel} color="primary">Zrušiť</Button>
+          <Button onClick={handleLogoutConfirm} color="primary" autoFocus>Odhlásiť</Button>
+        </DialogActions>
+      </Dialog>
     </PageWrapper>
   );
 };

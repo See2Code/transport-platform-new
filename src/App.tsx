@@ -6,6 +6,7 @@ import AppContent from './AppContent';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ChatProvider } from './contexts/ChatContext';
+import './styles/mui-overrides.css';
 
 const App: React.FC = () => {
   return (

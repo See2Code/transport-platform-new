@@ -415,6 +415,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages([]);
   };
 
+  const formatTime = (timestamp: any) => {
+    if (!timestamp) return '';
+    
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      // Odstránim zobrazenie času v zozname
+      return '';
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return '';
+    }
+  };
+
   const value = {
     conversations,
     currentConversation,
