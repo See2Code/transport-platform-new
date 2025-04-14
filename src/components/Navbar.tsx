@@ -198,105 +198,34 @@ const NavListItem = styled(ListItem, {
     alignItems: 'center',
     transition: 'all 0.2s ease-in-out',
     color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
-    backgroundColor: 'transparent',
-    outline: 'none',
     '&:hover': {
-      backgroundColor: isDarkMode 
-        ? 'rgba(99, 102, 241, 0.1)' 
-        : 'rgba(99, 102, 241, 0.05)',
-      color: colors.primary.main,
+      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)',
+      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.87)',
+      transform: 'translateY(-2px)',
+      boxShadow: isDarkMode 
+        ? '0 4px 12px rgba(0, 0, 0, 0.2)' 
+        : '0 4px 12px rgba(0, 0, 0, 0.1)',
       '& .MuiSvgIcon-root': {
-        color: colors.primary.main,
         transform: 'scale(1.1)',
+        color: colors.primary.main
       }
     },
     '&.Mui-selected': {
-      backgroundColor: isDarkMode 
-        ? 'rgba(99, 102, 241, 0.15)' 
-        : 'rgba(99, 102, 241, 0.1)',
+      backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)',
       color: colors.primary.main,
-      borderRadius: '8px',
-      outline: 'none',
-      '& .MuiSvgIcon-root': {
-        color: colors.primary.main,
-        transform: 'scale(1.1)',
-      },
       '&:hover': {
-        backgroundColor: isDarkMode 
-          ? 'rgba(99, 102, 241, 0.2)' 
-          : 'rgba(99, 102, 241, 0.15)',
+        backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)',
       }
-    },
-    '&:focus': {
-      outline: 'none',
-      backgroundColor: 'transparent'
-    },
-    '&:focus-visible': {
-      outline: `2px solid ${colors.primary.light}`,
-      outlineOffset: '2px',
-      backgroundColor: 'transparent',
-      borderRadius: '8px',
-    },
-    '&:active': {
-      backgroundColor: isDarkMode 
-        ? 'rgba(99, 102, 241, 0.2)' 
-        : 'rgba(99, 102, 241, 0.15)',
-      transform: 'scale(0.98)'
     }
-  },
-  '& .MuiListItemIcon-root': {
-    minWidth: 40,
-    color: 'inherit',
   },
   '& .MuiListItemText-root': {
-    opacity: 0,
-    position: 'absolute',
-    top: '100%',
-    left: '50%',
-    transform: 'translateX(-50%) translateY(8px)',
-    backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-    padding: '8px 12px',
-    borderRadius: '6px',
-    whiteSpace: 'nowrap',
-    zIndex: 1000,
-    transition: 'all 0.3s ease',
-    visibility: 'hidden',
-    color: isDarkMode ? colors.text.primary : '#000000',
-    boxShadow: isDarkMode 
-      ? '0 4px 20px rgba(0, 0, 0, 0.4)' 
-      : '0 4px 20px rgba(0, 0, 0, 0.1)',
-    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-    backdropFilter: 'blur(10px)',
-    '&:before': {
-      content: '""',
-      position: 'absolute',
-      top: '-4px',
-      left: '50%',
-      transform: 'translateX(-50%) rotate(45deg)',
-      width: '8px',
-      height: '8px',
-      backgroundColor: 'inherit',
-      borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-      borderLeft: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+    marginTop: '4px',
+    '& .MuiTypography-root': {
+      fontSize: '0.75rem',
+      fontWeight: 500,
+      textAlign: 'center',
+      transition: 'all 0.2s ease-in-out'
     }
-  },
-  '&:hover .MuiListItemText-root': {
-    opacity: 1,
-    transform: 'translateX(-50%) translateY(4px)',
-    visibility: 'visible',
-  },
-  '&:hover .MuiListItemButton-root': {
-    backgroundColor: isDarkMode 
-      ? 'rgba(99, 102, 241, 0.1)' 
-      : 'rgba(99, 102, 241, 0.05)',
-  },
-  '&:hover .MuiSvgIcon-root': {
-    transform: 'scale(1.1)',
-    color: colors.primary.main,
-  },
-  '& .MuiSvgIcon-root': {
-    color: isDarkMode ? colors.text.primary : '#000000',
-    transition: 'all 0.3s ease',
   }
 }));
 
