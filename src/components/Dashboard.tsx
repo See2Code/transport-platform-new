@@ -108,18 +108,18 @@ const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) =
 }));
 
 const StatsCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#f8f9fa',
+  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
   borderRadius: '16px !important',
-  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : '#c0c0c0'} !important`,
+  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'} !important`,
   boxShadow: `${isDarkMode 
-    ? '0 8px 32px 0 rgba(0, 0, 0, 0.4)'
-    : '0 4px 20px rgba(0, 0, 0, 0.1)'} !important`,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+    : '0 4px 12px rgba(0, 0, 0, 0.1)'} !important`,
+  transition: 'all 0.2s ease-in-out',
   overflow: 'hidden',
   position: 'relative',
   '&.MuiPaper-root': {
-    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#f8f9fa !important',
-    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : '#c0c0c0'} !important`,
+    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff !important',
+    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'} !important`,
   },
   '&:before': {
     content: '""',
@@ -143,12 +143,12 @@ const StatsCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
     filter: `drop-shadow(0 2px 4px ${isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.2)'})`
   },
   '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: `${isDarkMode 
-      ? '0 12px 40px rgba(0, 0, 0, 0.5)'
-      : '0 8px 30px rgba(0, 0, 0, 0.15)'} !important`,
-    border: `1px solid #ff9f43 !important`,
-    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.98)' : '#ffffff'
+    transform: 'translateY(-2px)',
+    boxShadow: '0 8px 24px rgba(255, 159, 67, 0.3) !important',
+    border: '1px solid rgba(255, 159, 67, 0.3) !important',
+    '& .MuiCardContent-root': {
+      background: 'linear-gradient(180deg, rgba(255, 159, 67, 0.1) 0%, rgba(255, 159, 67, 0) 100%)',
+    }
   }
 }));
 

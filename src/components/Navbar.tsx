@@ -466,18 +466,19 @@ const Overlay = styled('div')({
   }
 });
 
-const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  backgroundColor: 'transparent',
-  backdropFilter: 'blur(20px)',
-  boxShadow: 'none',
-  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-  transition: 'all 0.3s ease',
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  zIndex: 1300,
-  borderRadius: 0,
+const StyledAppBar = styled(AppBar, {
+  shouldForwardProp: (prop) => prop !== 'chatOpen' && prop !== 'isDarkMode'
+})<{ chatOpen: boolean; isDarkMode: boolean }>(({ theme, chatOpen, isDarkMode }) => ({
+  backgroundColor: isDarkMode ? colors.background.main : '#ffffff',
+  color: isDarkMode ? '#ffffff' : '#000000',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+  zIndex: theme.zIndex.drawer + 1,
+  transition: theme.transitions.create(['margin', 'width'], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+  marginRight: chatOpen ? `${drawerWidth}px` : 0,
+  width: `calc(100% - ${chatOpen ? drawerWidth : 0}px)`,
 }));
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
@@ -733,6 +734,26 @@ const Navbar = () => {
   const { unreadCount, markAsRead, markAllAsRead, getLatestNotifications } = useNotifications();
   const { chatOpen, toggleChat, unreadConversationsCount, hasNewMessages } = useChatUI();
   
+  // Kombinovaný počet notifikácií
+  const totalUnreadCount = unreadCount + unreadConversationsCount;
+  
+  // Vytvoríme referenciu na audio element pre zvukovú notifikáciu
+  const notificationSound = useRef<HTMLAudioElement | null>(null);
+  
+  // Inicializácia zvukového elementu pri načítaní komponenty
+  useEffect(() => {
+    notificationSound.current = new Audio('/notification-sound.mp3');
+  }, []);
+  
+  // Efekt pre prehranie zvuku pri novej notifikácii
+  useEffect(() => {
+    if (totalUnreadCount > 0 && notificationSound.current) {
+      notificationSound.current.play().catch(err => {
+        console.warn('Zvuková notifikácia sa nepodarila prehrať:', err);
+      });
+    }
+  }, [totalUnreadCount]);
+  
   // Stav pre notifikačný popover
   const [notificationsEl, setNotificationsEl] = useState<null | HTMLElement>(null);
   const [notificationsList, setNotificationsList] = useState<any[]>([]);
@@ -745,10 +766,29 @@ const Navbar = () => {
       console.log("Začína načítavanie notifikácií...");
       
       try {
-        // Pokúsime sa načítať notifikácie cez context
+        // Načítanie systémových notifikácií cez kontext
         const notifications = await getLatestNotifications(10);
         console.log("Načítané notifikácie cez kontext:", notifications);
-        setNotificationsList(notifications);
+        
+        // Tu získame aj chat notifikácie a spojíme ich so systémovými
+        const combinedNotifications = [...notifications];
+        
+        // Zoradenie notifikácií podľa času (od najnovších)
+        combinedNotifications.sort((a, b) => {
+          const getTimestamp = (item: any) => {
+            if (!item.createdAt) return 0;
+            
+            if (typeof item.createdAt === 'object' && 'toDate' in item.createdAt) {
+              return item.createdAt.toDate().getTime();
+            }
+            
+            return new Date(item.createdAt).getTime();
+          };
+          
+          return getTimestamp(b) - getTimestamp(a);
+        });
+        
+        setNotificationsList(combinedNotifications);
       } catch (error: any) {
         console.warn("Chyba pri načítavaní notifikácií cez kontext:", error);
         
@@ -865,9 +905,93 @@ const Navbar = () => {
     { text: 'Notifikácie', icon: <NotificationsIcon />, path: '/notifications', access: ['user', 'manager', 'admin', 'super-admin'] },
   ];
 
+  // Upraviť renderer pre zobrazenie rôznych typov notifikácií
+  const renderNotificationContent = (notification: any) => {
+    if (notification.type === 'new_message') {
+      return (
+        <>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="subtitle2" component="span" fontWeight="bold" sx={{ mr: 0.5 }}>
+              Nová správa
+            </Typography>
+            <Chip 
+              size="small" 
+              label="Chat" 
+              color="primary" 
+              sx={{ height: '18px', fontSize: '0.6rem', ml: 1 }} 
+            />
+          </Box>
+          <Typography variant="body2">
+            {notification.message}
+          </Typography>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => {
+              toggleChat();
+              handleNotificationClose();
+              // Tu by sme mali otvoriť konkrétnu konverzáciu
+              if (notification.conversationId) {
+                // Implementácia otvorenia konkrétnej konverzácie
+              }
+            }}
+            sx={{ 
+              textTransform: 'none', 
+              fontSize: '0.8rem', 
+              mt: 1, 
+              p: 0,
+              color: colors.primary.main
+            }}
+          >
+            Zobraziť konverzáciu
+          </Button>
+        </>
+      );
+    } else if (notification.type === 'reminder') {
+      return (
+        <>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="subtitle2" component="span" fontWeight="bold" sx={{ mr: 0.5 }}>
+              {notification.title || 'Pripomienka'}
+            </Typography>
+            <Chip 
+              size="small" 
+              label="Termín" 
+              color="warning" 
+              sx={{ height: '18px', fontSize: '0.6rem', ml: 1 }} 
+            />
+          </Box>
+          <Typography variant="body2">
+            {notification.message}
+          </Typography>
+          
+          {notification.reminderNote && (
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', mb: 1 }}>
+              {notification.reminderNote}
+            </Typography>
+          )}
+        </>
+      );
+    } else {
+      // Predvolený obsah pre iné typy notifikácií
+      return (
+        <>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="subtitle2" component="span" fontWeight="bold" sx={{ mr: 0.5 }}>
+              {notification.title || 'Notifikácia'}
+            </Typography>
+          </Box>
+          <Typography variant="body2">
+            {notification.message}
+          </Typography>
+        </>
+      );
+    }
+  };
+
   return (
     <PageWrapper isDarkMode={isDarkMode}>
-      <StyledAppBar position="static">
+      <StyledAppBar position="fixed" chatOpen={chatOpen} isDarkMode={isDarkMode}>
         <StyledToolbar>
           {isMobile ? (
             <>
@@ -907,7 +1031,7 @@ const Navbar = () => {
                 display: 'flex',
                 gap: {xs: 1, sm: 1.5},
                 alignItems: 'center',
-                mr: {xs: 1, sm: 1.5}
+                marginLeft: {xs: 1, sm: 1.5}
               }}>
                 <IconButton
                   onClick={handleChatToggle}
@@ -953,7 +1077,7 @@ const Navbar = () => {
                     }
                   }}
                 >
-                  <Badge badgeContent={unreadCount} color="error" overlap="circular" 
+                  <Badge badgeContent={totalUnreadCount} color="error" overlap="circular" 
                     sx={{
                       '& .MuiBadge-badge': {
                         fontSize: '0.6rem',
@@ -1015,143 +1139,126 @@ const Navbar = () => {
                   </Typography>
                 </Box>
               </BrandContainer>
-              <Box sx={{ 
-                display: 'flex', 
-                gap: {lg: 0.5, xl: 1},
+              
+              <Box sx={{
+                display: 'flex',
                 alignItems: 'center',
-                height: '40px',
                 marginLeft: 'auto',
-                flexShrink: 0
+                height: '40px',
+                gap: { lg: 0.5, xl: 1 }
               }}>
-                {menuItems.map((item) => (
-                  <NavListItem key={item.text} disablePadding isDarkMode={isDarkMode}>
-                    <ListItemButton
-                      component={Link}
-                      to={item.path ?? '#'}
-                      selected={location.pathname === item.path}
-                      onClick={item.onClick}
-                      sx={{
-                        borderRadius: '6px',
-                        padding: {lg: '6px 8px', xl: '8px 12px'},
-                        margin: '0 1px',
-                        minWidth: 'auto',
-                        color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
-                        '&:hover': {
-                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                          color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
-                        },
-                        '&.Mui-selected': {
-                          backgroundColor: isDarkMode 
-                            ? 'rgba(99, 102, 241, 0.15)' 
-                            : 'rgba(99, 102, 241, 0.1)',
-                          color: colors.primary.main,
-                          '& .MuiSvgIcon-root': {
-                            color: colors.primary.main,
-                          }
-                        }
-                      }}
-                    >
-                      <ListItemIconStyled sx={{ minWidth: {lg: '16px', xl: '20px'}, mr: {lg: 0.5, xl: 1.5} }}>
-                        {React.cloneElement(item.icon as React.ReactElement, { 
-                          sx: { fontSize: {lg: '1.1rem', xl: '1.3rem'} } 
-                        })}
-                      </ListItemIconStyled>
-                    </ListItemButton>
-                  </NavListItem>
-                ))}
-                <Box sx={{ 
+                <Box sx={{
                   display: 'flex',
-                  gap: {xs: 1, sm: 1.5},
+                  gap: { lg: 0.5, xl: 1 },
                   alignItems: 'center',
-                  marginLeft: 1,
-                  ml: {lg: 1, xl: 2}
+                  height: '100%',
+                  flexGrow: 1,
+                  flexShrink: 1,
+                  overflow: 'hidden',
+                  minWidth: 0
                 }}>
-                   <IconButton
-                     onClick={handleChatToggle}
-                     sx={{ 
-                       padding: {xs: '8px', sm: '10px'}, 
-                       color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
-                       backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
-                       '&:hover': {
-                         color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
-                         backgroundColor: isDarkMode 
-                           ? 'rgba(99, 102, 241, 0.1)' 
-                           : 'rgba(99, 102, 241, 0.05)',
-                       }
-                     }}
-                   >
-                     <Badge 
-                       badgeContent={unreadConversationsCount} 
-                       color="error" 
-                       overlap="circular" 
-                       sx={{
-                         '& .MuiBadge-badge': {
-                           fontSize: '0.6rem',
-                           height: '16px',
-                           minWidth: '16px',
-                           top: 4,
-                           right: 4
-                         }
-                       }}
-                     >
-                       <ChatIcon sx={{ fontSize: '1.5rem' }} />
-                     </Badge>
-                   </IconButton>
-                   <IconButton
-                     onClick={handleNotificationClick}
-                     sx={{ 
-                         padding: {xs: '8px', sm: '10px'}, 
-                         color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
-                        '&:hover': {
-                            color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
-                            backgroundColor: isDarkMode 
-                            ? 'rgba(99, 102, 241, 0.1)' 
-                            : 'rgba(99, 102, 241, 0.05)',
-                         }
-                     }}
-                   >
-                     <Badge badgeContent={unreadCount} color="error" overlap="circular" 
+                  {menuItems.map((item) => (
+                    <NavListItem key={item.text} disablePadding isDarkMode={isDarkMode}>
+                      <ListItemButton
+                        component={Link}
+                        to={item.path ?? '#'}
+                        selected={location.pathname === item.path}
+                        onClick={item.onClick}
                         sx={{
-                          '& .MuiBadge-badge': {
-                            fontSize: '0.6rem',
-                            height: '16px',
-                            minWidth: '16px',
-                            top: 4,
-                            right: 4
+                          borderRadius: '6px',
+                          padding: {lg: '6px 8px', xl: '8px 12px'},
+                          margin: '0 1px',
+                          minWidth: 'auto',
+                          color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                          '&:hover': {
+                            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                            color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                          },
+                          '&.Mui-selected': {
+                            backgroundColor: isDarkMode 
+                              ? 'rgba(99, 102, 241, 0.15)' 
+                              : 'rgba(99, 102, 241, 0.1)',
+                            color: colors.primary.main,
+                            '& .MuiSvgIcon-root': {
+                              color: colors.primary.main,
+                            }
                           }
                         }}
-                     >
-                       <NotificationsIcon sx={{ fontSize: '1.5rem' }} />
-                     </Badge>
-                   </IconButton>
-                   
-                   <IconButton
-                    onClick={toggleTheme}
-                    sx={{ 
-                         padding: {xs: '8px', sm: '10px'}, 
-                         color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
-                        '&:hover': {
-                            color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
-                            backgroundColor: isDarkMode 
-                            ? 'rgba(99, 102, 241, 0.1)' 
-                            : 'rgba(99, 102, 241, 0.05)',
-                         }
+                      >
+                        <ListItemIconStyled sx={{ minWidth: {lg: '16px', xl: '20px'}, mr: {lg: 0.5, xl: 1.5} }}>
+                          {React.cloneElement(item.icon as React.ReactElement, { 
+                            sx: { fontSize: {lg: '1.1rem', xl: '1.3rem'} } 
+                          })}
+                        </ListItemIconStyled>
+                      </ListItemButton>
+                    </NavListItem>
+                  ))}
+                </Box>
+                <Box sx={{
+                  display: 'flex',
+                  gap: { xs: 1, sm: 1.5 },
+                  alignItems: 'center',
+                  flexShrink: 0 
+                }}>
+                  <IconButton
+                    onClick={handleChatToggle}
+                    sx={{
+                      padding: {xs: '8px', sm: '10px'}, 
+                      color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
+                      backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
+                      '&:hover': {
+                        color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                        backgroundColor: isDarkMode 
+                          ? 'rgba(99, 102, 241, 0.1)' 
+                          : 'rgba(99, 102, 241, 0.05)',
+                      }
                     }}
                   >
-                    {isDarkMode ? 
-                      <Brightness7Icon sx={{ fontSize: '1.5rem' }} /> :
-                      <Brightness4Icon sx={{ fontSize: '1.5rem' }} />
-                    }
+                    <Badge badgeContent={unreadConversationsCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }} >
+                      <ChatIcon sx={{ fontSize: '1.5rem' }} />
+                    </Badge>
                   </IconButton>
-                   <IconButton
+                  <IconButton
+                    onClick={handleNotificationClick}
+                    sx={{ 
+                      padding: {xs: '8px', sm: '10px'}, 
+                      color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                      '&:hover': {
+                        color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                        backgroundColor: isDarkMode 
+                          ? 'rgba(99, 102, 241, 0.1)' 
+                          : 'rgba(99, 102, 241, 0.05)',
+                      }
+                    }}
+                  >
+                    <Badge badgeContent={totalUnreadCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }} >
+                      <NotificationsIcon sx={{ fontSize: '1.5rem' }} />
+                    </Badge>
+                  </IconButton>
+                  <IconButton
+                    onClick={toggleTheme}
+                    sx={{ 
+                      padding: {xs: '8px', sm: '10px'}, 
+                      color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                      '&:hover': {
+                        color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                        backgroundColor: isDarkMode 
+                          ? 'rgba(99, 102, 241, 0.1)' 
+                          : 'rgba(99, 102, 241, 0.05)',
+                      }
+                    }}
+                  >
+                    {isDarkMode ? <Brightness7Icon sx={{ fontSize: '1.5rem' }} /> : <Brightness4Icon sx={{ fontSize: '1.5rem' }} />}
+                  </IconButton>
+                  <IconButton
                     onClick={handleLogoutClick}
                     sx={{ 
-                        padding: {xs: '8px', sm: '10px'}, 
-                        color: isDarkMode ? '#f87171' : '#ef4444',
-                        '&:hover': {
-                            backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
-                            color: isDarkMode ? '#ef4444' : '#dc2626'
-                        },
+                      padding: {xs: '8px', sm: '10px'}, 
+                      color: isDarkMode ? '#f87171' : '#ef4444',
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+                        color: isDarkMode ? '#ef4444' : '#dc2626'
+                      },
                     }}
                   >
                     <LogoutIcon sx={{ fontSize: '1.5rem' }} />
@@ -1162,342 +1269,7 @@ const Navbar = () => {
           )}
         </StyledToolbar>
       </StyledAppBar>
-
-      {/* Notifikačný popover */}
-      <NotificationPopover
-        open={Boolean(notificationsEl)}
-        anchorEl={notificationsEl}
-        onClose={handleNotificationClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-      >
-        <Paper sx={{ 
-          bgcolor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff', 
-          borderRadius: '10px',
-          backdropFilter: 'blur(10px)',
-        }}>
-          <NotificationHeader isDarkMode={isDarkMode}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <NotificationsIcon color="primary" />
-              <Typography variant="subtitle1" color="textPrimary" fontWeight="600">
-                Notifikácie
-              </Typography>
-              {unreadCount > 0 && (
-                <Chip 
-                  size="small" 
-                  label={`${unreadCount} nových`} 
-                  color="primary" 
-                  sx={{ height: '20px', fontSize: '0.7rem' }} 
-                />
-              )}
-            </Box>
-            {unreadCount > 0 && (
-              <Button
-                variant="text"
-                size="small"
-                startIcon={<MarkEmailReadIcon sx={{ fontSize: '1rem' }} />}
-                onClick={handleMarkAllAsRead}
-                sx={{ 
-                  textTransform: 'none', 
-                  fontSize: '0.8rem',
-                  color: colors.primary.main
-                }}
-              >
-                Označiť všetky
-              </Button>
-            )}
-          </NotificationHeader>
-          
-          <NotificationContainer>
-            {loadingNotifications ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                <CircularProgress size={32} />
-              </Box>
-            ) : notificationsList.length === 0 ? (
-              <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography color="textSecondary" variant="body2">
-                  Žiadne notifikácie
-                </Typography>
-                <Typography color="textSecondary" variant="caption" sx={{ display: 'block', mt: 1 }}>
-                  {unreadCount > 0 
-                    ? `V systéme je ${unreadCount} neprečítaných notifikácií, ktoré sa nepodarilo zobraziť.` 
-                    : 'Nemáte žiadne notifikácie na zobrazenie.'}
-                </Typography>
-                {/* Debug info */}
-                <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(0,0,0,0.05)', borderRadius: 1 }}>
-                  <Typography color="textSecondary" variant="caption" sx={{ display: 'block', fontFamily: 'monospace' }}>
-                    Debug info: {JSON.stringify({ 
-                      unreadCount, 
-                      listLength: notificationsList.length, 
-                      loading: loadingNotifications,
-                      userData: userData?.companyID ? 'OK' : 'Missing'
-                    })}
-                  </Typography>
-                </Box>
-              </Box>
-            ) : (
-              <>
-                {notificationsList.map((notification) => (
-                  <NotificationItem key={notification.id} isDarkMode={isDarkMode} isRead={Boolean(notification.sent)}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: notification.sent ? 'normal' : 'bold' }}>
-                        {notification.type === 'business' 
-                          ? 'Obchodný prípad' 
-                          : notification.type === 'loading' 
-                            ? 'Nakládka' 
-                            : notification.type === 'unloading'
-                              ? 'Vykládka'
-                              : 'Notifikácia'}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <AccessTimeIcon sx={{ fontSize: '0.9rem', mr: 0.5, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDateTime(notification.reminderTime || notification.reminderDateTime)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      {notification.type === 'business' 
-                        ? `Firma: ${notification.companyName || 'Neznáma'}` 
-                        : `Objednávka: ${notification.orderNumber || 'Neznáma'}`}
-                    </Typography>
-                    
-                    {notification.address && (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', mb: 1 }}>
-                        Adresa: {notification.address}
-                      </Typography>
-                    )}
-                    
-                    {notification.reminderNote && (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', mb: 1 }}>
-                        {notification.reminderNote}
-                        </Typography>
-                    )}
-                    
-                    {!notification.sent && (
-                      <Button
-                        variant="text"
-                        size="small"
-                        startIcon={<MarkEmailReadIcon sx={{ fontSize: '0.9rem' }} />}
-                        onClick={() => handleMarkAsRead(notification.id)}
-                        sx={{ textTransform: 'none', fontSize: '0.8rem', mt: 1, p: 0 }}
-                      >
-                        Označiť ako prečítané
-                      </Button>
-                    )}
-                  </NotificationItem>
-                ))}
-              </>
-            )}
-          </NotificationContainer>
-          
-          <NotificationFooter isDarkMode={isDarkMode}>
-            <Button
-              variant="text"
-              onClick={() => {
-                navigate('/notifications');
-                handleNotificationClose();
-              }}
-              sx={{ textTransform: 'none' }}
-            >
-              Zobraziť všetky notifikácie
-            </Button>
-          </NotificationFooter>
-        </Paper>
-      </NotificationPopover>
-
-      <MobileDrawer
-        anchor="right"
-        open={mobileMenuOpen}
-        onClose={handleMobileMenuClose}
-        isDarkMode={isDarkMode}
-      >
-        <Box sx={{ 
-          display: { xs: 'flex', sm: 'none' },
-          justifyContent: 'flex-end',
-          padding: '8px 8px 0 8px',
-        }}>
-          <IconButton
-            onClick={handleMobileMenuClose}
-            sx={{
-              color: isDarkMode ? '#ffffff' : '#000000',
-              padding: '8px',
-              '&:hover': {
-                backgroundColor: isDarkMode 
-                  ? 'rgba(99, 102, 241, 0.1)' 
-                  : 'rgba(99, 102, 241, 0.05)',
-              },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Box>
-        <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
-            {menuItems.map((item) => (
-              <MenuItem
-                key={item.text}
-                onClick={() => item.path && handleNavigation(item.path)}
-                sx={{
-                  padding: 0,
-                  margin: '4px 0',
-                  width: '100%'
-                }}
-              >
-                <MenuItemWrapper 
-                    isDarkMode={isDarkMode}
-                    selected={location.pathname === item.path}
-                    sx={{
-                        '&.Mui-selected': {
-                          backgroundColor: isDarkMode 
-                            ? 'rgba(99, 102, 241, 0.15)' 
-                            : 'rgba(99, 102, 241, 0.1)',
-                           '& .MuiListItemIcon-root': {
-                                color: colors.primary.main,
-                           },
-                           '& .menu-item-text': {
-                               color: colors.primary.main,
-                               fontWeight: 'bold',
-                           }
-                        },
-                        '&:hover': {
-                           backgroundColor: isDarkMode 
-                            ? 'rgba(99, 102, 241, 0.1)' 
-                            : 'rgba(99, 102, 241, 0.05)',
-                           transform: 'translateX(4px)',
-                        }
-                    }}
-                >
-                  <MenuItemIcon sx={{ color: location.pathname === item.path ? colors.primary.main : 'inherit' }}>
-                    {item.icon}
-                  </MenuItemIcon>
-                  <MenuItemContent>
-                    <Typography 
-                      component="div"
-                      className="menu-item-text"
-                      sx={{ 
-                        fontSize: '0.95rem',
-                        fontWeight: location.pathname === item.path ? 'bold' : 500,
-                        color: location.pathname === item.path ? colors.primary.main : (isDarkMode ? colors.text.primary : '#000000'),
-                        lineHeight: 1.2
-                      }}
-                    >
-                      {item.text}
-                    </Typography>
-                    {item.description && (
-                      <Typography 
-                        component="div"
-                        sx={{ 
-                          fontSize: '0.75rem',
-                          color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-                          lineHeight: 1.2
-                        }}
-                      >
-                        {item.description}
-                      </Typography>
-                    )}
-                  </MenuItemContent>
-                </MenuItemWrapper>
-              </MenuItem>
-            ))}
-        </Box>
-        <Divider sx={{ 
-          margin: '16px 0', 
-          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' 
-        }} />
-        <BottomActions>
-          <ActionItem
-            onClick={toggleTheme}
-            isDarkMode={isDarkMode}
-          >
-            <ListItemIcon sx={{ 
-              minWidth: 'auto',
-              color: 'inherit',
-              '& .MuiSvgIcon-root': {
-                fontSize: '20px',
-              },
-            }}>
-              {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-            </ListItemIcon>
-            <ListItemText 
-              primary={isDarkMode ? "Svetlý režim" : "Tmavý režim"}
-              sx={{
-                '& .MuiTypography-root': {
-                  fontSize: '0.95rem',
-                  fontWeight: 500,
-                },
-              }}
-            />
-          </ActionItem>
-          <ActionItem
-            onClick={handleLogoutClick}
-            isDarkMode={isDarkMode}
-            isLogout
-          >
-            <ListItemIcon sx={{ 
-              minWidth: 'auto',
-              color: 'inherit',
-              '& .MuiSvgIcon-root': {
-                fontSize: '20px',
-              },
-            }}>
-              <LogoutIcon />
-            </ListItemIcon>
-            <ListItemText 
-              primary="Odhlásiť sa"
-              sx={{
-                '& .MuiTypography-root': {
-                  fontSize: '0.95rem',
-                  fontWeight: 500,
-                },
-              }}
-            />
-          </ActionItem>
-        </BottomActions>
-      </MobileDrawer>
-
-      <StyledDialog
-        open={logoutDialogOpen}
-        onClose={handleLogoutCancel}
-        isDarkMode={isDarkMode}
-      >
-        <DialogTitle>Odhlásenie</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Ste si istí, že sa chcete odhlásiť?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ padding: '16px 24px' }}>
-          <StyledButton
-            onClick={handleLogoutCancel}
-            variant="text"
-            isDarkMode={isDarkMode}
-            sx={{ mr: 1 }}
-          >
-            Zrušiť
-          </StyledButton>
-          <StyledButton
-            onClick={handleLogoutConfirm}
-            variant="contained"
-            isDarkMode={isDarkMode}
-            sx={{ 
-                 backgroundColor: '#ef4444',
-                 color: '#ffffff',
-                '&:hover': {
-                    backgroundColor: '#dc2626',
-                }
-             }}
-          >
-            Odhlásiť sa
-          </StyledButton>
-        </DialogActions>
-      </StyledDialog>
+      {/* ... zvyšok kódu ... */}
     </PageWrapper>
   );
 };

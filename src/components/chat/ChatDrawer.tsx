@@ -12,26 +12,19 @@ import {
   Avatar,
   TextField,
   InputAdornment,
-  Button,
-  Divider,
   Paper,
   CircularProgress,
   Badge,
   Tabs,
   Tab,
   useTheme,
-  Collapse,
 } from '@mui/material';
 import {
   Close as CloseIcon,
   Search as SearchIcon,
   Send as SendIcon,
   KeyboardBackspace as BackIcon,
-  Image as ImageIcon,
-  AttachFile as AttachFileIcon,
-  EmojiEmotions as EmojiIcon,
   ArrowForward as ArrowIcon,
-  FiberManualRecord as DotIcon,
 } from '@mui/icons-material';
 import { useChat, Message, Conversation, ChatUser } from '../../contexts/ChatContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -194,7 +187,6 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
   const [tabValue, setTabValue] = useState(0);
-  const [showSearch, setShowSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll down when new messages arrive
@@ -219,7 +211,6 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
     try {
       await createConversation(user.uid);
       setSearchTerm('');
-      setShowSearch(false);
     } catch (error) {
       console.error('Error starting conversation:', error);
     }
@@ -396,24 +387,43 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
             </ConversationHeader>
             
             <SearchContainer>
+              <Typography variant="body1" color="primary" sx={{ mb: 2, px: 0.5, fontWeight: 'bold' }}>
+                Pre vytvorenie novej konverzácie:
+              </Typography>
               <Typography variant="body2" color="textSecondary" sx={{ mb: 2, px: 0.5 }}>
-                Pre vytvorenie novej konverzácie zadajte meno alebo email používateľa a vyberte ho zo zoznamu.
+                1. Zadajte meno (min. 2 znaky) alebo email (min. 3 znaky) používateľa
+                <br />
+                2. Vyberte osobu zo zobrazeného zoznamu
               </Typography>
               <TextField
                 fullWidth
                 variant="outlined"
-                placeholder="Vyhľadajte používateľa..."
+                placeholder="Zadajte meno alebo email..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 size="small"
+                focused={!searchTerm}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderWidth: 2,
+                    borderColor: 'primary.main',
+                    boxShadow: '0 0 5px rgba(99, 102, 241, 0.3)'
+                  }
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
+                      <SearchIcon fontSize="small" color="primary" />
                     </InputAdornment>
                   ),
                 }}
               />
+              
+              {searchTerm && searchTerm.length < 2 && (
+                <Typography variant="caption" color="warning.main" sx={{ mt: 1, display: 'block' }}>
+                  Zadajte aspoň 2 znaky pre vyhľadávanie podľa mena
+                </Typography>
+              )}
               
               {searchTerm && (
                 <Paper 
@@ -446,8 +456,17 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                     </List>
                   ) : (
                     <Box sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="body2" color="textSecondary">
+                      <Typography variant="body2" color="warning.main" sx={{ mb: 1 }}>
                         Žiadni používatelia nenájdení
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Skúste:
+                        <ul style={{ textAlign: 'left', paddingLeft: '20px', margin: '8px 0' }}>
+                          <li>Zadať meno bez diakritiky (napr. "kristian")</li>
+                          <li>Skrátiť hľadaný výraz (napr. len "kris")</li>
+                          <li>Zadať priezvisko (napr. "lencses")</li>
+                          <li>Zadať celý alebo časť emailu</li>
+                        </ul>
                       </Typography>
                     </Box>
                   )}
