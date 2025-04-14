@@ -60,6 +60,7 @@ interface ChatContextType {
   markConversationAsRead: (conversationId: string) => Promise<void>;
   unreadConversationsCount: number;
   closeConversation: () => void;
+  hasNewMessages: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -81,6 +82,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [unreadConversationsCount, setUnreadConversationsCount] = useState(0);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
 
   // Načítanie konverzácií pre prihláseného používateľa
   useEffect(() => {
@@ -96,6 +98,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const conversationsData: Conversation[] = [];
       let unreadCount = 0;
+      let hasUnread = false;
       
       querySnapshot.forEach((doc) => {
         const conversationData = doc.data() as Omit<Conversation, 'id'>;
@@ -118,12 +121,42 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           conversation.unreadCount > 0
         ) {
           unreadCount++;
+          hasUnread = true;
+          
+          // Kontrola, či potrebujeme zobraziť notifikáciu pre novú správu
+          const lastMessageTime = conversation.lastMessage.timestamp;
+          if (lastMessageTime) {
+            const messageDate = lastMessageTime instanceof Date ? 
+              lastMessageTime : 
+              lastMessageTime.toDate();
+            
+            // Notifikácia na systémovej úrovni pre nové správy
+            try {
+              // Pokiaľ je podporovaná notifikácia v prehliadači a používateľ má povolenia
+              if ("Notification" in window && Notification.permission === "granted") {
+                const senderName = conversation.participantsInfo[conversation.lastMessage.senderId]?.name || 'Používateľ';
+                const notificationTitle = `Nová správa od ${senderName}`;
+                const notificationOptions = {
+                  body: conversation.lastMessage.text,
+                  icon: '/favicon.png', // Použijeme ikonu vašej aplikácie
+                };
+                
+                // Zobrazíme notifikáciu, len ak správa prišla v posledných 10 sekundách
+                if (Date.now() - messageDate.getTime() < 10000) {
+                  new Notification(notificationTitle, notificationOptions);
+                }
+              }
+            } catch (error) {
+              console.error('Chyba pri zobrazovaní notifikácie', error);
+            }
+          }
         }
         
         conversationsData.push(conversation);
       });
       
       setUnreadConversationsCount(unreadCount);
+      setHasNewMessages(hasUnread);
       setConversations(conversationsData);
       setLoadingConversations(false);
     });
@@ -168,104 +201,67 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const searchLower = searchQuery.toLowerCase();
-      const firstNameQuery = query(
+      // Odstránime diakritiku a prevedieme na malé písmená
+      const normalizedQuery = searchQuery.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+      console.log('Vyhľadávam používateľov podľa: ', normalizedQuery);
+
+      // Získame všetkých používateľov (s limitom)
+      const usersQuery = query(
         collection(db, 'users'),
-        where('firstNameLower', '>=', searchLower),
-        where('firstNameLower', '<=', searchLower + '\uf8ff'),
-        limit(10)
-      );
-      
-      const lastNameQuery = query(
-        collection(db, 'users'),
-        where('lastNameLower', '>=', searchLower),
-        where('lastNameLower', '<=', searchLower + '\uf8ff'),
-        limit(10)
+        limit(100)
       );
 
-      const [firstNameResults, lastNameResults] = await Promise.all([
-        getDocs(firstNameQuery),
-        getDocs(lastNameQuery)
-      ]);
-
-      const usersMap = new Map<string, ChatUser>();
+      const usersSnapshot = await getDocs(usersQuery);
       
-      // Pridáme výsledky z vyhľadávania podľa mena
-      firstNameResults.forEach(doc => {
-        const userData = doc.data();
-        if (doc.id !== userData?.uid) { // Vynecháme samých seba
-          usersMap.set(doc.id, {
+      // Filtrovanie používateľov v kóde namiesto v databáze
+      const results: ChatUser[] = [];
+      
+      usersSnapshot.forEach(doc => {
+        if (doc.id === userData?.uid) return; // Preskočíme seba samého
+        
+        const userInfo = doc.data();
+        
+        // Normalizované verzie pre vyhľadávanie
+        const firstName = (userInfo.firstName || '')
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        const lastName = (userInfo.lastName || '')
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        const email = (userInfo.email || '')
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        
+        // Hľadáme zhodu v rôznych poliach
+        if (firstName.includes(normalizedQuery) || 
+            lastName.includes(normalizedQuery) ||
+            email.includes(normalizedQuery) ||
+            `${firstName} ${lastName}`.includes(normalizedQuery)) {
+          
+          results.push({
             uid: doc.id,
-            firstName: userData.firstName || '',
-            lastName: userData.lastName || '',
-            email: userData.email || '',
-            photoURL: userData.photoURL,
-            companyName: userData.companyName
+            firstName: userInfo.firstName || '',
+            lastName: userInfo.lastName || '',
+            email: userInfo.email || '',
+            photoURL: userInfo.photoURL,
+            companyName: userInfo.companyName
           });
         }
       });
       
-      // Pridáme výsledky z vyhľadávania podľa priezviska
-      lastNameResults.forEach(doc => {
-        const userData = doc.data();
-        if (doc.id !== userData?.uid && !usersMap.has(doc.id)) { // Vynecháme duplikáty a samých seba
-          usersMap.set(doc.id, {
-            uid: doc.id,
-            firstName: userData.firstName || '',
-            lastName: userData.lastName || '',
-            email: userData.email || '',
-            photoURL: userData.photoURL,
-            companyName: userData.companyName
-          });
-        }
-      });
-      
-      setSearchedUsers(Array.from(usersMap.values()));
+      console.log('Výsledky vyhľadávania:', results);
+      setSearchedUsers(results);
     } catch (error) {
       console.error('Chyba pri vyhľadávaní používateľov:', error);
       setSearchedUsers([]);
     }
   };
 
-  // Vyhľadávanie používateľov podľa emailu
-  const searchUsersByEmail = async (searchQuery: string): Promise<void> => {
-    if (!searchQuery || searchQuery.length < 3 || !userData?.uid) {
-      setSearchedUsers([]);
-      return;
-    }
-
-    try {
-      const searchLower = searchQuery.toLowerCase();
-      const emailQuery = query(
-        collection(db, 'users'),
-        where('emailLower', '>=', searchLower),
-        where('emailLower', '<=', searchLower + '\uf8ff'),
-        limit(10)
-      );
-
-      const querySnapshot = await getDocs(emailQuery);
-      const users: ChatUser[] = [];
-      
-      querySnapshot.forEach(doc => {
-        const userData = doc.data();
-        if (doc.id !== userData?.uid) { // Vynecháme samých seba
-          users.push({
-            uid: doc.id,
-            firstName: userData.firstName || '',
-            lastName: userData.lastName || '',
-            email: userData.email || '',
-            photoURL: userData.photoURL,
-            companyName: userData.companyName
-          });
-        }
-      });
-      
-      setSearchedUsers(users);
-    } catch (error) {
-      console.error('Chyba pri vyhľadávaní používateľov podľa emailu:', error);
-      setSearchedUsers([]);
-    }
-  };
+  // Vyhľadávanie používateľov podľa emailu (budeme používať rovnakú metódu)
+  const searchUsersByEmail = searchUsersByName;
 
   // Vytvorenie novej konverzácie
   const createConversation = async (userId: string): Promise<string> => {
@@ -433,7 +429,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     selectConversation,
     markConversationAsRead,
     unreadConversationsCount,
-    closeConversation
+    closeConversation,
+    hasNewMessages
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

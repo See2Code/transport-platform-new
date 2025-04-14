@@ -2,13 +2,13 @@ import * as functions from 'firebase-functions/v1';
 import { CallableContext } from 'firebase-functions/v1/https';
 import * as admin from 'firebase-admin';
 import * as nodemailer from 'nodemailer';
-import * as chatFunctions from './chat';
 
 // Inicializácia Firebase Admin
 admin.initializeApp();
 
 // Import API proxy funkcií
 import * as apiProxy from './api-proxy';
+import * as chatFunctions from './chat';
 
 const REGION = 'europe-west1';
 

@@ -390,72 +390,70 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
               <Typography variant="h6" sx={{ flexGrow: 1 }}>
                 Správy
               </Typography>
-              <IconButton onClick={() => setShowSearch(!showSearch)}>
-                <SearchIcon />
-              </IconButton>
               <IconButton edge="end" onClick={onClose}>
                 <CloseIcon />
               </IconButton>
             </ConversationHeader>
             
-            <Collapse in={showSearch}>
-              <SearchContainer>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  placeholder="Vyhľadajte používateľa..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  size="small"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
+            <SearchContainer>
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2, px: 0.5 }}>
+                Pre vytvorenie novej konverzácie zadajte meno alebo email používateľa a vyberte ho zo zoznamu.
+              </Typography>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Vyhľadajte používateľa..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                size="small"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              
+              {searchTerm && (
+                <Paper 
+                  elevation={3} 
+                  sx={{ 
+                    mt: 1, 
+                    maxHeight: '300px', 
+                    overflow: 'auto',
+                    bgcolor: isDarkMode ? 'rgba(45, 45, 60, 0.95)' : 'white' 
                   }}
-                />
-                
-                {searchTerm && (
-                  <Paper 
-                    elevation={3} 
-                    sx={{ 
-                      mt: 1, 
-                      maxHeight: '300px', 
-                      overflow: 'auto',
-                      bgcolor: isDarkMode ? 'rgba(45, 45, 60, 0.95)' : 'white' 
-                    }}
-                  >
-                    {searchedUsers.length > 0 ? (
-                      <List dense>
-                        {searchedUsers.map((user) => (
-                          <ListItem button key={user.uid} onClick={() => handleStartConversation(user)}>
-                            <ListItemAvatar>
-                              <Avatar src={user.photoURL}>
-                                {(user.firstName?.charAt(0) || '') + (user.lastName?.charAt(0) || '')}
-                              </Avatar>
-                            </ListItemAvatar>
-                            <ListItemText 
-                              primary={`${user.firstName} ${user.lastName}`} 
-                              secondary={user.email}
-                              primaryTypographyProps={{ noWrap: true }}
-                              secondaryTypographyProps={{ noWrap: true }}
-                            />
-                            <ArrowIcon fontSize="small" color="action" sx={{ ml: 1 }} />
-                          </ListItem>
-                        ))}
-                      </List>
-                    ) : (
-                      <Box sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="body2" color="textSecondary">
-                          Žiadni používatelia nenájdení
-                        </Typography>
-                      </Box>
-                    )}
-                  </Paper>
-                )}
-              </SearchContainer>
-            </Collapse>
+                >
+                  {searchedUsers.length > 0 ? (
+                    <List dense>
+                      {searchedUsers.map((user) => (
+                        <ListItem button key={user.uid} onClick={() => handleStartConversation(user)}>
+                          <ListItemAvatar>
+                            <Avatar src={user.photoURL}>
+                              {(user.firstName?.charAt(0) || '') + (user.lastName?.charAt(0) || '')}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText 
+                            primary={`${user.firstName} ${user.lastName}`} 
+                            secondary={user.email}
+                            primaryTypographyProps={{ noWrap: true }}
+                            secondaryTypographyProps={{ noWrap: true }}
+                          />
+                          <ArrowIcon fontSize="small" color="action" sx={{ ml: 1 }} />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Box sx={{ p: 2, textAlign: 'center' }}>
+                      <Typography variant="body2" color="textSecondary">
+                        Žiadni používatelia nenájdení
+                      </Typography>
+                    </Box>
+                  )}
+                </Paper>
+              )}
+            </SearchContainer>
             
             <Tabs
               value={tabValue}
@@ -474,11 +472,11 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                 </Box>
               ) : conversations.filter(c => c.lastMessage).length === 0 ? (
                 <EmptyStateContainer>
-                  <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+                  <Typography variant="body1" color="primary" sx={{ mb: 2, fontWeight: 'bold' }}>
                     Nemáte žiadne nedávne konverzácie.
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Kliknite na ikonu vyhľadávania a nájdite používateľa, s ktorým chcete začať konverzáciu.
+                    Použite vyhľadávacie pole vyššie, zadajte meno alebo email používateľa a vytvorte novú konverzáciu.
                   </Typography>
                 </EmptyStateContainer>
               ) : (
@@ -568,11 +566,11 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                 </Box>
               ) : conversations.length === 0 ? (
                 <EmptyStateContainer>
-                  <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+                  <Typography variant="body1" color="primary" sx={{ mb: 2, fontWeight: 'bold' }}>
                     Nemáte žiadne konverzácie.
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Kliknite na ikonu vyhľadávania a nájdite používateľa, s ktorým chcete začať konverzáciu.
+                    Použite vyhľadávacie pole vyššie, zadajte meno alebo email používateľa a vytvorte novú konverzáciu.
                   </Typography>
                 </EmptyStateContainer>
               ) : (

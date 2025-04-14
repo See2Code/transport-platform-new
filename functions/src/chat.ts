@@ -155,11 +155,6 @@ export const sendMessage = functions.region(REGION).https.onCall(
       const senderData = senderDoc.data();
       const senderName = `${senderData?.firstName || ''} ${senderData?.lastName || ''}`.trim();
 
-      // Získame príjemcu (druhého účastníka konverzácie)
-      const recipientId = conversationData.participants.find(
-        (id: string) => id !== senderId
-      );
-
       // Časová značka
       const timestamp = admin.firestore.FieldValue.serverTimestamp();
 

@@ -731,7 +731,7 @@ const Navbar = () => {
   const { logout, userData } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
   const { unreadCount, markAsRead, markAllAsRead, getLatestNotifications } = useNotifications();
-  const { chatOpen, toggleChat } = useChatUI();
+  const { chatOpen, toggleChat, unreadConversationsCount, hasNewMessages } = useChatUI();
   
   // Stav pre notifikačný popover
   const [notificationsEl, setNotificationsEl] = useState<null | HTMLElement>(null);
@@ -905,14 +905,14 @@ const Navbar = () => {
               </Box>
               <Box sx={{ 
                 display: 'flex',
-                gap: 0.5,
+                gap: {xs: 1, sm: 1.5},
                 alignItems: 'center',
-                mr: 1
+                mr: {xs: 1, sm: 1.5}
               }}>
                 <IconButton
                   onClick={handleChatToggle}
                   sx={{ 
-                    padding: {xs: '4px', sm: '6px', md: '8px'}, 
+                    padding: {xs: '8px', sm: '10px'}, 
                     color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
                     backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
                     '&:hover': {
@@ -923,7 +923,22 @@ const Navbar = () => {
                     }
                   }}
                 >
-                  <ChatIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
+                  <Badge 
+                    badgeContent={unreadConversationsCount} 
+                    color="error" 
+                    overlap="circular" 
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        fontSize: '0.6rem',
+                        height: '16px',
+                        minWidth: '16px',
+                        top: 4,
+                        right: 4
+                      }
+                    }}
+                  >
+                    <ChatIcon sx={{ fontSize: {xs: '1.5rem', sm: '1.6rem', md: '1.8rem'} }} />
+                  </Badge>
                 </IconButton>
                 <IconButton
                   onClick={handleNotificationClick}
@@ -1044,7 +1059,7 @@ const Navbar = () => {
                 ))}
                 <Box sx={{ 
                   display: 'flex',
-                  gap: 0.5,
+                  gap: {xs: 1, sm: 1.5},
                   alignItems: 'center',
                   marginLeft: 1,
                   ml: {lg: 1, xl: 2}
@@ -1052,7 +1067,7 @@ const Navbar = () => {
                    <IconButton
                      onClick={handleChatToggle}
                      sx={{ 
-                       padding: {lg: '4px', xl: '8px'}, 
+                       padding: {xs: '8px', sm: '10px'}, 
                        color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
                        backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
                        '&:hover': {
@@ -1063,12 +1078,27 @@ const Navbar = () => {
                        }
                      }}
                    >
-                     <ChatIcon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} />
+                     <Badge 
+                       badgeContent={unreadConversationsCount} 
+                       color="error" 
+                       overlap="circular" 
+                       sx={{
+                         '& .MuiBadge-badge': {
+                           fontSize: '0.6rem',
+                           height: '16px',
+                           minWidth: '16px',
+                           top: 4,
+                           right: 4
+                         }
+                       }}
+                     >
+                       <ChatIcon sx={{ fontSize: {xs: '1.5rem', sm: '1.6rem', md: '1.8rem'} }} />
+                     </Badge>
                    </IconButton>
                    <IconButton
                      onClick={handleNotificationClick}
                      sx={{ 
-                         padding: {lg: '4px', xl: '8px'}, 
+                         padding: {xs: '4px', sm: '6px', md: '8px'}, 
                          color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
                         '&:hover': {
                             color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
@@ -1087,14 +1117,14 @@ const Navbar = () => {
                           }
                         }}
                      >
-                       <NotificationsIcon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} />
+                       <NotificationsIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
                      </Badge>
                    </IconButton>
                    
                    <IconButton
                     onClick={toggleTheme}
                     sx={{ 
-                         padding: {lg: '4px', xl: '8px'}, 
+                         padding: {xs: '4px', sm: '6px', md: '8px'}, 
                          color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
                         '&:hover': {
                             color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
@@ -1105,14 +1135,14 @@ const Navbar = () => {
                     }}
                   >
                     {isDarkMode ? 
-                      <Brightness7Icon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} /> :
-                      <Brightness4Icon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} />
+                      <Brightness7Icon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} /> :
+                      <Brightness4Icon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
                     }
                   </IconButton>
                    <IconButton
                     onClick={handleLogoutClick}
                     sx={{ 
-                        padding: {lg: '4px', xl: '8px'}, 
+                        padding: {xs: '4px', sm: '6px', md: '8px'}, 
                         color: isDarkMode ? '#f87171' : '#ef4444',
                         '&:hover': {
                             backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
@@ -1120,7 +1150,7 @@ const Navbar = () => {
                         },
                     }}
                   >
-                    <LogoutIcon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} />
+                    <LogoutIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
                   </IconButton>
                 </Box>
               </Box>
@@ -1244,7 +1274,7 @@ const Navbar = () => {
                     {notification.reminderNote && (
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', mb: 1 }}>
                         {notification.reminderNote}
-                      </Typography>
+                        </Typography>
                     )}
                     
                     {!notification.sent && (

@@ -22,12 +22,15 @@ import VehicleMap from './components/VehicleMap';
 import Notifications from './components/Notifications';
 import { useThemeMode } from './contexts/ThemeContext';
 import ChatDrawer from './components/chat/ChatDrawer';
+import { useChat } from './contexts/ChatContext';
 
 // Vytvoríme kontext pre chat UI
 type ChatUIContextType = {
   chatOpen: boolean;
   toggleChat: () => void;
   closeChat: () => void;
+  unreadConversationsCount: number;
+  hasNewMessages: boolean;
 };
 
 const ChatUIContext = createContext<ChatUIContextType | undefined>(undefined);
@@ -113,10 +116,14 @@ const AppContent: React.FC = () => {
   const toggleChat = () => setChatOpen(prev => !prev);
   const closeChat = () => setChatOpen(false);
 
+  const { unreadConversationsCount, hasNewMessages } = useChat();
+
   const chatUIValue = {
     chatOpen,
     toggleChat,
-    closeChat
+    closeChat,
+    unreadConversationsCount,
+    hasNewMessages
   };
 
   const theme = createTheme({

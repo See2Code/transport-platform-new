@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.googleMapsProxy = exports.sendTestReminder = exports.initializeLastLogin = exports.logFunctionMetrics = exports.checkTransportNotifications = exports.checkBusinessCaseReminders = exports.sendInvitationEmail = exports.clearDatabase = void 0;
+exports.deleteConversation = exports.getConversationMessages = exports.getUserConversations = exports.updateUnreadCounts = exports.updateUserProfileInConversations = exports.searchUsers = exports.markMessagesAsRead = exports.sendMessage = exports.createConversation = exports.googleMapsProxy = exports.sendTestReminder = exports.initializeLastLogin = exports.logFunctionMetrics = exports.checkTransportNotifications = exports.checkBusinessCaseReminders = exports.sendInvitationEmail = exports.clearDatabase = void 0;
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
@@ -8,6 +8,7 @@ const nodemailer = require("nodemailer");
 admin.initializeApp();
 // Import API proxy funkcií
 const apiProxy = require("./api-proxy");
+const chatFunctions = require("./chat");
 const REGION = 'europe-west1';
 // Konfigurácia emailového transportu
 const transporter = nodemailer.createTransport({
@@ -626,6 +627,16 @@ exports.sendTestReminder = functions
 });
 // Export API proxy funkcií
 exports.googleMapsProxy = apiProxy.googleMapsProxy;
+// Export chat funkcií
+exports.createConversation = chatFunctions.createConversation;
+exports.sendMessage = chatFunctions.sendMessage;
+exports.markMessagesAsRead = chatFunctions.markMessagesAsRead;
+exports.searchUsers = chatFunctions.searchUsers;
+exports.updateUserProfileInConversations = chatFunctions.updateUserProfileInConversations;
+exports.updateUnreadCounts = chatFunctions.updateUnreadCounts;
+exports.getUserConversations = chatFunctions.getUserConversations;
+exports.getConversationMessages = chatFunctions.getConversationMessages;
+exports.deleteConversation = chatFunctions.deleteConversation;
 // Prípadné ďalšie funkcie
 // export const otherApiProxy = apiProxy.otherApiProxy; 
 //# sourceMappingURL=index.js.map
