@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteConversation = exports.getConversationMessages = exports.getUserConversations = exports.updateUnreadCounts = exports.updateUserProfileInConversations = exports.searchUsers = exports.markMessagesAsRead = exports.sendMessage = exports.createConversation = exports.googleMapsProxy = exports.sendTestReminder = exports.initializeLastLogin = exports.logFunctionMetrics = exports.checkTransportNotifications = exports.checkBusinessCaseReminders = exports.sendInvitationEmail = exports.clearDatabase = void 0;
+exports.deleteConversation = exports.getConversationMessages = exports.getUserConversations = exports.updateUnreadCounts = exports.updateUserProfileInConversations = exports.searchUsers = exports.markMessagesAsRead = exports.sendMessage = exports.createConversation = exports.googleMapsProxy = exports.sendTestReminder = exports.updateLastLogin = exports.initializeLastLogin = exports.logFunctionMetrics = exports.checkTransportNotifications = exports.checkBusinessCaseReminders = exports.sendInvitationEmail = exports.clearDatabase = void 0;
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
@@ -586,6 +586,32 @@ exports.initializeLastLogin = functions
     catch (error) {
         console.error('Chyba pri inicializácii lastLogin:', error);
         throw new functions.https.HttpsError('internal', 'Chyba pri inicializácii lastLogin');
+    }
+});
+// Funkcia na aktualizáciu lastLogin pri prihlásení používateľa
+exports.updateLastLogin = functions
+    .region(REGION)
+    .https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Užívateľ nie je prihlásený');
+    }
+    const db = admin.firestore();
+    try {
+        await db.collection('users').doc(context.auth.uid).update({
+            lastLogin: admin.firestore.Timestamp.now()
+        });
+        return {
+            success: true,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            }
+        };
+    }
+    catch (error) {
+        console.error('Chyba pri aktualizácii lastLogin:', error);
+        throw new functions.https.HttpsError('internal', 'Chyba pri aktualizácii lastLogin');
     }
 });
 // Funkcia na odoslanie testovacieho pripomenutia

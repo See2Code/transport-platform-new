@@ -23,6 +23,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { sk } from 'date-fns/locale';
 import { format } from 'date-fns';
+import { styled } from '@mui/material/styles';
 
 interface VehicleTrailPoint {
     lat: number;
@@ -522,6 +523,24 @@ const SaveRouteDialog: React.FC<SaveRouteDialogProps> = ({ open, onClose, routeN
     );
 };
 
+// Pridať PageTitle komponent hneď za importami, pred začiatok komponentu
+const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  fontSize: '1.75rem',
+  fontWeight: 700,
+  color: isDarkMode ? '#ffffff' : '#000000',
+  position: 'relative',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    bottom: '-8px',
+    left: 0,
+    width: '60px',
+    height: '4px',
+    backgroundColor: '#ff9f43',
+    borderRadius: '2px',
+  }
+}));
+
 // --- Hlavný komponent VehicleMap ---
 
 const VehicleMap: React.FC = () => {
@@ -806,23 +825,21 @@ const VehicleMap: React.FC = () => {
     return (
         <Box sx={{ p: 2 }}>
             <GlobalStyles styles={hideGoogleMapElements} />
-            {/* Panel filtrov */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h4">Mapa vozidiel</Typography>
-                <Paper elevation={2} sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 2, backgroundColor: isDarkMode ? 'rgba(42, 45, 62, 0.8)' : 'rgba(255, 255, 255, 0.8)' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><FilterIcon sx={{ color: isDarkMode ? '#888' : '#555' }} /><Typography variant="body2" fontWeight={500}>Filtre:</Typography></Box>
-                    <FormGroup row>
-                        <Tooltip title="Zobraziť offline vozidlá"><FormControlLabel control={<Switch size="small" checked={filterOptions.showOfflineVehicles} onChange={handleFilterChange('showOfflineVehicles')} color="primary" />} label={<Typography variant="body2">Offline vozidlá</Typography>} /></Tooltip>
-                        <Tooltip title="Zobraziť len online vozidlá (menej ako 5 minút)"><FormControlLabel control={<Switch size="small" checked={filterOptions.showOnlineOnly} onChange={handleFilterChange('showOnlineOnly')} color="warning" />} label={<Typography variant="body2">Len online</Typography>} /></Tooltip>
-                        <Tooltip title="Automaticky ukladať trasy vozidiel"><FormControlLabel control={<Switch size="small" checked={autoSaveEnabled} onChange={(e) => setAutoSaveEnabled(e.target.checked)} color="success" />} label={<Typography variant="body2">Auto-ukladanie</Typography>} /></Tooltip>
-                        <Tooltip title="Zobraziť/skryť panel histórie"><IconButton size="small" onClick={() => setShowHistoryPanel(!showHistoryPanel)} color={showHistoryPanel ? "primary" : "default"}><HistoryIcon /></IconButton></Tooltip>
-                    </FormGroup>
-                </Paper>
+            {/* Panel nadpisu */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <PageTitle isDarkMode={isDarkMode}>Mapa vozidiel</PageTitle>
             </Box>
             <Grid container spacing={3}>
                 {/* Zoznam vozidiel */} 
                 <Grid item xs={12} md={4}>
-                    <Paper elevation={3} sx={{ height: '700px', overflow: 'auto' }}>
+                    <Paper elevation={3} sx={{ 
+                      height: '700px', 
+                      overflow: 'auto',
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      borderRadius: '16px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)'
+                    }}>
                         <List>
                             <ListItem><ListItemText primary={<Typography variant="h6">Aktívni vodiči ({vehicles.length})</Typography>} /></ListItem><Divider />
                             {vehicles.length === 0 ? <ListItem><ListItemText primary="Žiadni aktívni vodiči" secondary="Momentálne nie sú k dispozícii žiadne aktívne vozidlá" /></ListItem> : vehicles.map((vehicle: VehicleLocation) => (
@@ -869,7 +886,12 @@ const VehicleMap: React.FC = () => {
                 </Grid>
                 {/* Mapa */} 
                 <Grid item xs={12} md={8}>
-                    <Paper elevation={3}>
+                    <Paper elevation={3} sx={{ 
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      borderRadius: '16px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)'
+                    }}>
                         <GoogleMap mapContainerStyle={mapContainerStyle} center={defaultCenter} zoom={7} onLoad={map => setMap(map)} options={{ styles: isDarkMode ? darkMapStyles : lightMapStyles, disableDefaultUI: false, zoomControl: true, mapTypeControl: false, scaleControl: true, streetViewControl: false, rotateControl: true, fullscreenControl: true, backgroundColor: isDarkMode ? '#1a1a2e' : '#ffffff' }}>
                             {getFilteredVehicles().map((vehicle: VehicleLocation) => (
                                 <React.Fragment key={vehicle.id}>
@@ -895,20 +917,30 @@ const VehicleMap: React.FC = () => {
                     </Paper>
                 </Grid>
                 {/* Panel histórie */} 
-                {showHistoryPanel && (
-                    <Grid item xs={12}>
-                        <Paper elevation={3} sx={{ p: 2, mt: 2, backgroundColor: isDarkMode ? '#2A2D3E' : '#FFFFFF' }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Typography variant="h6">História trás vozidiel</Typography>
-                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}><DatePicker label="Od dátumu" value={dateRangeFilter.startDate} onChange={(newDate) => setDateRangeFilter(prev => ({ ...prev, startDate: newDate }))} slotProps={{ textField: { size: 'small', sx: { width: 140 }}}} /><DatePicker label="Do dátumu" value={dateRangeFilter.endDate} onChange={(newDate) => setDateRangeFilter(prev => ({ ...prev, endDate: newDate }))} slotProps={{ textField: { size: 'small', sx: { width: 140 }}}} /></LocalizationProvider>
-                                    <Button variant="outlined" size="small" startIcon={<FilterIcon />} onClick={filterHistory}>Filtrovať</Button>
-                                </Box>
+                <Grid item xs={12}>
+                    <Paper elevation={3} sx={{ 
+                      p: 2, 
+                      mt: 2,
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      borderRadius: '16px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)'
+                    }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="h6">História trás vozidiel</Typography>
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                                    <DatePicker label="Od dátumu" value={dateRangeFilter.startDate} onChange={(newDate) => setDateRangeFilter(prev => ({ ...prev, startDate: newDate }))} 
+                                      slotProps={{ textField: { size: 'small', sx: { width: 140 }}}} />
+                                    <DatePicker label="Do dátumu" value={dateRangeFilter.endDate} onChange={(newDate) => setDateRangeFilter(prev => ({ ...prev, endDate: newDate }))} 
+                                      slotProps={{ textField: { size: 'small', sx: { width: 140 }}}} />
+                                </LocalizationProvider>
+                                <Button variant="outlined" size="small" startIcon={<FilterIcon />} onClick={filterHistory}>Filtrovať</Button>
                             </Box>
-                            {routeHistory.length === 0 ? <Typography sx={{ textAlign: 'center', p: 3, color: 'text.secondary' }}>Neboli nájdené žiadne trasy pre zvolené obdobie.</Typography> : <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{routeHistory.map((route: RouteHistoryEntry) => (<Paper key={route.id} elevation={selectedHistoryRoute?.id === route.id ? 3 : 1} sx={{ width: 280, p: 2, cursor: 'pointer', transition: 'all 0.2s ease', borderLeft: `4px solid ${route.autoSaved ? '#4CAF50' : '#FF6B00'}`, backgroundColor: selectedHistoryRoute?.id === route.id ? (isDarkMode ? '#3A3D4E' : '#f5f5f5') : (isDarkMode ? '#2A2D3E' : '#FFFFFF'), '&:hover': { backgroundColor: isDarkMode ? '#3A3D4E' : '#f5f5f5' } }} onClick={() => handleSelectHistoryRoute(route)}><Box sx={{ mb: 1 }}><Typography variant="subtitle1" fontWeight="medium" noWrap>{route.name || `Trasa ${route.licensePlate}`}</Typography><Typography variant="caption" sx={{ color: 'text.secondary' }}>{route.autoSaved ? 'Automaticky uložená' : 'Manuálne uložená'}</Typography></Box><Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CarIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{route.licensePlate}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PersonIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2" noWrap>{route.driverName}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TimeIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{format(route.startTime, 'dd.MM.yyyy HH:mm')}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TrackChangesIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{route.distance.toFixed(1)} km</Typography></Box></Box></Paper>))}</Box>}
-                        </Paper>
-            </Grid>
-                )}
+                        </Box>
+                        {routeHistory.length === 0 ? <Typography sx={{ textAlign: 'center', p: 3, color: 'text.secondary' }}>Neboli nájdené žiadne trasy pre zvolené obdobie.</Typography> : <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{routeHistory.map((route: RouteHistoryEntry) => (<Paper key={route.id} elevation={selectedHistoryRoute?.id === route.id ? 3 : 1} sx={{ width: 280, p: 2, cursor: 'pointer', transition: 'all 0.2s ease', borderLeft: `4px solid ${route.autoSaved ? '#4CAF50' : '#FF6B00'}`, backgroundColor: selectedHistoryRoute?.id === route.id ? (isDarkMode ? '#3A3D4E' : '#f5f5f5') : (isDarkMode ? '#2A2D3E' : '#FFFFFF'), '&:hover': { backgroundColor: isDarkMode ? '#3A3D4E' : '#f5f5f5' } }} onClick={() => handleSelectHistoryRoute(route)}><Box sx={{ mb: 1 }}><Typography variant="subtitle1" fontWeight="medium" noWrap>{route.name || `Trasa ${route.licensePlate}`}</Typography><Typography variant="caption" sx={{ color: 'text.secondary' }}>{route.autoSaved ? 'Automaticky uložená' : 'Manuálne uložená'}</Typography></Box><Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CarIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{route.licensePlate}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PersonIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2" noWrap>{route.driverName}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TimeIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{format(route.startTime, 'dd.MM.yyyy HH:mm')}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TrackChangesIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{route.distance.toFixed(1)} km</Typography></Box></Box></Paper>))}</Box>}
+                    </Paper>
+                </Grid>
             </Grid>
             <Menu anchorEl={historyMenu.anchor} open={Boolean(historyMenu.anchor)} onClose={handleVehicleMenuClose}>
                 <MenuItem onClick={() => { if (historyMenu.vehicleId) loadVehicleRouteHistory(historyMenu.vehicleId); handleVehicleMenuClose(); }}><ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon><ListItemText>Zobraziť históriu trás</ListItemText></MenuItem>

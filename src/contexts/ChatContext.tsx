@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, 
-  updateDoc, doc, getDoc, getDocs, Timestamp, limit, arrayUnion
+  updateDoc, doc, getDoc, getDocs, Timestamp, limit
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';

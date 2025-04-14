@@ -618,7 +618,7 @@ function Settings() {
 
   useEffect(() => {
     if (userData) {
-      setIsAdmin(userData.role === 'admin');
+      setIsAdmin(userData.role === 'admin' || userData.role === 'super-admin');
       fetchCompanyData();
     }
   }, [userData]);
@@ -1175,144 +1175,142 @@ function Settings() {
             </FormSection>
           </SettingsCard>
 
-          {isAdmin && (
-            <SettingsCard isDarkMode={isDarkMode}>
-              <CardHeader>
-                <SectionTitle isDarkMode={isDarkMode}>
-                  <BusinessIcon />
-                  Firemné údaje
-                </SectionTitle>
-                {!isEditingCompany ? (
-                  <IconButtonStyled isDarkMode={isDarkMode} onClick={() => setIsEditingCompany(true)}>
-                    <EditIcon />
+          <SettingsCard isDarkMode={isDarkMode}>
+            <CardHeader>
+              <SectionTitle isDarkMode={isDarkMode}>
+                <BusinessIcon />
+                Firemné údaje
+              </SectionTitle>
+              {isAdmin && !isEditingCompany ? (
+                <IconButtonStyled isDarkMode={isDarkMode} onClick={() => setIsEditingCompany(true)}>
+                  <EditIcon />
+                </IconButtonStyled>
+              ) : isAdmin && isEditingCompany ? (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <IconButtonStyled isDarkMode={isDarkMode} onClick={handleSaveCompany}>
+                    <SaveIcon />
                   </IconButtonStyled>
-                ) : (
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButtonStyled isDarkMode={isDarkMode} onClick={handleSaveCompany}>
-                      <SaveIcon />
-                    </IconButtonStyled>
-                    <IconButtonStyled isDarkMode={isDarkMode} onClick={() => setIsEditingCompany(false)}>
-                      <CancelIcon />
-                    </IconButtonStyled>
-                  </Box>
-                )}
-              </CardHeader>
-              <FormSection isDarkMode={isDarkMode}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <StyledTextField
-                      fullWidth
-                      label="Názov firmy"
-                      value={companyData?.companyName || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('companyName', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth disabled={!isEditingCompany}>
-                      <InputLabel sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>Krajina</InputLabel>
-                      <StyledSelect
-                        value={selectedCountry.code}
-                        onChange={handleCountryChange}
-                        disabled={!isEditingCompany}
-                        isDarkMode={isDarkMode}
-                      >
-                        {euCountries.map((country) => (
-                          <MenuItem key={country.code} value={country.code}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <span>{country.flag}</span>
-                              <span>{country.name}</span>
-                            </Box>
-                          </MenuItem>
-                        ))}
-                      </StyledSelect>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <StyledTextField
-                      fullWidth
-                      label="IČO"
-                      value={companyData?.ico || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('ico', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <StyledTextField
-                      fullWidth
-                      label="IČ DPH"
-                      value={companyData?.icDph || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('icDph', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <StyledTextField
-                      fullWidth
-                      label="DIČ"
-                      value={companyData?.dic || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('dic', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <StyledTextField
-                      fullWidth
-                      label="Ulica"
-                      value={companyData?.street || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('street', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <StyledTextField
-                      fullWidth
-                      label="PSČ"
-                      value={companyData?.zipCode || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('zipCode', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <StyledTextField
-                      fullWidth
-                      label="Mesto"
-                      value={companyData?.city || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('city', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <StyledTextField
-                      fullWidth
-                      label="IBAN"
-                      value={companyData?.iban || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('iban', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <StyledTextField
-                      fullWidth
-                      label="Banka"
-                      value={companyData?.bank || ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('bank', e.target.value)}
-                      disabled={!isEditingCompany}
-                      isDarkMode={isDarkMode}
-                    />
-                  </Grid>
+                  <IconButtonStyled isDarkMode={isDarkMode} onClick={() => setIsEditingCompany(false)}>
+                    <CancelIcon />
+                  </IconButtonStyled>
+                </Box>
+              ) : null}
+            </CardHeader>
+            <FormSection isDarkMode={isDarkMode}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    fullWidth
+                    label="Názov firmy"
+                    value={companyData?.companyName || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('companyName', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
                 </Grid>
-              </FormSection>
-            </SettingsCard>
-          )}
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth disabled={!isEditingCompany}>
+                    <InputLabel sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>Krajina</InputLabel>
+                    <StyledSelect
+                      value={selectedCountry.code}
+                      onChange={handleCountryChange}
+                      disabled={!isEditingCompany}
+                      isDarkMode={isDarkMode}
+                    >
+                      {euCountries.map((country) => (
+                        <MenuItem key={country.code} value={country.code}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <span>{country.flag}</span>
+                            <span>{country.name}</span>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </StyledSelect>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    fullWidth
+                    label="IČO"
+                    value={companyData?.ico || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('ico', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    fullWidth
+                    label="IČ DPH"
+                    value={companyData?.icDph || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('icDph', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    fullWidth
+                    label="DIČ"
+                    value={companyData?.dic || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('dic', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <StyledTextField
+                    fullWidth
+                    label="Ulica"
+                    value={companyData?.street || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('street', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    fullWidth
+                    label="PSČ"
+                    value={companyData?.zipCode || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('zipCode', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    fullWidth
+                    label="Mesto"
+                    value={companyData?.city || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('city', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    fullWidth
+                    label="IBAN"
+                    value={companyData?.iban || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('iban', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StyledTextField
+                    fullWidth
+                    label="Banka"
+                    value={companyData?.bank || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCompanyDataChange('bank', e.target.value)}
+                    disabled={!isEditingCompany}
+                    isDarkMode={isDarkMode}
+                  />
+                </Grid>
+              </Grid>
+            </FormSection>
+          </SettingsCard>
         </Grid>
       </SettingsGrid>
 
@@ -1382,13 +1380,13 @@ function Settings() {
                 accept="image/*"
                 style={{ display: 'none' }}
               />
-              <ImageContainer onClick={() => logoInputRef.current?.click()}>
+              <ImageContainer onClick={isAdmin ? () => logoInputRef.current?.click() : undefined} style={{ cursor: isAdmin ? 'pointer' : 'default' }}>
                 {companyLogo ? (
                   <StyledImage src={companyLogo} alt="Company logo" />
                 ) : (
                   <AddAPhotoIcon sx={{ width: 40, height: 40, color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' }} />
                 )}
-                {companyLogo && (
+                {companyLogo && isAdmin && (
                   <IconButtonStyled
                     isDarkMode={isDarkMode}
                     size="small"
@@ -1409,7 +1407,7 @@ function Settings() {
                 )}
               </ImageContainer>
               <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>
-                Kliknite pre nahratie loga firmy
+                {isAdmin ? 'Kliknite pre nahratie loga firmy' : 'Logo vašej firmy'}
               </Typography>
             </UploadSection>
           </SettingsCard>
@@ -1441,36 +1439,39 @@ function Settings() {
         circular={false}
       />
 
-      <ButtonGroup>
-        <CancelButton isDarkMode={isDarkMode} onClick={handleCancel}>
-          Zrušiť
-        </CancelButton>
-        <ActionButton
-          isDarkMode={isDarkMode}
-          onClick={handleSave}
-          disabled={loading}
-          sx={{
-            position: 'relative',
-            overflow: 'hidden',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(45deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%)',
-              transform: 'translateX(-100%)',
-              transition: 'transform 0.6s ease',
-            },
-            '&:hover::after': {
-              transform: 'translateX(100%)',
-            }
-          }}
-        >
-          {loading ? <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 'Uložiť'}
-        </ActionButton>
-      </ButtonGroup>
+      {/* Zobrazenie ButtonGroup len pre admina */}
+      {isAdmin && (
+        <ButtonGroup>
+          <CancelButton isDarkMode={isDarkMode} onClick={handleCancel}>
+            Zrušiť
+          </CancelButton>
+          <ActionButton
+            isDarkMode={isDarkMode}
+            onClick={handleSave}
+            disabled={loading}
+            sx={{
+              position: 'relative',
+              overflow: 'hidden',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(45deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%)',
+                transform: 'translateX(-100%)',
+                transition: 'transform 0.6s ease',
+              },
+              '&:hover::after': {
+                transform: 'translateX(100%)',
+              }
+            }}
+          >
+            {loading ? <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 'Uložiť'}
+          </ActionButton>
+        </ButtonGroup>
+      )}
 
       <SnackbarStyled
         open={snackbar.open || Boolean(error) || Boolean(success)}

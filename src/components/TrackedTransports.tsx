@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -17,16 +17,6 @@ import {
   IconButton,
   Chip,
   Tooltip,
-  InputAdornment,
-  Card,
-  TableCell,
-  TableContainer,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  CardContent,
-  CardActions,
   Divider,
   useTheme,
   Snackbar,
@@ -35,8 +25,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { sk } from 'date-fns/locale';
-import { collection, query, where, getDocs, addDoc, doc as firestoreDoc, updateDoc, Timestamp, orderBy, deleteDoc, onSnapshot, writeBatch, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { collection, query, where, getDocs, addDoc, doc as firestoreDoc, updateDoc, Timestamp, orderBy, deleteDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -52,23 +42,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import CloseIcon from '@mui/icons-material/Close';
 import { useThemeMode } from '../contexts/ThemeContext';
 import { v4 as uuidv4 } from 'uuid';
-
-const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  margin: theme.spacing(2, 0),
-  width: '100%',
-  background: theme.palette.mode === 'dark' 
-    ? 'rgba(28, 28, 45, 0.35)' 
-    : 'rgba(255, 255, 255, 0.95)',
-  backdropFilter: 'blur(10px)',
-  border: `1px solid ${theme.palette.mode === 'dark' 
-    ? 'rgba(255, 255, 255, 0.1)' 
-    : 'rgba(0, 0, 0, 0.1)'}`,
-  borderRadius: 12,
-  boxShadow: theme.palette.mode === 'dark'
-    ? '0 4px 20px rgba(0, 0, 0, 0.2)'
-    : '0 4px 20px rgba(0, 0, 0, 0.1)',
-}));
 
 // Pomocná funkcia na konverziu dátumu
 const convertToDate = (dateTime: Date | Timestamp | string | null | undefined): Date | null => {
@@ -210,33 +183,6 @@ const AddButton = styled(Button)({
   }
 });
 
-const StyledCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-  backdropFilter: 'blur(10px)',
-  borderRadius: '20px',
-  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.15)',
-  transition: 'all 0.3s ease',
-  marginBottom: '10px',
-  '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: '0 8px 24px rgba(255, 159, 67, 0.3)',
-    border: '1px solid rgba(255, 159, 67, 0.3)',
-    '& .MuiCardContent-root': {
-      background: 'linear-gradient(180deg, rgba(255, 159, 67, 0.1) 0%, rgba(255, 159, 67, 0) 100%)',
-    }
-  },
-  '& .MuiTypography-root': {
-    color: isDarkMode ? '#ffffff' : '#000000',
-  },
-  '& .MuiTypography-body1': {
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-  },
-  '@media (max-width: 600px)': {
-    marginBottom: '8px'
-  }
-}));
-
 const TransportCard = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
   borderRadius: '16px',
@@ -260,23 +206,6 @@ const TransportCard = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode 
   }
 }));
 
-const TransportInfo = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-});
-
-const InfoContainer = styled(Box)({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
-  height: '100%',
-  justifyContent: 'space-between',
-  '@media (max-width: 600px)': {
-    gap: '16px'
-  }
-});
-
 const CreatorInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   alignItems: 'center',
@@ -287,146 +216,6 @@ const CreatorInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
     fontSize: '1.1rem',
     color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
   }
-}));
-
-const MapContainer = styled(Box)({
-  width: '50%',
-  height: '600px',
-  borderRadius: '12px',
-  overflow: 'hidden',
-  marginTop: '24px',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-});
-
-const MapThumbnail = styled(Box)({
-  width: '100%',
-  height: '100%',
-  '& > div': {
-    width: '100% !important',
-    height: '100% !important',
-  }
-});
-
-const InfoSection = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-  padding: '12px',
-  backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
-  borderRadius: '12px',
-  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
-}));
-
-const InfoLabel = styled(Typography)({
-  fontSize: '0.85rem',
-  color: 'rgba(255, 255, 255, 0.5)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-});
-
-const InfoValue = styled(Typography)({
-  fontSize: '1rem',
-  color: '#ffffff',
-});
-
-const LocationInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '24px',
-  color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-  '& .location-section': {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    padding: '20px',
-    backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
-    borderRadius: '12px',
-    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
-  },
-  '& .location-header': {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontWeight: 600,
-    fontSize: '1.1rem',
-    color: isDarkMode ? '#ffffff' : '#000000',
-    '& .MuiSvgIcon-root': {
-      fontSize: '1.2rem',
-      color: colors.accent.main
-    }
-  },
-  '& .location-address': {
-    marginLeft: '32px',
-    fontSize: '1rem',
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-  }
-}));
-
-const TimeInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '32px',
-  color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)',
-  '& .section': {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    padding: '20px',
-    backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.02)',
-    borderRadius: '12px',
-    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
-  },
-  '& .section-title': {
-    fontWeight: 600,
-    color: isDarkMode ? '#ffffff' : '#000000',
-    fontSize: '1.1rem',
-    marginBottom: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    '& .MuiSvgIcon-root': {
-      fontSize: '1.2rem',
-      color: colors.accent.main
-    }
-  },
-  '& .time-row': {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginLeft: '24px',
-    fontSize: '1rem',
-    '& .MuiSvgIcon-root': {
-      fontSize: '1.1rem',
-      color: colors.accent.main
-    }
-  },
-  '& .reminder-info': {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-    marginLeft: '24px',
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-    fontSize: '0.9rem',
-    '& .MuiSvgIcon-root': {
-      fontSize: '0.9rem',
-      color: colors.accent.light
-    }
-  }
-}));
-
-const CardHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  width: '100%',
-  color: isDarkMode ? '#ffffff' : '#000000',
-}));
-
-const OrderNumber = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  fontSize: '1.1rem',
-  fontWeight: 600,
-  color: isDarkMode ? '#ffffff' : '#000000',
 }));
 
 const InfoChip = styled(Box)<{ variant?: 'status' | 'distance' }>(({ variant, theme }) => ({
@@ -491,17 +280,6 @@ const MapDialog = styled(Dialog)(({ theme }) => ({
   }
 }));
 
-const MobileTransportCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
-  borderRadius: '16px',
-  padding: '16px',
-  color: isDarkMode ? '#ffffff' : '#000000',
-  boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
-  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
-  marginBottom: '16px',
-  width: '100%'
-}));
-
 const MobileTransportHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   justifyContent: 'space-between',
@@ -523,11 +301,6 @@ const MobileTransportNumber = styled(Typography)<{ isDarkMode: boolean }>(({ isD
   fontWeight: 600,
   color: isDarkMode ? colors.accent.main : '#000000'
 }));
-
-const MobileTransportStatus = styled(Chip)({
-  height: '24px',
-  fontSize: '0.75rem'
-});
 
 const MobileTransportInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
@@ -674,51 +447,8 @@ const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
   }
 }));
 
-const ActionButton = styled(Button)(({ theme }) => ({
-  '&:hover': {
-    backgroundColor: 'rgba(255, 159, 67, 0.1)',
-  },
-}));
-
-// Pridáme helper metódu pre získanie vzdialenosti
-const fetchDistanceFromGoogle = async (origin: string, destination: string): Promise<string | null> => {
-  try {
-    if (window.google && window.google.maps) {
-      const directionsService = new window.google.maps.DirectionsService();
-      
-      const result = await directionsService.route({
-        origin,
-        destination,
-        travelMode: window.google.maps.TravelMode.DRIVING
-      });
-      
-      if (result.routes[0]?.legs[0]?.distance?.text) {
-        return result.routes[0].legs[0].distance.text;
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching distance:', error);
-    return null;
-  }
-};
-
 // Hook pre zobrazovanie pripomienok
-interface Reminder {
-  id: string;
-  type: 'loading' | 'unloading';
-  orderNumber: string;
-  address: string;
-  reminderTime?: Timestamp | Date;
-  reminderDateTime?: Timestamp | Date; // podporujeme oba formáty
-  shown?: boolean;  // Ponecháme, ale budeme ignorovať pri kontrole
-  status: string;
-  companyID: string;
-  transportId: string;
-  sent?: boolean;
-  createdAt?: Timestamp | Date;
-  updatedAt?: Timestamp | Date;
-}
+type ReminderType = 'loading' | 'unloading';
 
 // Jednoduchý hook pre notifikácie
 function useNotifications() {

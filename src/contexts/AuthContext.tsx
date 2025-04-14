@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { User as FirebaseUser } from 'firebase/auth';
 import { auth, db, functions } from '../firebase';
 import { CircularProgress, Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@mui/material';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, deleteDoc, updateDoc, Timestamp, getFirestore, arrayUnion, getDocs } from 'firebase/firestore';
 import { signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { useThemeMode } from './ThemeContext';
+import { httpsCallable } from 'firebase/functions';
 
 export interface UserData {
   uid: string;
@@ -78,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const generateDeviceId = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      const v = c === 'x' ? r : ((r & 0x3) | 0x8);
       return v.toString(16);
     });
   };
@@ -263,6 +264,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       setUserData(newUserData);
+      
+      // Aktualizácia lastLogin priamo cez Firestore
+      try {
+        await updateDoc(doc(db, 'users', userCredential.user.uid), {
+          lastLogin: serverTimestamp()
+        });
+      } catch (updateError) {
+        console.error('Nepodarilo sa aktualizovať lastLogin:', updateError);
+      }
+      
       await manageSession(userCredential.user);
       
     } catch (error: any) {

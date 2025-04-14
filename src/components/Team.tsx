@@ -46,7 +46,7 @@ import {
   Phone as PhoneIcon,
   AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
-import { collection, query, where, getDocs, addDoc, doc, getDoc, onSnapshot, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, getDoc, onSnapshot, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
 import { auth, db, functions } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -59,6 +59,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeMode } from '../contexts/ThemeContext';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
+import { formatDistanceToNow } from 'date-fns';
+import { sk } from 'date-fns/locale';
 
 interface Country {
   code: string;
@@ -721,102 +723,124 @@ function Team() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        setLoading(true);
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          // Get company 
+          const userRef = doc(db, 'users', user.uid);
+          const userSnap = await getDoc(userRef);
           
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            console.log('CompanyID používateľa v Team:', userData.companyID);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
             
-            if (!userData.companyID) {
-              console.error('Používateľ nemá nastavené companyID v Team komponente');
-              setError('Používateľ nemá priradené ID firmy.');
-              setLoading(false);
-              return;
-            }
-            
-            setCompanyID(userData.companyID);
-            setIsAdmin(userData.role === 'admin');
-
-            // Ak je užívateľ admin, aktualizujeme jeho status na 'active'
-            if (userData.role === 'admin' && userData.status !== 'active') {
-              await updateDoc(doc(db, 'users', user.uid), {
-                status: 'active',
-                updatedAt: new Date()
-              });
-            }
-
-            // Načítanie členov tímu
-            const membersQuery = query(
-              collection(db, 'users'),
-              where('companyID', '==', userData.companyID)
-            );
-            
-            // Načítanie pozvánok
-            const invitationsQuery = query(
-              collection(db, 'invitations'),
-              where('companyID', '==', userData.companyID)
-            );
-
-            // Real-time sledovanie členov tímu
-            const unsubscribeMembers = onSnapshot(membersQuery, (snapshot) => {
-              console.log('Načítané členy tímu:', snapshot.docs.map(doc => ({
-                ...doc.data(),
-                id: doc.id
-              })));
-              const membersMap = new Map<string, TeamMember>();
-              snapshot.forEach((doc) => {
-                const data = doc.data();
-                console.log('Spracovávam člena:', data.email, 'lastLogin:', data.lastLogin);
-                // Použijeme email ako kľúč pre odstránenie duplicít
-                membersMap.set(data.email, {
+            if (userData) {
+              // Nastavenie companyID pre neskoršie použitie
+              setCompanyID(userData.companyID || userData.companyId || "");
+              setIsAdmin(userData.role === 'admin');
+              
+              // Načítanie členov tímu
+              const companyQuery = query(
+                collection(db, 'users'),
+                where('companyID', '==', userData.companyID || userData.companyId),
+                where('role', 'in', ['admin', 'user', 'manager', 'driver', 'viewer']),
+                orderBy('createdAt', 'desc')
+              );
+              
+              const companySnap = await getDocs(companyQuery);
+              
+              const members: TeamMember[] = [];
+              
+              companySnap.forEach((doc) => {
+                const memberData = doc.data();
+                
+                // Funkcia pre bezpečné spracovanie lastLogin hodnoty
+                const processLastLogin = (lastLoginValue: any) => {
+                  console.log('Processing lastLogin:', lastLoginValue, typeof lastLoginValue);
+                  
+                  if (!lastLoginValue) return null;
+                  
+                  // Ak je to už Timestamp objekt z Firestore
+                  if (lastLoginValue instanceof Timestamp) {
+                    console.log('Timestamp instance detected');
+                    return lastLoginValue;
+                  }
+                  
+                  // Ak je to objekt s seconds a nanoseconds (serializovaný Timestamp)
+                  if (typeof lastLoginValue === 'object' && 'seconds' in lastLoginValue) {
+                    console.log('Timestamp-like object detected');
+                    return new Timestamp(lastLoginValue.seconds, lastLoginValue.nanoseconds || 0);
+                  }
+                  
+                  // Ak je to string (ISO formát dátumu)
+                  if (typeof lastLoginValue === 'string') {
+                    console.log('String date detected');
+                    return Timestamp.fromDate(new Date(lastLoginValue));
+                  }
+                  
+                  // Ak je to Date objekt
+                  if (lastLoginValue instanceof Date) {
+                    console.log('Date instance detected');
+                    return Timestamp.fromDate(lastLoginValue);
+                  }
+                  
+                  console.log('Unrecognized lastLogin format:', lastLoginValue);
+                  return null;
+                };
+                
+                const processedLastLogin = processLastLogin(memberData.lastLogin);
+                
+                const member = {
                   id: doc.id,
-                  firstName: data.firstName,
-                  lastName: data.lastName,
-                  email: data.email,
-                  phone: data.phone,
-                  role: data.role,
-                  status: data.role === 'admin' ? 'active' : (data.status || 'pending'),
-                  createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
-                  userId: doc.id,  // Používame doc.id ako userId
-                  lastLogin: data.lastLogin || null
-                });
-                console.log('Po konverzii lastLogin:', membersMap.get(data.email)?.lastLogin);
+                  firstName: memberData.firstName || '',
+                  lastName: memberData.lastName || '',
+                  email: memberData.email || '',
+                  phone: memberData.phone || '',
+                  role: memberData.role || '',
+                  status: memberData.status || 'active',
+                  createdAt: memberData.createdAt || null,
+                  userId: memberData.userId || doc.id,
+                  lastLogin: processedLastLogin
+                };
+                
+                members.push(member);
               });
-              console.log('Finálny zoznam členov po odstránení duplicít:', Array.from(membersMap.values()));
-              setTeamMembers(Array.from(membersMap.values()));
-            });
-
-            // Real-time sledovanie pozvánok
-            const unsubscribeInvitations = onSnapshot(invitationsQuery, (snapshot) => {
-              const invites: Invitation[] = [];
-              snapshot.forEach((doc) => {
-                const data = doc.data();
-                if (data.status === 'pending') {
-                  invites.push({
-                    id: doc.id,
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    email: data.email,
-                    phone: data.phone,
-                    role: data.role,
-                    status: data.status,
-                    createdAt: data.createdAt?.toDate?.() || data.createdAt || new Date(),
-                    userId: data.userId
-                  });
-                }
+              
+              setTeamMembers(members);
+              
+              // Oddelené načítanie pozvánok
+              const invitationsQuery = query(
+                collection(db, 'invitations'),
+                where('companyID', '==', userData.companyID || userData.companyId),
+                where('status', '==', 'pending')
+              );
+              
+              const invitationsSnap = await getDocs(invitationsQuery);
+              
+              const pendingInvitations: Invitation[] = [];
+              
+              invitationsSnap.forEach((doc) => {
+                const invitationData = doc.data();
+                
+                const invitation: Invitation = {
+                  id: doc.id,
+                  firstName: invitationData.firstName || '',
+                  lastName: invitationData.lastName || '',
+                  email: invitationData.email || '',
+                  phone: invitationData.phone || '',
+                  role: invitationData.role || '',
+                  status: 'pending',
+                  createdAt: invitationData.createdAt || new Date(),
+                  userId: invitationData.userId
+                };
+                
+                pendingInvitations.push(invitation);
               });
-              setInvitations(invites);
-            });
-
-            return () => {
-              unsubscribeMembers();
-              unsubscribeInvitations();
-            };
+              
+              setInvitations(pendingInvitations);
+            }
           }
-        } catch (err) {
-          console.error('Chyba pri načítaní údajov:', err);
-          setError('Nastala chyba pri načítaní údajov.');
+        } catch (error) {
+          console.error('Error fetching team data:', error);
+          setError('Nepodarilo sa načítať údaje o tíme.');
         } finally {
           setLoading(false);
         }
@@ -1388,22 +1412,37 @@ function Team() {
                         />
                       </TableCell>
                       <TableCell>
-                        {member.lastLogin ? (
-                          <Typography sx={{ 
-                            color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                            fontSize: '0.9rem'
-                          }}>
-                            {format(member.lastLogin.toDate(), 'dd.MM.yyyy HH:mm')}
-                          </Typography>
-                        ) : (
-                          <Typography sx={{ 
-                            color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-                            fontSize: '0.9rem',
-                            fontStyle: 'italic'
-                          }}>
-                            Nikdy
-                          </Typography>
-                        )}
+                        <Typography 
+                          variant="button"
+                          fontWeight="regular"
+                          fontFamily={"Inter"}
+                          color="text"
+                          sx={{ display: 'flex', alignItems: 'center' }}
+                        >
+                          {member.lastLogin ? (
+                            <>
+                              <Tooltip title={
+                                `Presný čas: ${member.lastLogin.toDate().toLocaleString('sk-SK', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric', 
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit'
+                                })}`
+                              }>
+                                <span>
+                                  {formatDistanceToNow(member.lastLogin.toDate(), { 
+                                    addSuffix: true,
+                                    locale: sk 
+                                  })}
+                                </span>
+                              </Tooltip>
+                            </>
+                          ) : (
+                            "Nikdy"
+                          )}
+                        </Typography>
                       </TableCell>
                       {isAdmin && (
                         <TableCell>
@@ -1970,7 +2009,7 @@ function Team() {
           <DialogTitle>Potvrdiť vymazanie</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              Ste si istý, že chcete {inviteToDelete && 'userId' in inviteToDelete ? 'vymazať člena z tímu' : 'zrušiť pozvánku pre'} {inviteToDelete?.firstName} {inviteToDelete?.lastName}? Táto akcia je nezvratná.
+              Ste si istý, že chcete {inviteToDelete ? 'vymazať člena z tímu' : 'zrušiť pozvánku pre'} {inviteToDelete?.firstName} {inviteToDelete?.lastName}? Táto akcia je nezvratná.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
