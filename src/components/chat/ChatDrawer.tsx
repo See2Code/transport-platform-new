@@ -59,6 +59,7 @@ const ConversationList = styled(List)(({ theme }) => ({
   flexGrow: 1,
   overflow: 'auto',
   padding: 0,
+  margin: 0,
 }));
 
 const ChatHeader = styled(Box, {
@@ -145,17 +146,33 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
   },
 }));
 
-const TabPanel = ({ children, value, index, ...other }: any) => {
+const TabPanel = (props: {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+  style?: React.CSSProperties;
+  [key: string]: any;
+}) => {
+  const { children, value, index, style, ...other } = props;
+
+  const mergedStyle: React.CSSProperties = {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    flexGrow: 1,
+    ...(style || {}),
+  };
+
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
       id={`chat-tabpanel-${index}`}
       aria-labelledby={`chat-tab-${index}`}
-      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
       {...other}
+      style={mergedStyle}
     >
-      {value === index && <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>{children}</Box>}
+      {value === index && <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, padding: 0, margin: 0 }}>{children}</Box>}
     </div>
   );
 };
@@ -186,7 +203,6 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
-  const [tabValue, setTabValue] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll down when new messages arrive
@@ -251,15 +267,16 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
 
   // Get other user's info from conversation
   const getOtherUserInfo = (conversation: Conversation) => {
-    if (!userData?.uid) return { name: 'Unknown', photoURL: '' };
+    if (!userData?.uid) return { name: 'Unknown', photoURL: '', companyName: '' };
     
     const otherUserId = conversation.participants.find(id => id !== userData.uid);
-    if (!otherUserId) return { name: 'Unknown', photoURL: '' };
+    if (!otherUserId) return { name: 'Unknown', photoURL: '', companyName: '' };
     
     const userInfo = conversation.participantsInfo[otherUserId];
     return {
       name: userInfo?.name || 'Unknown',
       photoURL: userInfo?.photoURL || '',
+      companyName: userInfo?.companyName || ''
     };
   };
 
@@ -297,8 +314,11 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                 {getOtherUserInfo(currentConversation).name.charAt(0)}
               </Avatar>
               <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="subtitle1" fontWeight="medium">
+                <Typography variant="subtitle1" fontWeight="medium" noWrap>
                   {getOtherUserInfo(currentConversation).name}
+                </Typography>
+                <Typography variant="caption" color="textSecondary" noWrap>
+                  {getOtherUserInfo(currentConversation).companyName}
                 </Typography>
               </Box>
               <IconButton edge="end" onClick={onClose}>
@@ -474,201 +494,98 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
               )}
             </SearchContainer>
             
-            <Tabs
-              value={tabValue}
-              onChange={(_, newValue) => setTabValue(newValue)}
-              variant="fullWidth"
-              sx={{ borderBottom: 1, borderColor: 'divider' }}
-            >
-              <Tab label="Nedávne" />
-              <Tab label="Všetky" />
-            </Tabs>
-            
-            <TabPanel value={tabValue} index={0}>
-              {loadingConversations ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                  <CircularProgress size={32} />
-                </Box>
-              ) : conversations.filter(c => c.lastMessage).length === 0 ? (
-                <EmptyStateContainer>
-                  <Typography variant="body1" color="primary" sx={{ mb: 2, fontWeight: 'bold' }}>
-                    Nemáte žiadne nedávne konverzácie.
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Použite vyhľadávacie pole vyššie, zadajte meno alebo email používateľa a vytvorte novú konverzáciu.
-                  </Typography>
-                </EmptyStateContainer>
-              ) : (
-                <ConversationList>
-                  {conversations
-                    .filter(conversation => conversation.lastMessage)
-                    .map((conversation) => {
-                      const { name, photoURL } = getOtherUserInfo(conversation);
-                      const hasUnread = 
-                        conversation.lastMessage?.senderId !== userData?.uid && 
-                        conversation.unreadCount && 
-                        conversation.unreadCount > 0;
-                      
-                      return (
-                        <ListItem
-                          button
-                          key={conversation.id}
-                          onClick={() => selectConversation(conversation.id)}
-                          sx={{
-                            bgcolor: hasUnread 
-                              ? (isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)')
-                              : 'transparent',
-                            borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
-                          }}
-                        >
-                          <ListItemAvatar>
-                            <Avatar src={photoURL} alt={name}>
-                              {name.charAt(0)}
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography 
-                                  variant="subtitle2" 
-                                  fontWeight={hasUnread ? 'bold' : 'normal'}
-                                  noWrap
-                                >
-                                  {name}
-                                </Typography>
-                              </Box>
-                            }
-                            secondary={
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Typography 
-                                  variant="body2" 
-                                  color="textSecondary" 
-                                  sx={{ 
-                                    maxWidth: '180px',
-                                    fontWeight: hasUnread ? 'medium' : 'normal',
-                                    color: hasUnread ? (isDarkMode ? 'white' : 'black') : 'inherit'
-                                  }}
-                                  noWrap
-                                >
-                                  {conversation.lastMessage?.text}
-                                </Typography>
-                                {hasUnread && (
-                                  <Box 
-                                    component="span" 
-                                    sx={{ 
-                                      ml: 1,
-                                      width: 8,
-                                      height: 8,
-                                      borderRadius: '50%',
-                                      bgcolor: 'primary.main',
-                                      display: 'inline-block'
-                                    }} 
-                                  />
-                                )}
-                              </Box>
-                            }
-                          />
-                        </ListItem>
-                      );
-                    })}
-                </ConversationList>
-              )}
-            </TabPanel>
-            
-            <TabPanel value={tabValue} index={1}>
-              {loadingConversations ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                  <CircularProgress size={32} />
-                </Box>
-              ) : conversations.length === 0 ? (
-                <EmptyStateContainer>
-                  <Typography variant="body1" color="primary" sx={{ mb: 2, fontWeight: 'bold' }}>
-                    Nemáte žiadne konverzácie.
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Použite vyhľadávacie pole vyššie, zadajte meno alebo email používateľa a vytvorte novú konverzáciu.
-                  </Typography>
-                </EmptyStateContainer>
-              ) : (
-                <ConversationList>
-                  {conversations.map((conversation) => {
-                    const { name, photoURL } = getOtherUserInfo(conversation);
-                    const hasUnread = 
-                      conversation.lastMessage?.senderId !== userData?.uid && 
-                      conversation.unreadCount && 
-                      conversation.unreadCount > 0;
-                    
-                    return (
-                      <ListItem
-                        button
-                        key={conversation.id}
-                        onClick={() => selectConversation(conversation.id)}
-                        sx={{
-                          bgcolor: hasUnread 
-                            ? (isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)')
-                            : 'transparent',
-                          borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
-                        }}
-                      >
-                        <ListItemAvatar>
-                          <Avatar src={photoURL} alt={name}>
-                            {name.charAt(0)}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {loadingConversations ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', flexGrow: 1 }}>
+                <CircularProgress size={32} />
+              </Box>
+            ) : conversations.length === 0 ? (
+              <EmptyStateContainer sx={{ flexGrow: 1 }}>
+                <Typography variant="body1" color="primary" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  Nemáte žiadne konverzácie.
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Použite vyhľadávacie pole vyššie, zadajte meno alebo email používateľa a vytvorte novú konverzáciu.
+                </Typography>
+              </EmptyStateContainer>
+            ) : (
+              <ConversationList sx={{ flexGrow: 1 }}>
+                {conversations.map((conversation) => {
+                  const { name, photoURL } = getOtherUserInfo(conversation);
+                  const hasUnread = 
+                    conversation.lastMessage?.senderId !== userData?.uid && 
+                    conversation.unreadCount && 
+                    conversation.unreadCount > 0;
+                  
+                  return (
+                    <ListItem
+                      button
+                      key={conversation.id}
+                      onClick={() => selectConversation(conversation.id)}
+                      sx={{
+                        bgcolor: hasUnread 
+                          ? (isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)')
+                          : 'transparent',
+                        borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar src={photoURL} alt={name}>
+                          {name.charAt(0)}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography 
+                              variant="subtitle2" 
+                              fontWeight={hasUnread ? 'bold' : 'normal'}
+                              noWrap
+                            >
+                              {name}
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
+                          conversation.lastMessage ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <Typography 
-                                variant="subtitle2" 
-                                fontWeight={hasUnread ? 'bold' : 'normal'}
+                                variant="body2" 
+                                color="textSecondary" 
+                                sx={{ 
+                                  maxWidth: '180px',
+                                  fontWeight: hasUnread ? 'medium' : 'normal',
+                                  color: hasUnread ? (isDarkMode ? 'white' : 'black') : 'inherit'
+                                }}
                                 noWrap
                               >
-                                {name}
+                                {conversation.lastMessage.text}
                               </Typography>
-                            </Box>
-                          }
-                          secondary={
-                            conversation.lastMessage ? (
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Typography 
-                                  variant="body2" 
-                                  color="textSecondary" 
+                              {hasUnread && (
+                                <Box 
+                                  component="span" 
                                   sx={{ 
-                                    maxWidth: '180px',
-                                    fontWeight: hasUnread ? 'medium' : 'normal',
-                                    color: hasUnread ? (isDarkMode ? 'white' : 'black') : 'inherit'
-                                  }}
-                                  noWrap
-                                >
-                                  {conversation.lastMessage.text}
-                                </Typography>
-                                {hasUnread && (
-                                  <Box 
-                                    component="span" 
-                                    sx={{ 
-                                      ml: 1,
-                                      width: 8,
-                                      height: 8,
-                                      borderRadius: '50%',
-                                      bgcolor: 'primary.main',
-                                      display: 'inline-block'
-                                    }} 
-                                  />
-                                )}
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" color="textSecondary">
-                                Začnite konverzáciu
-                              </Typography>
-                            )
-                          }
-                        />
-                      </ListItem>
-                    );
-                  })}
-                </ConversationList>
-              )}
-            </TabPanel>
+                                    ml: 1,
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    bgcolor: 'primary.main',
+                                    display: 'inline-block'
+                                  }} 
+                                />
+                              )}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="textSecondary">
+                              Začnite konverzáciu
+                            </Typography>
+                          )
+                        }
+                      />
+                    </ListItem>
+                  );
+                })}
+              </ConversationList>
+            )}
           </>
         )}
       </ChatContainer>

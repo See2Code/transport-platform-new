@@ -24,6 +24,7 @@ export interface Conversation {
       name: string;
       email: string;
       photoURL?: string;
+      companyName?: string;
     }
   };
   lastMessage?: {
@@ -302,12 +303,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       [userData.uid]: {
         name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
         email: userData.email || '',
-        photoURL: userData.photoURL || ''
+        photoURL: userData.photoURL || '',
+        companyName: userData.companyName || ''
       },
       [userId]: {
         name: `${otherUserData.firstName || ''} ${otherUserData.lastName || ''}`.trim(),
         email: otherUserData.email || '',
-        photoURL: otherUserData.photoURL || ''
+        photoURL: otherUserData.photoURL || '',
+        companyName: otherUserData.companyName || ''
       }
     };
     

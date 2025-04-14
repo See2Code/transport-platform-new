@@ -32,37 +32,38 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import HomeIcon from '@mui/icons-material/Home';
-import GroupIcon from '@mui/icons-material/Group';
-import SettingsIcon from '@mui/icons-material/Settings';
-import LogoutIcon from '@mui/icons-material/Logout';
-import AccountIcon from '@mui/icons-material/AccountCircle';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import ContactsIcon from '@mui/icons-material/Contacts';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import CloseIcon from '@mui/icons-material/Close';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import EuroIcon from '@mui/icons-material/Euro';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import BusinessIcon from '@mui/icons-material/Business';
-import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
-import ChatIcon from '@mui/icons-material/Chat';
+import {
+  Home as HomeIcon,
+  Group as GroupIcon,
+  Settings as SettingsIcon,
+  Logout as LogoutIcon,
+  AccountCircle as AccountIcon,
+  LocalShipping as LocalShippingIcon,
+  Notifications as NotificationsIcon,
+  Contacts as ContactsIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Close as CloseIcon,
+  LocationOn as LocationOnIcon,
+  Receipt as ReceiptIcon,
+  Visibility as VisibilityIcon,
+  Euro as EuroIcon,
+  AccessTime as AccessTimeIcon,
+  Business as BusinessIcon,
+  Chat as ChatIcon,
+  Menu as MenuIcon,
+  Person as PersonIcon,
+  Dashboard as DashboardIcon,
+  Brightness4 as Brightness4Icon,
+  Brightness7 as Brightness7Icon,
+  PersonAdd as PersonAddIcon,
+} from '@mui/icons-material';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { MenuProps } from '@mui/material/Menu';
-import MenuIcon from '@mui/icons-material/Menu';
-import PersonIcon from '@mui/icons-material/Person';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import { useThemeMode } from '../contexts/ThemeContext';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { useNotifications } from '../contexts/NotificationsContext';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
@@ -185,27 +186,63 @@ const ListItemIconStyled = styled(ListItemIcon)({
 
 const NavListItem = styled(ListItem, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode?: boolean }>(({ isDarkMode = true }) => ({
+})<{ isDarkMode?: boolean }>(({ theme, isDarkMode = true }) => ({
   position: 'relative',
   padding: '4px',
   '& .MuiListItemButton-root': {
-    borderRadius: 0,
+    borderRadius: '8px',
     padding: '12px 16px',
     minWidth: '56px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    color: isDarkMode ? colors.text.primary : '#000000',
+    transition: 'all 0.2s ease-in-out',
+    color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'transparent',
+    outline: 'none',
     '&:hover': {
       backgroundColor: isDarkMode 
         ? 'rgba(99, 102, 241, 0.1)' 
         : 'rgba(99, 102, 241, 0.05)',
-      transform: 'translateY(-2px)',
-      boxShadow: isDarkMode 
-        ? '0 4px 20px rgba(99, 102, 241, 0.2)' 
-        : '0 4px 20px rgba(99, 102, 241, 0.1)',
+      color: colors.primary.main,
+      '& .MuiSvgIcon-root': {
+        color: colors.primary.main,
+        transform: 'scale(1.1)',
+      }
     },
+    '&.Mui-selected': {
+      backgroundColor: isDarkMode 
+        ? 'rgba(99, 102, 241, 0.15)' 
+        : 'rgba(99, 102, 241, 0.1)',
+      color: colors.primary.main,
+      borderRadius: '8px',
+      outline: 'none',
+      '& .MuiSvgIcon-root': {
+        color: colors.primary.main,
+        transform: 'scale(1.1)',
+      },
+      '&:hover': {
+        backgroundColor: isDarkMode 
+          ? 'rgba(99, 102, 241, 0.2)' 
+          : 'rgba(99, 102, 241, 0.15)',
+      }
+    },
+    '&:focus': {
+      outline: 'none',
+      backgroundColor: 'transparent'
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${colors.primary.light}`,
+      outlineOffset: '2px',
+      backgroundColor: 'transparent',
+      borderRadius: '8px',
+    },
+    '&:active': {
+      backgroundColor: isDarkMode 
+        ? 'rgba(99, 102, 241, 0.2)' 
+        : 'rgba(99, 102, 241, 0.15)',
+      transform: 'scale(0.98)'
+    }
   },
   '& .MuiListItemIcon-root': {
     minWidth: 40,
@@ -341,7 +378,7 @@ const StyledMenuList = styled(List)({
 const StyledMenuItem = styled(MenuItem)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   padding: '12px 16px',
   margin: '4px 8px',
-  borderRadius: 0,
+  borderRadius: '8px',
   display: 'flex',
   alignItems: 'center',
   gap: '16px',
@@ -1037,10 +1074,10 @@ const Navbar = () => {
                   onClick={handleChatToggle}
                   sx={{ 
                     padding: {xs: '8px', sm: '10px'}, 
-                    color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
+                    color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)'),
                     backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
                     '&:hover': {
-                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
                       backgroundColor: isDarkMode 
                         ? 'rgba(99, 102, 241, 0.1)' 
                         : 'rgba(99, 102, 241, 0.05)',
@@ -1068,9 +1105,10 @@ const Navbar = () => {
                   onClick={handleNotificationClick}
                   sx={{ 
                     padding: {xs: '8px', sm: '10px'}, 
-                    color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                    color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
+                    borderRadius: '8px',
                     '&:hover': {
-                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
                       backgroundColor: isDarkMode 
                         ? 'rgba(99, 102, 241, 0.1)' 
                         : 'rgba(99, 102, 241, 0.05)',
@@ -1161,19 +1199,18 @@ const Navbar = () => {
                         padding: {lg: '6px 8px', xl: '8px 12px'},
                         margin: '0 1px',
                         minWidth: 'auto',
-                        color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                        color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
                         '&:hover': {
                           backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                          color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                          color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
                         },
                         '&.Mui-selected': {
                           backgroundColor: isDarkMode 
                             ? 'rgba(99, 102, 241, 0.15)' 
                             : 'rgba(99, 102, 241, 0.1)',
                           color: colors.primary.main,
-                          '& .MuiSvgIcon-root': {
-                            color: colors.primary.main,
-                          }
+                          borderRadius: '8px',
+                          outline: 'none',
                         }
                       }}
                     >
@@ -1204,13 +1241,25 @@ const Navbar = () => {
                   onClick={handleChatToggle}
                   sx={{
                     padding: {xs: '8px', sm: '10px'}, 
-                    color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
+                    color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)'),
                     backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
+                    borderRadius: '8px',
+                    transition: 'all 0.2s ease-in-out',
+                    outline: 'none',
                     '&:hover': {
-                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
                       backgroundColor: isDarkMode 
                         ? 'rgba(99, 102, 241, 0.1)' 
                         : 'rgba(99, 102, 241, 0.05)',
+                    },
+                    '&:focus': { outline: 'none' },
+                    '&:focus-visible': {
+                       outline: `2px solid ${colors.primary.light}`,
+                       outlineOffset: '2px',
+                       backgroundColor: 'transparent',
+                    },
+                    '&:active': {
+                        transform: 'scale(0.98)' 
                     }
                   }}
                 >
@@ -1220,14 +1269,27 @@ const Navbar = () => {
                 </IconButton>
                 <IconButton
                   onClick={handleNotificationClick}
-                  sx={{ 
+                   sx={{
                     padding: {xs: '8px', sm: '10px'}, 
-                    color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                    color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
+                    borderRadius: '8px',
+                    backgroundColor: 'transparent',
+                    transition: 'all 0.2s ease-in-out',
+                    outline: 'none',
                     '&:hover': {
-                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
                       backgroundColor: isDarkMode 
                         ? 'rgba(99, 102, 241, 0.1)' 
                         : 'rgba(99, 102, 241, 0.05)',
+                    },
+                    '&:focus': { outline: 'none' },
+                    '&:focus-visible': {
+                       outline: `2px solid ${colors.primary.light}`,
+                       outlineOffset: '2px',
+                       backgroundColor: 'transparent',
+                    },
+                    '&:active': {
+                        transform: 'scale(0.98)' 
                     }
                   }}
                 >
@@ -1237,14 +1299,27 @@ const Navbar = () => {
                 </IconButton>
                 <IconButton
                   onClick={toggleTheme}
-                  sx={{ 
+                   sx={{
                     padding: {xs: '8px', sm: '10px'}, 
-                    color: isDarkMode ? colors.text.secondary : theme.palette.text.secondary,
+                    color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
+                    borderRadius: '8px',
+                    backgroundColor: 'transparent',
+                    transition: 'all 0.2s ease-in-out',
+                    outline: 'none',
                     '&:hover': {
-                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
                       backgroundColor: isDarkMode 
                         ? 'rgba(99, 102, 241, 0.1)' 
                         : 'rgba(99, 102, 241, 0.05)',
+                    },
+                    '&:focus': { outline: 'none' },
+                    '&:focus-visible': {
+                       outline: `2px solid ${colors.primary.light}`,
+                       outlineOffset: '2px',
+                       backgroundColor: 'transparent',
+                    },
+                    '&:active': {
+                        transform: 'scale(0.98)' 
                     }
                   }}
                 >
@@ -1252,13 +1327,26 @@ const Navbar = () => {
                 </IconButton>
                 <IconButton
                   onClick={handleLogoutClick}
-                  sx={{ 
+                   sx={{
                     padding: {xs: '8px', sm: '10px'}, 
                     color: isDarkMode ? '#f87171' : '#ef4444',
+                    borderRadius: '8px',
+                    backgroundColor: 'transparent',
+                    transition: 'all 0.2s ease-in-out',
+                    outline: 'none',
                     '&:hover': {
                       backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
                       color: isDarkMode ? '#ef4444' : '#dc2626'
                     },
+                    '&:focus': { outline: 'none' },
+                    '&:focus-visible': {
+                       outline: `2px solid ${isDarkMode ? '#f87171' : '#ef4444'}`,
+                       outlineOffset: '2px',
+                       backgroundColor: 'transparent',
+                    },
+                    '&:active': {
+                        transform: 'scale(0.98)' 
+                    }
                   }}
                 >
                   <LogoutIcon sx={{ fontSize: '1.5rem' }} />
