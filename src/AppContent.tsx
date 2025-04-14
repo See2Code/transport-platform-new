@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider as MuiThemeProvider, createTheme, styled, CssBaseline, GlobalStyles, Theme } from '@mui/material';
 import { SxProps } from '@mui/system';
@@ -21,6 +21,24 @@ import InvoicesPage from './components/Invoices';
 import VehicleMap from './components/VehicleMap';
 import Notifications from './components/Notifications';
 import { useThemeMode } from './contexts/ThemeContext';
+import ChatDrawer from './components/chat/ChatDrawer';
+
+// Vytvoríme kontext pre chat UI
+type ChatUIContextType = {
+  chatOpen: boolean;
+  toggleChat: () => void;
+  closeChat: () => void;
+};
+
+const ChatUIContext = createContext<ChatUIContextType | undefined>(undefined);
+
+export const useChatUI = () => {
+  const context = useContext(ChatUIContext);
+  if (!context) {
+    throw new Error('useChatUI musí byť použitý vnútri ChatUIProvider');
+  }
+  return context;
+};
 
 type AppContainerProps = {
   isDarkMode: boolean;
@@ -30,6 +48,7 @@ type AppContainerProps = {
 type PageContentProps = {
   isDarkMode: boolean;
   children: React.ReactNode;
+  sx?: Record<string, any>;
 };
 
 const AppContainer = ({ isDarkMode, children }: AppContainerProps) => (
@@ -48,7 +67,7 @@ const AppContainer = ({ isDarkMode, children }: AppContainerProps) => (
   </Box>
 );
 
-const PageContent = ({ isDarkMode, children }: PageContentProps) => (
+const PageContent = ({ isDarkMode, children, sx = {} }: PageContentProps) => (
   <Box
     sx={{
       flexGrow: 1,
@@ -64,6 +83,7 @@ const PageContent = ({ isDarkMode, children }: PageContentProps) => (
         padding: '16px',
         minHeight: 'calc(100vh - 40px)',
       },
+      ...sx
     }}
   >
     {isDarkMode && (
@@ -88,6 +108,16 @@ const PageContent = ({ isDarkMode, children }: PageContentProps) => (
 
 const AppContent: React.FC = () => {
   const { isDarkMode } = useThemeMode();
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const toggleChat = () => setChatOpen(prev => !prev);
+  const closeChat = () => setChatOpen(false);
+
+  const chatUIValue = {
+    chatOpen,
+    toggleChat,
+    closeChat
+  };
 
   const theme = createTheme({
     palette: {
@@ -193,121 +223,134 @@ const AppContent: React.FC = () => {
     <MuiThemeProvider theme={theme}>
       <CssBaseline />
       <GlobalStyles styles={globalStyles} />
-      {isDarkMode && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            height: '100vh',
-            zIndex: -1,
-            background: 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)',
-          }}
-        />
-      )}
-      <AppContainer isDarkMode={isDarkMode}>
-        <Routes>
-          {/* Verejné cesty */}
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/register-user" element={<RegisterUser />} />
-          <Route path="/accept-invitation/:invitationId" element={<RegisterUser />} />
-          
-          {/* Chránené cesty */}
-          <Route path="/dashboard" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <Dashboard />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/team" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <Team />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/contacts" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <Contacts />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/settings" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <Settings />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/tracked-transports" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <TrackedTransports />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/business-cases" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <BusinessCases />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/orders" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <OrdersForm />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/nova-objednavka" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <NewOrderForm />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/invoices" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <InvoicesPage />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/vehicle-map" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <VehicleMap />
-              </PageContent>
-            </PrivateRoute>
-          } />
-          <Route path="/notifications" element={
-            <PrivateRoute>
-              <PageContent isDarkMode={isDarkMode}>
-                <Navbar />
-                <Notifications />
-              </PageContent>
-            </PrivateRoute>
-          } />
-        </Routes>
-      </AppContainer>
+      <ChatUIContext.Provider value={chatUIValue}>
+        {isDarkMode && (
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh',
+              zIndex: -1,
+              background: 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)',
+            }}
+          />
+        )}
+        <AppContainer isDarkMode={isDarkMode}>
+          <Routes>
+            {/* Verejné cesty */}
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/register-user" element={<RegisterUser />} />
+            <Route path="/accept-invitation/:invitationId" element={<RegisterUser />} />
+            
+            {/* Chránené cesty */}
+            <Route path="/dashboard" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <Dashboard />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/team" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <Team />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/contacts" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <Contacts />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/settings" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <Settings />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/tracked-transports" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <TrackedTransports />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/business-cases" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <BusinessCases />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/orders" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <OrdersForm />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/nova-objednavka" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <NewOrderForm />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/invoices" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <InvoicesPage />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/vehicle-map" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <VehicleMap />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/notifications" element={
+              <PrivateRoute>
+                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <Notifications />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+          </Routes>
+        </AppContainer>
+      </ChatUIContext.Provider>
     </MuiThemeProvider>
   );
 };

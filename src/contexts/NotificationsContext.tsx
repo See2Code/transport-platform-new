@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
 
@@ -9,7 +9,28 @@ interface NotificationsContextType {
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   loading: boolean;
-  getLatestNotifications: (count: number) => Promise<any[]>;
+  getLatestNotifications: (count: number) => Promise<NotificationData[]>;
+}
+
+// Rozhranie pre notifikačné dáta
+interface NotificationData {
+  id: string;
+  type?: 'loading' | 'unloading' | 'business';
+  sent?: boolean;
+  shown?: boolean;
+  companyID?: string;
+  userId?: string;
+  userEmail?: string;
+  reminderDateTime?: Timestamp | Date;
+  reminderTime?: Timestamp | Date;
+  createdAt?: Timestamp | Date;
+  orderNumber?: string;
+  companyName?: string;
+  address?: string;
+  transportId?: string;
+  businessCaseId?: string;
+  reminderNote?: string;
+  [key: string]: any; // Pre ďalšie vlastnosti, ktoré môžu existovať
 }
 
 const NotificationsContext = createContext<NotificationsContextType | null>(null);
@@ -55,26 +76,91 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [userData?.companyID]);
 
   // Získanie niekoľkých najnovších notifikácií
-  const getLatestNotifications = async (count: number = 5) => {
+  const getLatestNotifications = async (count: number = 5): Promise<NotificationData[]> => {
     if (!userData?.companyID) {
       return [];
     }
 
     try {
       const remindersRef = collection(db, 'reminders');
-      const q = query(
-        remindersRef,
-        where('companyID', '==', userData.companyID),
-        orderBy('createdAt', 'desc'),
-        limit(count)
-      );
-
-      const snapshot = await getDocs(q);
       
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      // Použijeme len where filter bez orderBy, aby sme sa vyhli potrebe indexu
+      const basicQuery = query(
+        remindersRef,
+        where('companyID', '==', userData.companyID)
+      );
+      
+      const allSnapshot = await getDocs(basicQuery);
+      console.log(`Celkový počet notifikácií v systéme: ${allSnapshot.size}`);
+      
+      if (allSnapshot.empty) {
+        console.log("Nenašli sa žiadne notifikácie pre tento companyID");
+        return [];
+      }
+      
+      // Namiesto použitia orderBy v query, načítame všetky a zoradíme ich v pamäti
+      const allNotifications: NotificationData[] = allSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data
+        };
+      });
+      
+      console.log(`Spracovaných ${allNotifications.length} notifikácií`);
+      
+      // Zoradíme notifikácie podľa času pripomienky (novšie najprv)
+      const sortedNotifications = [...allNotifications].sort((a, b) => {
+        // Pre ladenie vypíšeme dáta
+        console.log("Porovnávam:", { 
+          a: { id: a.id, time: a.reminderDateTime || a.reminderTime || a.createdAt },
+          b: { id: b.id, time: b.reminderDateTime || b.reminderTime || b.createdAt }
+        });
+      
+        // Použijeme reminderDateTime alebo reminderTime alebo createdAt
+        const timeA = a.reminderDateTime || a.reminderTime || a.createdAt;
+        const timeB = b.reminderDateTime || b.reminderTime || b.createdAt;
+        
+        if (!timeA && !timeB) return 0;
+        if (!timeA) return 1;
+        if (!timeB) return -1;
+        
+        let dateA: Date, dateB: Date;
+        
+        try {
+          // Konvertujeme Timestamp na Date
+          if (timeA instanceof Timestamp) {
+            dateA = timeA.toDate();
+          } else if (typeof timeA === 'object' && timeA !== null && 'toDate' in timeA && typeof timeA.toDate === 'function') {
+            dateA = timeA.toDate();
+          } else {
+            dateA = new Date(timeA as any);
+          }
+          
+          if (timeB instanceof Timestamp) {
+            dateB = timeB.toDate();
+          } else if (typeof timeB === 'object' && timeB !== null && 'toDate' in timeB && typeof timeB.toDate === 'function') {
+            dateB = timeB.toDate();
+          } else {
+            dateB = new Date(timeB as any);
+          }
+          
+          console.log("Konvertované dátumy:", { 
+            a: dateA.toString(), 
+            b: dateB.toString() 
+          });
+          
+          return dateB.getTime() - dateA.getTime();
+        } catch (error) {
+          console.error("Chyba pri konverzii dátumov:", error);
+          return 0;
+        }
+      });
+      
+      console.log("Zoradených notifikácií:", sortedNotifications.length);
+      
+      // Vrátime prvých 'count' notifikácií
+      return sortedNotifications.slice(0, count);
     } catch (error) {
       console.error("Chyba pri načítavaní najnovších notifikácií:", error);
       return [];

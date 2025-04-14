@@ -5,6 +5,7 @@ import { routerConfig } from './router/config';
 import AppContent from './AppContent';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ChatProvider } from './contexts/ChatContext';
 
 const App: React.FC = () => {
   return (
@@ -12,7 +13,9 @@ const App: React.FC = () => {
       <AuthProvider>
         <ThemeProvider>
           <NotificationsProvider>
-            <AppContent />
+            <ChatProvider>
+              <AppContent />
+            </ChatProvider>
           </NotificationsProvider>
         </ThemeProvider>
       </AuthProvider>

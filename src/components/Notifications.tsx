@@ -187,7 +187,7 @@ const NotificationActions = styled(Box)({
 const Notifications = () => {
   const { isDarkMode } = useThemeMode();
   const { userData } = useAuth();
-  const { unreadCount, markAsRead, markAllAsRead, fetchNotifications } = useNotificationsContext();
+  const { unreadCount, markAsRead, markAllAsRead, fetchNotifications, getLatestNotifications } = useNotificationsContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -204,56 +204,28 @@ const Notifications = () => {
     try {
       setLoading(true);
       
-      // Načítanie všetkých pripomienok pre danú spoločnosť
-      const remindersRef = collection(db, 'reminders');
-      const q = query(
-        remindersRef,
-        where('companyID', '==', userData.companyID),
-        orderBy('createdAt', 'desc')
-      );
+      // Použijeme rovnakú funkciu ako v malom popoveri, ale bez limitu
+      console.log("Začínam načítavanie všetkých notifikácií pomocou getLatestNotifications");
+      const rawNotificationsData = await getLatestNotifications(100); // Načítame až 100 notifikácií
+      console.log(`Načítaných ${rawNotificationsData.length} notifikácií pre plnú stránku`);
       
-      const snapshot = await getDocs(q);
-      
-      // Mapovanie dát z Firestore na naše rozhranie Notification
-      const notificationsData: Notification[] = snapshot.docs.map(doc => {
-        const data = doc.data();
-        
-        // Určenie typu notifikácie
-        let type: 'loading' | 'unloading' | 'business' = data.type || 'business';
-        if (data.businessCaseId) type = 'business';
-        
-        // Konverzia časových značiek
-        const reminderTime = data.reminderTime instanceof Timestamp 
-          ? data.reminderTime 
-          : data.reminderDateTime instanceof Timestamp 
-            ? data.reminderDateTime 
-            : data.reminderTime 
-              ? Timestamp.fromDate(new Date(data.reminderTime)) 
-              : data.reminderDateTime 
-                ? Timestamp.fromDate(new Date(data.reminderDateTime))
-                : null;
-                
-        const createdAt = data.createdAt instanceof Timestamp 
-          ? data.createdAt 
-          : Timestamp.fromDate(new Date(data.createdAt));
-          
-        return {
-          id: doc.id,
-          type,
-          reminderTime,
-          reminderDateTime: reminderTime, // Pre kompatibilitu
-          orderNumber: data.orderNumber || 'Neznáme číslo',
-          companyName: data.companyName || 'Neznáma spoločnosť',
-          address: data.address || 'Neuvedená adresa',
-          sent: data.sent || false,
-          shown: data.shown || false,
-          createdAt,
-          userEmail: data.userEmail,
-          transportId: data.transportId,
-          businessCaseId: data.businessCaseId,
-          reminderNote: data.reminderNote || ''
-        };
-      });
+      // Konvertujeme na Notification typ 
+      const notificationsData: Notification[] = rawNotificationsData.map(data => ({
+        id: data.id,
+        type: data.type || 'business', // zabezpečí, že type nikdy nebude undefined
+        reminderTime: data.reminderTime || null,
+        reminderDateTime: data.reminderDateTime || null,
+        orderNumber: data.orderNumber || 'Neznáme číslo',
+        companyName: data.companyName || 'Neznáma spoločnosť',
+        address: data.address || 'Neuvedená adresa',
+        sent: data.sent || false,
+        shown: data.shown || false,
+        createdAt: data.createdAt || new Date(),
+        userEmail: data.userEmail,
+        transportId: data.transportId,
+        businessCaseId: data.businessCaseId,
+        reminderNote: data.reminderNote || ''
+      }));
       
       setNotifications(notificationsData);
     } catch (error) {
@@ -266,7 +238,7 @@ const Notifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [userData?.companyID]);
+  }, [userData?.companyID, getLatestNotifications]);
 
   // Načítanie dát pri mountovaní komponentu
   useEffect(() => {

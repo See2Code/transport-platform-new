@@ -50,6 +50,7 @@ import EuroIcon from '@mui/icons-material/Euro';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import BusinessIcon from '@mui/icons-material/Business';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import ChatIcon from '@mui/icons-material/Chat';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -65,6 +66,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { useNotifications } from '../contexts/NotificationsContext';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
+import { useChatUI } from '../AppContent';
 
 const drawerWidth = 240;
 const miniDrawerWidth = 64;
@@ -181,7 +183,9 @@ const ListItemIconStyled = styled(ListItemIcon)({
   }
 });
 
-const NavListItem = styled(ListItem)<{ isDarkMode?: boolean }>(({ isDarkMode = true }) => ({
+const NavListItem = styled(ListItem, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode?: boolean }>(({ isDarkMode = true }) => ({
   position: 'relative',
   padding: '4px',
   '& .MuiListItemButton-root': {
@@ -273,6 +277,7 @@ interface MenuItem {
   onClick?: () => void;
   hidden?: boolean;
   description?: string;
+  access?: string[];
 }
 
 const MinimizedMenuItem = styled(MenuItem)(({ theme }) => ({
@@ -490,7 +495,9 @@ const MenuButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.primary,
 }));
 
-const MobileDrawer = styled(Drawer)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
+const MobileDrawer = styled(Drawer, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   '& .MuiDrawer-paper': {
     backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(20px)',
@@ -563,7 +570,9 @@ const MenuItemContent = styled(Box)({
   gap: '2px'
 });
 
-const PageWrapper = styled('div')<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const PageWrapper = styled('div', {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   flexDirection: 'column',
   width: '100%',
@@ -607,7 +616,9 @@ const StyledDivider = styled(Divider)<{ isDarkMode?: boolean }>(({ isDarkMode })
   height: '1px',
 }));
 
-const StyledDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledDialog = styled(Dialog, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   '& .MuiDialog-paper': {
     backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.95)' : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(10px)',
@@ -625,7 +636,9 @@ const StyledDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ isDarkMode }) =>
   },
 }));
 
-const StyledButton = styled(Button)<{ isDarkMode: boolean; variant: 'text' | 'contained' }>(({ isDarkMode, variant }) => ({
+const StyledButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean; variant: 'text' | 'contained' }>(({ isDarkMode, variant }) => ({
   borderRadius: 0,
   textTransform: 'none',
   padding: '8px 16px',
@@ -662,7 +675,9 @@ const NotificationPopover = styled(Popover)(({ theme }) => ({
   },
 }));
 
-const NotificationHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const NotificationHeader = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '12px 16px',
   display: 'flex',
   justifyContent: 'space-between',
@@ -685,7 +700,9 @@ const NotificationContainer = styled(Box)({
   },
 });
 
-const NotificationItem = styled(Box)<{ isDarkMode: boolean; isRead: boolean }>(({ isDarkMode, isRead }) => ({
+const NotificationItem = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode' && prop !== 'isRead'
+})<{ isDarkMode: boolean; isRead: boolean }>(({ isDarkMode, isRead }) => ({
   padding: '12px 16px',
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
   backgroundColor: isRead ? 'transparent' : (isDarkMode ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.04)'),
@@ -695,7 +712,9 @@ const NotificationItem = styled(Box)<{ isDarkMode: boolean; isRead: boolean }>((
   },
 }));
 
-const NotificationFooter = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const NotificationFooter = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '12px 16px',
   display: 'flex',
   justifyContent: 'center',
@@ -712,6 +731,7 @@ const Navbar = () => {
   const { logout, userData } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
   const { unreadCount, markAsRead, markAllAsRead, getLatestNotifications } = useNotifications();
+  const { chatOpen, toggleChat } = useChatUI();
   
   // Stav pre notifikačný popover
   const [notificationsEl, setNotificationsEl] = useState<null | HTMLElement>(null);
@@ -722,10 +742,30 @@ const Navbar = () => {
   const fetchNotifications = async () => {
     try {
       setLoadingNotifications(true);
-      const notifications = await getLatestNotifications(5);
-      setNotificationsList(notifications);
+      console.log("Začína načítavanie notifikácií...");
+      
+      try {
+        // Pokúsime sa načítať notifikácie cez context
+        const notifications = await getLatestNotifications(10);
+        console.log("Načítané notifikácie cez kontext:", notifications);
+        setNotificationsList(notifications);
+      } catch (error: any) {
+        console.warn("Chyba pri načítavaní notifikácií cez kontext:", error);
+        
+        // Ak sa vyskytne chyba s indexom, extrahujeme URL na vytváranie indexu
+        if (error && error.message && error.message.includes('index')) {
+          const urlMatch = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s)]+/);
+          if (urlMatch) {
+            console.warn("Pre správne fungovanie vytvorte index: " + urlMatch[0]);
+          }
+        }
+        
+        // Nastavíme aspoň prázdne notifikácie
+        setNotificationsList([]);
+      }
     } catch (error) {
       console.error("Chyba pri načítavaní notifikácií:", error);
+      setNotificationsList([]);
     } finally {
       setLoadingNotifications(false);
     }
@@ -807,16 +847,22 @@ const Navbar = () => {
     }
   };
 
+  // Funkcia pre otvorenie/zatvorenie chatu
+  const handleChatToggle = () => {
+    toggleChat();
+  };
+
   const menuItems: MenuItem[] = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Sledované prepravy', icon: <LocalShippingIcon />, path: '/tracked-transports' },
     { text: 'Mapa vozidiel', icon: <LocationOnIcon />, path: '/vehicle-map' },
     { text: 'Objednávky', icon: <ReceiptIcon />, path: '/orders' },
-    { text: 'Business prípady', icon: <BusinessIcon />, path: '/business-cases' },
+    { text: 'Obchodné prípady', icon: <BusinessIcon />, path: '/business-cases', access: ['manager', 'admin', 'super-admin'] },
     { text: 'Faktúry', icon: <EuroIcon />, path: '/invoices' },
     { text: 'Kontakty', icon: <ContactsIcon />, path: '/contacts' },
     { text: 'Tím', icon: <GroupIcon />, path: '/team' },
     { text: 'Nastavenia', icon: <SettingsIcon />, path: '/settings' },
+    { text: 'Notifikácie', icon: <NotificationsIcon />, path: '/notifications', access: ['user', 'manager', 'admin', 'super-admin'] },
   ];
 
   return (
@@ -863,6 +909,22 @@ const Navbar = () => {
                 alignItems: 'center',
                 mr: 1
               }}>
+                <IconButton
+                  onClick={handleChatToggle}
+                  sx={{ 
+                    padding: {xs: '4px', sm: '6px', md: '8px'}, 
+                    color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
+                    backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
+                    '&:hover': {
+                      color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                      backgroundColor: isDarkMode 
+                        ? 'rgba(99, 102, 241, 0.1)' 
+                        : 'rgba(99, 102, 241, 0.05)',
+                    }
+                  }}
+                >
+                  <ChatIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
+                </IconButton>
                 <IconButton
                   onClick={handleNotificationClick}
                   sx={{ 
@@ -988,6 +1050,22 @@ const Navbar = () => {
                   ml: {lg: 1, xl: 2}
                 }}>
                    <IconButton
+                     onClick={handleChatToggle}
+                     sx={{ 
+                       padding: {lg: '4px', xl: '8px'}, 
+                       color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : theme.palette.text.secondary),
+                       backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
+                       '&:hover': {
+                         color: isDarkMode ? colors.text.primary : theme.palette.text.primary,
+                         backgroundColor: isDarkMode 
+                           ? 'rgba(99, 102, 241, 0.1)' 
+                           : 'rgba(99, 102, 241, 0.05)',
+                       }
+                     }}
+                   >
+                     <ChatIcon sx={{ fontSize: {lg: '1.1rem', xl: '1.4rem'} }} />
+                   </IconButton>
+                   <IconButton
                      onClick={handleNotificationClick}
                      sx={{ 
                          padding: {lg: '4px', xl: '8px'}, 
@@ -1112,51 +1190,77 @@ const Navbar = () => {
                 <Typography color="textSecondary" variant="body2">
                   Žiadne notifikácie
                 </Typography>
+                <Typography color="textSecondary" variant="caption" sx={{ display: 'block', mt: 1 }}>
+                  {unreadCount > 0 
+                    ? `V systéme je ${unreadCount} neprečítaných notifikácií, ktoré sa nepodarilo zobraziť.` 
+                    : 'Nemáte žiadne notifikácie na zobrazenie.'}
+                </Typography>
+                {/* Debug info */}
+                <Box sx={{ mt: 2, p: 1, bgcolor: 'rgba(0,0,0,0.05)', borderRadius: 1 }}>
+                  <Typography color="textSecondary" variant="caption" sx={{ display: 'block', fontFamily: 'monospace' }}>
+                    Debug info: {JSON.stringify({ 
+                      unreadCount, 
+                      listLength: notificationsList.length, 
+                      loading: loadingNotifications,
+                      userData: userData?.companyID ? 'OK' : 'Missing'
+                    })}
+                  </Typography>
+                </Box>
               </Box>
             ) : (
-              notificationsList.map((notification) => (
-                <NotificationItem key={notification.id} isDarkMode={isDarkMode} isRead={notification.sent}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: notification.sent ? 'normal' : 'bold' }}>
-                      {notification.type === 'business' 
-                        ? 'Obchodný prípad' 
-                        : notification.type === 'loading' 
-                          ? 'Nakládka' 
-                          : 'Vykládka'}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AccessTimeIcon sx={{ fontSize: '0.9rem', mr: 0.5, color: 'text.secondary' }} />
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDateTime(notification.reminderTime || notification.reminderDateTime)}
+              <>
+                {notificationsList.map((notification) => (
+                  <NotificationItem key={notification.id} isDarkMode={isDarkMode} isRead={Boolean(notification.sent)}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: notification.sent ? 'normal' : 'bold' }}>
+                        {notification.type === 'business' 
+                          ? 'Obchodný prípad' 
+                          : notification.type === 'loading' 
+                            ? 'Nakládka' 
+                            : notification.type === 'unloading'
+                              ? 'Vykládka'
+                              : 'Notifikácia'}
                       </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <AccessTimeIcon sx={{ fontSize: '0.9rem', mr: 0.5, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary">
+                          {formatDateTime(notification.reminderTime || notification.reminderDateTime)}
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                  
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    {notification.type === 'business' 
-                      ? `Firma: ${notification.companyName || 'Neznáma'}` 
-                      : `Objednávka: ${notification.orderNumber || 'Neznáma'}`}
-                  </Typography>
-                  
-                  {notification.address && (
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', mb: 1 }}>
-                      Adresa: {notification.address}
+                    
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      {notification.type === 'business' 
+                        ? `Firma: ${notification.companyName || 'Neznáma'}` 
+                        : `Objednávka: ${notification.orderNumber || 'Neznáma'}`}
                     </Typography>
-                  )}
-                  
-                  {!notification.sent && (
-                    <Button
-                      variant="text"
-                      size="small"
-                      startIcon={<MarkEmailReadIcon sx={{ fontSize: '0.9rem' }} />}
-                      onClick={() => handleMarkAsRead(notification.id)}
-                      sx={{ textTransform: 'none', fontSize: '0.8rem', mt: 1, p: 0 }}
-                    >
-                      Označiť ako prečítané
-                    </Button>
-                  )}
-                </NotificationItem>
-              ))
+                    
+                    {notification.address && (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', mb: 1 }}>
+                        Adresa: {notification.address}
+                      </Typography>
+                    )}
+                    
+                    {notification.reminderNote && (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', mb: 1 }}>
+                        {notification.reminderNote}
+                      </Typography>
+                    )}
+                    
+                    {!notification.sent && (
+                      <Button
+                        variant="text"
+                        size="small"
+                        startIcon={<MarkEmailReadIcon sx={{ fontSize: '0.9rem' }} />}
+                        onClick={() => handleMarkAsRead(notification.id)}
+                        sx={{ textTransform: 'none', fontSize: '0.8rem', mt: 1, p: 0 }}
+                      >
+                        Označiť ako prečítané
+                      </Button>
+                    )}
+                  </NotificationItem>
+                ))}
+              </>
             )}
           </NotificationContainer>
           

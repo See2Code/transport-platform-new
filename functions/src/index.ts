@@ -2,6 +2,7 @@ import * as functions from 'firebase-functions/v1';
 import { CallableContext } from 'firebase-functions/v1/https';
 import * as admin from 'firebase-admin';
 import * as nodemailer from 'nodemailer';
+import * as chatFunctions from './chat';
 
 // Inicializácia Firebase Admin
 admin.initializeApp();
@@ -697,6 +698,17 @@ export const sendTestReminder = functions
 
 // Export API proxy funkcií
 export const googleMapsProxy = apiProxy.googleMapsProxy;
+
+// Export chat funkcií
+export const createConversation = chatFunctions.createConversation;
+export const sendMessage = chatFunctions.sendMessage;
+export const markMessagesAsRead = chatFunctions.markMessagesAsRead;
+export const searchUsers = chatFunctions.searchUsers;
+export const updateUserProfileInConversations = chatFunctions.updateUserProfileInConversations;
+export const updateUnreadCounts = chatFunctions.updateUnreadCounts;
+export const getUserConversations = chatFunctions.getUserConversations;
+export const getConversationMessages = chatFunctions.getConversationMessages;
+export const deleteConversation = chatFunctions.deleteConversation;
 
 // Prípadné ďalšie funkcie
 // export const otherApiProxy = apiProxy.otherApiProxy; 
