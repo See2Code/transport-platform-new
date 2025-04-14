@@ -1,5 +1,5 @@
 .css-6e45vs-MuiTypography-root {
-    color: #ff9f43 !important;
+    color: #6366f1 !important;
     margin: 0;
     font-family: "Roboto", "Helvetica", "Arial", sans-serif;
     font-weight: 700;
@@ -16,18 +16,18 @@
 }
 
 .MuiInputBase-root .MuiSvgIcon-root {
-    color: #ff9f43 !important;
+    color: #6366f1 !important;
 }
 
 .MuiOutlinedInput-root {
     & fieldset {
-        border-color: #ff9f43 !important;
+        border-color: #6366f1 !important;
     }
     &:hover fieldset {
-        border-color: #ff9f43 !important;
+        border-color: #6366f1 !important;
     }
     &.Mui-focused fieldset {
-        border-color: #ff9f43 !important;
+        border-color: #6366f1 !important;
     }
 }
 
@@ -44,7 +44,7 @@
 
 .MuiListItemText-primary {
     font-weight: 600 !important;
-    color: #ff9f43 !important;
+    color: #6366f1 !important;
     margin-bottom: 2px !important;
 }
 
