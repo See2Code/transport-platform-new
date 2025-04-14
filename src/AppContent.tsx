@@ -1,7 +1,6 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider as MuiThemeProvider, createTheme, styled, CssBaseline, GlobalStyles, Theme } from '@mui/material';
-import { SxProps } from '@mui/system';
+import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline, GlobalStyles } from '@mui/material';
 import Box from '@mui/material/Box';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';

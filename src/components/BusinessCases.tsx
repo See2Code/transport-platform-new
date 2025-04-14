@@ -43,13 +43,10 @@ import EmailIcon from '@mui/icons-material/Email';
 import BusinessIcon from '@mui/icons-material/Business';
 import PersonIcon from '@mui/icons-material/Person';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import InfoIcon from '@mui/icons-material/Info';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, getDoc, orderBy, updateDoc, increment, limit, startAfter, QueryDocumentSnapshot, DocumentReference, DocumentData } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, getDoc, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
-import { useNavigate } from 'react-router-dom';
 import SearchField from './common/SearchField';
 import { format } from 'date-fns';
 import { useThemeMode } from '../contexts/ThemeContext';
@@ -280,29 +277,6 @@ const convertToDate = (dateTime: Date | Timestamp | null): Date | null => {
   return new Date(dateTime);
 };
 
-const StyledCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-  backdropFilter: 'blur(10px)',
-  borderRadius: '20px',
-  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.15)',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    transform: 'translateY(-5px)',
-    boxShadow: '0 8px 24px rgba(255, 159, 67, 0.2)',
-    border: '1px solid rgba(255, 159, 67, 0.2)',
-    '& .MuiCardContent-root': {
-      background: 'linear-gradient(180deg, rgba(255, 159, 67, 0.1) 0%, rgba(255, 159, 67, 0) 100%)',
-    }
-  },
-  '& .MuiTypography-root': {
-    color: isDarkMode ? '#ffffff' : '#000000',
-  },
-  '& .MuiTypography-body1': {
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-  },
-}));
-
 const StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
@@ -414,12 +388,10 @@ export default function BusinessCases() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
   const { currentUser, userData } = useAuth();
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
   const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
-  const [filterOptions, setFilterOptions] = useState({ showOfflineVehicles: true, showOnlineOnly: false });
   const [formData, setFormData] = useState({
     companyName: '', vatNumber: '', companyAddress: '',
     contactPerson: { firstName: '', lastName: '', phone: '', email: '' },
@@ -431,20 +403,13 @@ export default function BusinessCases() {
   const [loading, setLoading] = useState(false);
   const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
   const [phaseDialogOpen, setPhaseDialogOpen] = useState(false);
-  const [phases, setPhases] = useState<Phase[]>([]);
+  const [, setPhases] = useState<Phase[]>([]);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
     libraries: ['places'],
     id: 'script-loader'
   });
-
-  const getVehicleIcons = useCallback(() => {
-    // Implement your logic to get vehicle icons based on isLoaded
-    return isLoaded ? 'icons' : 'fallback';
-  }, [isLoaded]);
-
-  const vehicleIcons = getVehicleIcons();
 
   const fetchCases = useCallback(async () => {
     try {
@@ -503,10 +468,6 @@ export default function BusinessCases() {
     } catch (error) { console.error('Error fetching cases:', error); setSnackbar({ open: true, message: 'Chyba pri načítaní prípadov', severity: 'error' }); }
     finally { setLoading(false); }
   }, [userData?.companyID, filterStartDate, filterEndDate]);
-
-  const handleFilterChange = useCallback((filter: keyof typeof filterOptions) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFilterOptions((prev: { showOfflineVehicles: boolean; showOnlineOnly: boolean; }) => ({ ...prev, [filter]: event.target.checked }));
-  }, []);
 
   const getFilteredCases = useCallback(() => {
     return cases.filter(c => 
@@ -887,77 +848,6 @@ export default function BusinessCases() {
   useEffect(() => {
     fetchPhases();
   }, [fetchPhases]);
-
-  const renderPhasesTimeline = (caseId: string): JSX.Element | null => {
-    const businessCase = cases.find((c: BusinessCase) => c.id === caseId);
-    if (!businessCase?.phases || businessCase.phases.length === 0) return null;
-
-    const phases = businessCase.phases || [];
-    return (
-      <Box sx={{ 
-        marginTop: 3,
-        border: '1px dashed rgba(255, 255, 255, 0.2)',
-        padding: 2,
-        borderRadius: 1
-      }}>
-        <Typography variant="body2" sx={{ marginBottom: 1, fontWeight: 'bold' }}>
-          Aktuálna časová os fáz (zľava doprava):
-        </Typography>
-        <Box sx={{
-          display: 'flex',
-          gap: 1,
-          overflowX: 'auto',
-          padding: '4px 0'
-        }}>
-          {phases.map((phase: Phase, index: number) => (
-            <Box
-              key={phase.id}
-              sx={{
-                backgroundColor: phaseColors[index % phaseColors.length],
-                color: '#fff',
-                borderRadius: '8px',
-                padding: '6px 10px',
-                fontSize: '0.75rem',
-                position: 'relative',
-                whiteSpace: 'nowrap',
-                '&::after': index < phases.length - 1 ? {
-                  content: '""',
-                  position: 'absolute',
-                  right: '-8px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '8px',
-                  height: '8px',
-                  borderTop: '4px solid transparent',
-                  borderBottom: '4px solid transparent',
-                  borderLeft: `4px solid ${phaseColors[index % phaseColors.length]}`,
-                  zIndex: 1
-                } : {}
-              }}
-            >
-              {phase.name}
-            </Box>
-          ))}
-          <Box
-            sx={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              color: '#fff',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontSize: '0.75rem',
-              border: '1px dashed #fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5
-            }}
-          >
-            <AddIcon sx={{ fontSize: '0.9rem' }} />
-            Nová fáza
-          </Box>
-        </Box>
-      </Box>
-    );
-  };
 
   return (
     <PageWrapper>
