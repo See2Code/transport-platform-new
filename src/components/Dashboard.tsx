@@ -20,11 +20,9 @@ import {
 import {
   Business as BusinessIcon,
   Person as PersonIcon,
-  Notifications as NotificationsIcon,
   Contacts as ContactsIcon,
   DriveEta as DriveEtaIcon,
   AccessTime as AccessTimeIcon,
-  LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import { collection, query, getDocs, where, Timestamp, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -388,23 +386,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [userData]);
-
-  // Helper function to format the date
-  const formatDate = (timestamp: Timestamp | any) => {
-    if (!timestamp) return '';
-    
-    let date;
-    if (timestamp instanceof Timestamp) {
-      date = timestamp.toDate();
-    } else if (timestamp.seconds) {
-      date = new Date(timestamp.seconds * 1000);
-    } else {
-      date = new Date(timestamp);
-    }
-    
-    return format(date, 'dd.MM.yyyy', { locale: sk });
-  };
+  }, [userData, fetchDashboardData]);
 
   // Helper function to format time ago
   const formatTimeAgo = (timestamp: Timestamp | any) => {
@@ -420,22 +402,6 @@ export default function Dashboard() {
     }
     
     return formatDistanceToNow(date, { addSuffix: true, locale: sk });
-  };
-
-  // Helper function to check if driver is online
-  const isDriverOnline = (vehicle: VehicleLocation) => {
-    if (vehicle.isOffline) return false;
-    
-    const lastUpdate = vehicle.lastUpdate?.toDate?.() || 
-                       (vehicle.lastUpdate?.seconds ? new Date(vehicle.lastUpdate.seconds * 1000) : null);
-    
-    if (!lastUpdate) return false;
-    
-    // Kontrola, či je aktualizácia polohy staršia ako 15 minút
-    const fifteenMinutesAgo = new Date();
-    fifteenMinutesAgo.setMinutes(fifteenMinutesAgo.getMinutes() - 15);
-    
-    return lastUpdate > fifteenMinutesAgo;
   };
 
   const getDriverStatusColor = (vehicle: VehicleLocation) => {

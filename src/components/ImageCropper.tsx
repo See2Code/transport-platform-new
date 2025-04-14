@@ -3,18 +3,15 @@ import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-im
 import 'react-image-crop/dist/ReactCrop.css';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  Slider,
   Box,
   Typography,
   IconButton,
   styled
 } from '@mui/material';
-import { ZoomIn, ZoomOut, Close as CloseIcon } from '@mui/icons-material';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { Close as CloseIcon } from '@mui/icons-material';
 
 interface ImageCropperProps {
   open: boolean;
@@ -79,34 +76,6 @@ const CropContainer = styled(Box)(({ theme }) => ({
   }
 }));
 
-const Controls = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '16px',
-  padding: '0 24px',
-  width: '100%',
-  maxWidth: '400px'
-}));
-
-const ZoomControl = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  width: '100%',
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  padding: '8px 16px',
-  borderRadius: '12px',
-  border: '1px solid rgba(255, 255, 255, 0.1)'
-}));
-
-const StyledIconButton = styled(IconButton)(({ theme }) => ({
-  color: '#ff9f43',
-  backgroundColor: 'rgba(255, 159, 67, 0.1)',
-  '&:hover': {
-    backgroundColor: 'rgba(255, 159, 67, 0.2)'
-  }
-}));
-
 const StyledButton = styled(Button)(({ theme }) => ({
   borderRadius: '12px',
   padding: '8px 24px',
@@ -130,24 +99,6 @@ const StyledButton = styled(Button)(({ theme }) => ({
       borderColor: 'rgba(255, 255, 255, 0.3)',
       backgroundColor: 'rgba(255, 255, 255, 0.05)'
     }
-  }
-}));
-
-const StyledSlider = styled(Slider)(({ theme }) => ({
-  color: '#ff9f43',
-  '& .MuiSlider-thumb': {
-    width: '16px',
-    height: '16px',
-    backgroundColor: '#ff9f43',
-    '&:hover, &.Mui-focusVisible': {
-      boxShadow: '0 0 0 8px rgba(255, 159, 67, 0.2)'
-    }
-  },
-  '& .MuiSlider-rail': {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)'
-  },
-  '& .MuiSlider-track': {
-    backgroundColor: '#ff9f43'
   }
 }));
 
@@ -184,10 +135,8 @@ function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: numbe
 
 function ImageCropper({ open, image, onClose, onSave, aspectRatio, circular = false }: ImageCropperProps) {
   const [crop, setCrop] = useState<Crop>();
-  const [zoom, setZoom] = useState<number>(1);
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
-  const { isDarkMode } = useThemeMode();
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
@@ -201,10 +150,6 @@ function ImageCropper({ open, image, onClose, onSave, aspectRatio, circular = fa
       height: (height * crop.height) / 100
     });
   }, [aspectRatio]);
-
-  const handleZoomChange = (event: Event, newValue: number | number[]) => {
-    setZoom(newValue as number);
-  };
 
   const generateCroppedImage = async () => {
     if (!completedCrop || !imgRef.current) return;
@@ -274,6 +219,7 @@ function ImageCropper({ open, image, onClose, onSave, aspectRatio, circular = fa
             <img
               ref={imgRef}
               src={image}
+              alt=""
               onLoad={onImageLoad}
               style={{ maxWidth: '100%', maxHeight: '60vh' }}
             />

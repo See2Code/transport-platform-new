@@ -536,9 +536,6 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                                 >
                                   {name}
                                 </Typography>
-                                <Typography variant="caption" color="textSecondary">
-                                  {formatTime(conversation.lastMessage?.timestamp)}
-                                </Typography>
                               </Box>
                             }
                             secondary={
@@ -628,11 +625,6 @@ const ChatDrawer: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                               >
                                 {name}
                               </Typography>
-                              {conversation.lastMessage && (
-                                <Typography variant="caption" color="textSecondary">
-                                  {formatTime(conversation.lastMessage?.timestamp)}
-                                </Typography>
-                              )}
                             </Box>
                           }
                           secondary={

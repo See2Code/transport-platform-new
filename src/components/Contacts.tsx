@@ -25,11 +25,13 @@ import {
   InputLabel,
   Grid,
   DialogContentText,
-  CircularProgress,
   InputAdornment,
+  CircularProgress,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
-import { collection, addDoc, query, deleteDoc, doc, updateDoc, onSnapshot, getDocs, Timestamp, where, orderBy } from 'firebase/firestore';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import AddIcon from '@mui/icons-material/Add';
+import { collection, addDoc, query, deleteDoc, doc, updateDoc, getDocs, Timestamp, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import styled from '@emotion/styled';
@@ -43,18 +45,10 @@ import {
   PageTitle,
   AddButton,
   SearchWrapper,
-  SearchLabel,
   StyledCard
 } from './styled';
 import { Contact, User, ContactFormData, SnackbarState } from '../types/contact';
-import { countries } from '../constants/countries';
 import type { GridColDef } from '@mui/x-data-grid';
-
-interface Country {
-  code: string;
-  name: string;
-  prefix: string;
-}
 
 const colors = {
   primary: {
@@ -327,12 +321,10 @@ const Contacts = () => {
   const [open, setOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
-  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
   const { isDarkMode } = useThemeMode();
-  const isMobile = useMediaQuery('(max-width:600px)');
   const { currentUser } = useAuth();
 
   const [formData, setFormData] = useState<ContactFormData>({
@@ -405,7 +397,7 @@ const Contacts = () => {
 
   useEffect(() => {
     fetchContacts();
-  }, []);
+  }, [fetchContacts]);
 
   useEffect(() => {
     if (userData && !editingContact) {
@@ -433,12 +425,6 @@ const Contacts = () => {
     fetchUsers();
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setTouchedFields(prev => ({ ...prev, [name]: true }));
-  };
-
   const handleCountryChange = (e: SelectChangeEvent) => {
     const countryCode = e.target.value;
     const selectedCountry = countriesWithFlags.find(c => c.code === countryCode);
@@ -448,19 +434,6 @@ const Contacts = () => {
         countryCode,
         phonePrefix: selectedCountry.prefix
       });
-    }
-  };
-
-  const handleCreatorChange = (e: SelectChangeEvent) => {
-    const selectedUser = users.find(user => user.email === e.target.value);
-    if (selectedUser) {
-      setFormData(prev => ({
-        ...prev,
-        createdBy: {
-          firstName: selectedUser.firstName,
-          lastName: selectedUser.lastName
-        }
-      }));
     }
   };
 
@@ -599,7 +572,6 @@ const Contacts = () => {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     });
-    setTouchedFields({});
   };
 
   const filteredContacts = contacts.filter(contact =>
@@ -708,17 +680,6 @@ const Contacts = () => {
       </MobileContactActions>
     </MobileContactCard>
   );
-
-  const columns: GridColDef[] = [
-    {
-      field: 'phone',
-      headerName: 'Phone',
-      width: 200,
-      renderCell: (params: { row: { phonePrefix: string; phone: string } }) => {
-        return params.row.phonePrefix + params.row.phone;
-      }
-    },
-  ];
 
   return (
     <PageWrapper>

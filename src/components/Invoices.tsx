@@ -27,8 +27,6 @@ import {
   CardContent,
   CardHeader,
   Avatar,
-  Snackbar,
-  Alert,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../contexts/ThemeContext';
@@ -41,7 +39,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { Invoice, InvoiceItem, YOUR_COMPANY_DETAILS } from '../types/invoices';
 import { collection, addDoc, query, where, orderBy, getDocs, Timestamp, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, storage, downloadFile } from '../firebase';
+import { db, storage } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -288,7 +286,7 @@ const InvoicesPage: FC = () => {
   const theme = useTheme();
   const { isDarkMode } = useThemeMode();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { currentUser, userData } = useAuth();
+  const { currentUser } = useAuth();
 
   const [invoicesList, setInvoicesList] = useState<Invoice[]>([]);
   const [newInvoiceCustomer, setNewInvoiceCustomer] = useState({
@@ -318,21 +316,11 @@ const InvoicesPage: FC = () => {
     logoName: '',
     signatureAndStampName: '',
   });
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error'
-  });
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [, setEditingInvoice] = useState<Invoice | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [companyDetails, setCompanyDetails] = useState(YOUR_COMPANY_DETAILS);
-
-  useEffect(() => {
-    fetchInvoices();
-    fetchCompanySettings();
-    fetchCompanyDetails();
-  }, [currentUser]);
 
   const fetchInvoices = async () => {
     try {
@@ -413,6 +401,12 @@ const InvoicesPage: FC = () => {
       console.error('Chyba pri načítaní údajov o firme:', error);
     }
   };
+
+  useEffect(() => {
+    fetchInvoices();
+    fetchCompanySettings();
+    fetchCompanyDetails();
+  }, [currentUser, fetchInvoices, fetchCompanySettings, fetchCompanyDetails]);
 
   const calculateTotals = (items: InvoiceItem[]) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
@@ -1722,12 +1716,8 @@ const InvoicesPage: FC = () => {
           {previewInvoice && pdfData && (
             <iframe
               src={pdfData}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none'
-              }}
-            />
+              style={{ width: '100%', height: '80vh', border: 'none' }}
+            ></iframe>
           )}
         </DialogContent>
         <DialogActions sx={{ 
