@@ -7,9 +7,9 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
     palette: {
       mode: isDarkMode ? 'dark' : 'light',
       primary: {
-        main: '#ff9f43',
-        light: '#ffbe76',
-        dark: '#f7b067',
+        main: '#6366f1',
+        light: '#818cf8',
+        dark: '#4f46e5',
         contrastText: '#ffffff',
       },
       secondary: {
@@ -29,9 +29,9 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
         dark: colors.warning.dark,
       },
       info: {
-        main: '#ff9f43',
-        light: '#ffbe76',
-        dark: '#f7b067',
+        main: '#6366f1',
+        light: '#818cf8',
+        dark: '#4f46e5',
       },
       success: {
         main: colors.success.main,
@@ -103,25 +103,25 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
             border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15)'}`,
           },
           contained: {
-            backgroundColor: '#ff9f43',
+            backgroundColor: '#6366f1',
             color: '#ffffff',
             '&:hover': {
-              backgroundColor: '#ffbe76',
+              backgroundColor: '#818cf8',
             },
             '&:active': {
-              backgroundColor: '#f7b067',
+              backgroundColor: '#4f46e5',
             },
             '&.Mui-disabled': {
-              backgroundColor: 'rgba(255, 159, 67, 0.3)',
+              backgroundColor: 'rgba(99, 102, 241, 0.3)',
               color: 'rgba(255, 255, 255, 0.3)',
             }
           },
           outlined: {
             borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.23)',
-            color: '#ff9f43',
+            color: '#6366f1',
             '&:hover': {
-              backgroundColor: 'rgba(255, 159, 67, 0.1)',
-              borderColor: '#ffbe76',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              borderColor: '#818cf8',
             }
           },
         }
@@ -175,10 +175,10 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
                 borderWidth: '1px',
               },
               '&:hover fieldset': {
-                borderColor: isDarkMode ? 'rgba(255, 159, 67, 0.5)' : 'rgba(255, 159, 67, 0.5)',
+                borderColor: isDarkMode ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.5)',
               },
               '&.Mui-focused fieldset': {
-                borderColor: '#ff9f43',
+                borderColor: '#6366f1',
                 borderWidth: '2px',
               },
             },
@@ -188,15 +188,15 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
       MuiIconButton: {
         styleOverrides: {
           root: {
-            color: '#ff9f43',
+            color: '#6366f1',
             '&:hover': {
-              backgroundColor: 'rgba(255, 159, 67, 0.1)'
+              backgroundColor: 'rgba(99, 102, 241, 0.1)'
             },
             '&:active': {
-              backgroundColor: 'rgba(255, 159, 67, 0.2)'
+              backgroundColor: 'rgba(99, 102, 241, 0.2)'
             },
             '&.Mui-disabled': {
-              color: 'rgba(255, 159, 67, 0.3)'
+              color: 'rgba(99, 102, 241, 0.3)'
             }
           }
         }
@@ -272,10 +272,10 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
                 backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
               },
               '&.Mui-selected': {
-                backgroundColor: '#ff9f43',
+                backgroundColor: '#6366f1',
                 color: '#fff',
                 '&:hover': {
-                  backgroundColor: '#ffbe76',
+                  backgroundColor: '#818cf8',
                 },
               },
             },
@@ -283,7 +283,7 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
               color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
             },
             '& .MuiPickersDay-today': {
-              borderColor: '#ff9f43',
+              borderColor: '#6366f1',
             },
           },
         },
@@ -314,11 +314,11 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
               color: isDarkMode ? '#fff' : '#000',
             },
             '& .MuiClockPointer-root': {
-              backgroundColor: '#ff9f43',
+              backgroundColor: '#6366f1',
             },
             '& .MuiClockPointer-thumb': {
-              backgroundColor: '#ff9f43',
-              borderColor: '#ff9f43',
+              backgroundColor: '#6366f1',
+              borderColor: '#6366f1',
             },
           }
         }
@@ -346,9 +346,9 @@ export const createAppTheme = (isDarkMode: boolean): Theme => {
       MuiClockPointer: {
         styleOverrides: {
           root: {
-            backgroundColor: '#ff9f43',
+            backgroundColor: '#6366f1',
             '& .MuiClock-pin': {
-              backgroundColor: '#ff9f43',
+              backgroundColor: '#6366f1',
             }
           }
         }

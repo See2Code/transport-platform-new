@@ -423,7 +423,15 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
             </ConversationHeader>
             
             <SearchContainer>
-              <Typography variant="body1" color="primary" sx={{ mb: 2, px: 0.5, fontWeight: 'bold' }}>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  mb: 2, 
+                  px: 0.5, 
+                  fontWeight: 'bold',
+                  color: '#6366f1'
+                }}
+              >
                 Pre vytvorenie novej konverzácie:
               </Typography>
               <Typography variant="body2" color="textSecondary" sx={{ mb: 2, px: 0.5 }}>
