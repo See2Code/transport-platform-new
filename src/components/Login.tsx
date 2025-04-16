@@ -17,28 +17,39 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../contexts/ThemeContext';
+import { signInWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 function Login() {
+  const { login } = useAuth();
+  const { isDarkMode } = useThemeMode();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { login } = useAuth();
+  const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
-  const isDarkMode = theme.palette.mode === 'dark';
+  const auth = getAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError(null);
 
     try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Nastavte createdAt na aktuálny čas pri každom prihlásení
+      await updateDoc(doc(db, 'users', user.uid), {
+        createdAt: new Date().toISOString()
+      });
+
       await login(email, password);
       navigate('/dashboard');
-    } catch (err: any) {
-      console.error('Chyba pri prihlásení:', err);
-      setError(err.message || 'Nepodarilo sa prihlásiť. Skúste to znova.');
+    } catch (err) {
+      setError('Nesprávne prihlasovacie údaje');
     } finally {
       setLoading(false);
     }
@@ -121,7 +132,7 @@ function Login() {
             </Alert>
           )}
           
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleLogin}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <TextField

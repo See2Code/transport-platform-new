@@ -303,7 +303,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
     return {
       name: userInfo?.name || 'Unknown',
       photoURL: userInfo?.photoURL || '',
-      companyName: userInfo?.companyName || ''
+      companyName: userInfo?.companyName || 'Nezadaná firma'
     };
   };
 
@@ -534,7 +534,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
             ) : (
               <ConversationList sx={{ flexGrow: 1 }}>
                 {conversations.map((conversation) => {
-                  const { name, photoURL } = getOtherUserInfo(conversation);
+                  const { name, photoURL, companyName } = getOtherUserInfo(conversation);
                   const hasUnread = 
                     conversation.lastMessage?.senderId !== userData?.uid && 
                     conversation.unreadCount && 
@@ -570,39 +570,48 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                           </Box>
                         }
                         secondary={
-                          conversation.lastMessage ? (
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Typography 
-                                variant="body2" 
-                                color="textSecondary" 
-                                sx={{ 
-                                  maxWidth: '180px',
-                                  fontWeight: hasUnread ? 'medium' : 'normal',
-                                  color: hasUnread ? (isDarkMode ? 'white' : 'black') : 'inherit'
-                                }}
-                                noWrap
-                              >
-                                {conversation.lastMessage.text}
-                              </Typography>
-                              {hasUnread && (
-                                <Box 
-                                  component="span" 
-                                  sx={{ 
-                                    ml: 1,
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    bgcolor: 'primary.main',
-                                    display: 'inline-block'
-                                  }} 
-                                />
-                              )}
-                            </Box>
-                          ) : (
-                            <Typography variant="body2" color="textSecondary">
-                              Začnite konverzáciu
+                          <Box>
+                            <Typography 
+                              variant="caption" 
+                              color="textSecondary" 
+                              sx={{ display: 'block', mb: 0.5 }}
+                            >
+                              {companyName}
                             </Typography>
-                          )
+                            {conversation.lastMessage ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Typography 
+                                  variant="body2" 
+                                  color="textSecondary" 
+                                  sx={{ 
+                                    maxWidth: '180px',
+                                    fontWeight: hasUnread ? 'medium' : 'normal',
+                                    color: hasUnread ? (isDarkMode ? 'white' : 'black') : 'inherit'
+                                  }}
+                                  noWrap
+                                >
+                                  {conversation.lastMessage.text}
+                                </Typography>
+                                {hasUnread && (
+                                  <Box 
+                                    component="span" 
+                                    sx={{ 
+                                      ml: 1,
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: '50%',
+                                      bgcolor: 'primary.main',
+                                      display: 'inline-block'
+                                    }} 
+                                  />
+                                )}
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="textSecondary">
+                                Začnite konverzáciu
+                              </Typography>
+                            )}
+                          </Box>
                         }
                       />
                     </ListItem>
