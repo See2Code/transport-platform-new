@@ -29,7 +29,8 @@ import {
   Card,
   CircularProgress,
   Collapse,
-  SelectChangeEvent
+  SelectChangeEvent,
+  TablePagination
 } from '@mui/material';
 import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -404,6 +405,8 @@ export default function BusinessCases() {
   const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
   const [phaseDialogOpen, setPhaseDialogOpen] = useState(false);
   const [, setPhases] = useState<Phase[]>([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
@@ -849,6 +852,9 @@ export default function BusinessCases() {
     fetchPhases();
   }, [fetchPhases]);
 
+  const filteredCases = getFilteredCases();
+  const paginatedCases = filteredCases.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   return (
     <PageWrapper>
       <PageHeader>
@@ -1012,7 +1018,7 @@ export default function BusinessCases() {
 
       {!loading && (
           <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-              {getFilteredCases().map((businessCase: BusinessCase) => renderMobileCase(businessCase))}
+              {paginatedCases.map((businessCase: BusinessCase) => renderMobileCase(businessCase))}
           </Box>
       )}
 
@@ -1062,7 +1068,7 @@ export default function BusinessCases() {
                       </TableRow>
                   </TableHead>
                   <TableBody>
-                       {getFilteredCases().map((businessCase: BusinessCase) => (
+                       {paginatedCases.map((businessCase: BusinessCase) => (
                           <React.Fragment key={businessCase.id}>
                               <StyledTableRow isDarkMode={isDarkMode} onClick={() => handleRowClick(businessCase.id!)} sx={{ cursor: 'pointer' }}>
                                   <StyledTableCell isDarkMode={isDarkMode}>{(businessCase.createdAt as Timestamp)?.toDate().toLocaleString('sk-SK') ?? '-'}</StyledTableCell>
@@ -1166,6 +1172,19 @@ export default function BusinessCases() {
                       ))}
                   </TableBody>
               </Table>
+              <TablePagination
+                component="div"
+                count={filteredCases.length}
+                page={page}
+                onPageChange={(e, newPage) => setPage(newPage)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={e => {
+                  setRowsPerPage(parseInt(e.target.value, 10));
+                  setPage(0);
+                }}
+                rowsPerPageOptions={[10, 25, 50, 100]}
+                labelRowsPerPage="Záznamov na stránku:"
+              />
           </TableContainer>
       )}
 

@@ -1,63 +1,60 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  CssBaseline,
-  Divider,
-  IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Typography,
-  Avatar,
-  Menu,
-  MenuItem,
-  styled,
-  Box,
-  Toolbar,
-  AppBar,
-  useMediaQuery,
-  useTheme,
-  MenuList,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Drawer,
-  Badge,
-  Popover,
-  Paper,
-  Chip,
-  CircularProgress,
-  Alert,
-} from '@mui/material';
-import {
-  Home as HomeIcon,
-  Group as GroupIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  AccountCircle as AccountIcon,
-  LocalShipping as LocalShippingIcon,
-  Notifications as NotificationsIcon,
-  Contacts as ContactsIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  Close as CloseIcon,
-  LocationOn as LocationOnIcon,
-  Receipt as ReceiptIcon,
-  Visibility as VisibilityIcon,
-  Euro as EuroIcon,
-  AccessTime as AccessTimeIcon,
-  Business as BusinessIcon,
-  Chat as ChatIcon,
-  Menu as MenuIcon,
-  Person as PersonIcon,
-  Dashboard as DashboardIcon,
-  Brightness4 as Brightness4Icon,
-  Brightness7 as Brightness7Icon,
-  PersonAdd as PersonAddIcon,
-} from '@mui/icons-material';
+import React, { useState, useEffect, useRef, FC } from 'react';
+import CssBaseline from '@mui/material/CssBaseline';
+import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Typography from '@mui/material/Typography';
+import Avatar from '@mui/material/Avatar';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Box from '@mui/material/Box';
+import Toolbar from '@mui/material/Toolbar';
+import AppBar from '@mui/material/AppBar';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme, styled } from '@mui/material/styles';
+import MenuList from '@mui/material/MenuList';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import Drawer from '@mui/material/Drawer';
+import Badge from '@mui/material/Badge';
+import Popover from '@mui/material/Popover';
+import Paper from '@mui/material/Paper';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import DialogContentText from '@mui/material/DialogContentText';
+import HomeIcon from '@mui/icons-material/Home';
+import GroupIcon from '@mui/icons-material/Group';
+import SettingsIcon from '@mui/icons-material/Settings';
+import AccountIcon from '@mui/icons-material/AccountCircle';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import ContactsIcon from '@mui/icons-material/Contacts';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CloseIcon from '@mui/icons-material/Close';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import EuroIcon from '@mui/icons-material/Euro';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import BusinessIcon from '@mui/icons-material/Business';
+import ChatIcon from '@mui/icons-material/Chat';
+import PersonIcon from '@mui/icons-material/Person';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import PeopleIcon from '@mui/icons-material/People';
+import MenuIcon from '@mui/icons-material/Menu';
+import LogoutIcon from '@mui/icons-material/Logout';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -68,6 +65,7 @@ import { useNotifications, NotificationData } from '../contexts/NotificationsCon
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { useChatUI } from '../AppContent';
+import { alpha } from '@mui/material/styles';
 
 const drawerWidth = 240;
 const miniDrawerWidth = 64;
@@ -685,174 +683,80 @@ const NotificationFooter = styled(Box, {
   borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
 }));
 
-const Navbar = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+const StyledMenu = styled((props: MenuProps) => (
+  <Menu
+    elevation={0}
+    anchorOrigin={{
+      vertical: 'bottom',
+      horizontal: 'right',
+    }}
+    transformOrigin={{
+      vertical: 'top',
+      horizontal: 'right',
+    }}
+    {...props}
+  />
+))(({ theme }) => ({
+  '& .MuiPaper-root': {
+    borderRadius: 6,
+    marginTop: theme.spacing(1),
+    minWidth: 180,
+    color: theme.palette.mode === 'light' ? 'rgb(55, 65, 81)' : theme.palette.grey[300],
+    boxShadow:
+      'rgb(255, 255, 255) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px',
+    '& .MuiMenu-list': {
+      padding: '4px 0',
+    },
+    '& .MuiMenuItem-root': {
+      '& .MuiSvgIcon-root': {
+        fontSize: 18,
+        color: theme.palette.text.secondary,
+        marginRight: theme.spacing(1.5),
+      },
+      '&:active': {
+        backgroundColor: alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity),
+      },
+    },
+  },
+}));
+
+const SolidDialogPaper = styled(Paper)(({ theme }) => ({
+  backgroundColor: theme.palette.mode === 'dark' ? '#232342' : '#fff',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+  borderRadius: 16,
+  minWidth: 320,
+  color: theme.palette.mode === 'dark' ? '#fff' : '#232342',
+  opacity: 1,
+  backdropFilter: 'none',
+  backgroundImage: 'none',
+}));
+
+const Navbar: FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, userData } = useAuth();
+  const { userData, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, refreshNotifications, loading } = useNotifications();
-  const { chatOpen, toggleChat, unreadConversationsCount } = useChatUI();
-  
-  // Kombinovaný počet notifikácií
-  const totalUnreadCount = unreadCount + unreadConversationsCount;
-  
-  // Vytvoríme referenciu na audio element pre zvukovú notifikáciu
-  const notificationSound = useRef<HTMLAudioElement | null>(null);
-  
-  // Inicializácia zvukového elementu pri načítaní komponenty
-  useEffect(() => {
-    notificationSound.current = new Audio('/notification-sound.mp3');
-  }, []);
-  
-  // Efekt pre prehranie zvuku pri novej notifikácii
-  useEffect(() => {
-    if (totalUnreadCount > 0 && notificationSound.current) {
-      notificationSound.current.play().catch(err => {
-        console.warn('Zvuková notifikácia sa nepodarila prehrať:', err);
-      });
-    }
-  }, [totalUnreadCount]);
-  
-  // Notifikačný popover
-  const [notificationsEl, setNotificationsEl] = useState<null | HTMLElement>(null);
+  const { toggleChat } = useChatUI();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // Otvorenie notifikačného popoveru
-  const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationsEl(event.currentTarget);
-    refreshNotifications();
-  };
-
-  // Navigácia na stránku notifikácií
-  const handleNavigateToNotifications = () => {
-    handleNotificationClose();
+  const handleNotificationsClick = () => {
+    setAnchorEl(null);
     navigate('/notifications');
   };
 
-  // Zatvorenie notifikačného popoveru
-  const handleNotificationClose = () => {
-    setNotificationsEl(null);
-  };
-
-  // Označenie notifikácie ako prečítanej
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      await markAsRead(id);
-    } catch (error) {
-      console.error("Chyba pri označovaní notifikácie ako prečítanej:", error);
-    }
-  };
-
-  // Označenie všetkých notifikácií ako prečítané
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllAsRead();
-    } catch (error) {
-      console.error("Chyba pri označovaní všetkých notifikácií ako prečítané:", error);
-    }
-  };
-
-  // Formátovanie dátumu
-  const formatDateTime = (timestamp: Timestamp | null): string => {
-    if (!timestamp) return 'Neznámy čas';
-    return format(timestamp.toDate(), 'dd.MM.yyyy HH:mm');
-  };
-
-  // Renderer pre rôzne typy notifikácií
-  const renderNotificationContent = (notification: NotificationData) => {
-    const getNotificationIcon = () => {
-      switch (notification.type) {
-        case 'message':
-          return <ChatIcon fontSize="small" />;
-        case 'reminder':
-          return <AccessTimeIcon fontSize="small" />;
-        case 'business':
-          return <BusinessIcon fontSize="small" />;
-        default:
-          return <NotificationsIcon fontSize="small" />;
-      }
-    };
-
-    const getNotificationColor = () => {
-      switch (notification.type) {
-        case 'message':
-          return 'primary';
-        case 'reminder':
-          return 'warning';
-        case 'business':
-          return 'success';
-        default:
-          return 'default';
-      }
-    };
-
-    return (
-      <>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {getNotificationIcon()}
-            <Typography variant="subtitle2" component="span" fontWeight="bold">
-              {notification.title}
-            </Typography>
-          </Box>
-          <Chip 
-            size="small" 
-            label={notification.type.charAt(0).toUpperCase() + notification.type.slice(1)} 
-            color={getNotificationColor()} 
-            sx={{ height: '18px', fontSize: '0.6rem', ml: 1 }} 
-          />
-        </Box>
-        <Typography variant="body2">
-          {notification.message}
-        </Typography>
-        {notification.metadata && Object.keys(notification.metadata).length > 0 && (
-          <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {notification.metadata.orderId && (
-              <Chip
-                size="small"
-                label={`Objednávka: ${notification.metadata.orderId}`}
-                sx={{ height: '20px', fontSize: '0.7rem' }}
-              />
-            )}
-            {notification.metadata.businessCaseId && (
-              <Chip
-                size="small"
-                label={`Obchodný prípad: ${notification.metadata.businessCaseId}`}
-                sx={{ height: '20px', fontSize: '0.7rem' }}
-              />
-            )}
-            {notification.metadata.transportId && (
-              <Chip
-                size="small"
-                label={`Preprava: ${notification.metadata.transportId}`}
-                sx={{ height: '20px', fontSize: '0.7rem' }}
-              />
-            )}
-          </Box>
-        )}
-      </>
-    );
-  };
-
-  const handleMobileMenuClick = () => {
-    setMobileMenuOpen(true);
-  };
-
-  const handleMobileMenuClose = () => {
-    setMobileMenuOpen(false);
-  };
-
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    handleMobileMenuClose();
+  const handleNotificationClick = (notification: any) => {
+    setAnchorEl(null);
+    // Handle notification click
   };
 
   const handleLogoutClick = () => {
     setLogoutDialogOpen(true);
-    handleMobileMenuClose();
   };
 
   const handleLogoutCancel = () => {
@@ -869,569 +773,213 @@ const Navbar = () => {
     }
   };
 
-  const menuItems: MenuItem[] = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Sledované prepravy', icon: <LocalShippingIcon />, path: '/tracked-transports' },
-    { text: 'Mapa vozidiel', icon: <LocationOnIcon />, path: '/vehicle-map' },
-    { text: 'Objednávky', icon: <ReceiptIcon />, path: '/orders' },
-    { text: 'Obchodné prípady', icon: <BusinessIcon />, path: '/business-cases', access: ['manager', 'admin', 'super-admin'] },
-    { text: 'Faktúry', icon: <EuroIcon />, path: '/invoices' },
-    { text: 'Kontakty', icon: <ContactsIcon />, path: '/contacts' },
-    { text: 'Tím', icon: <GroupIcon />, path: '/team' },
-    { text: 'Nastavenia', icon: <SettingsIcon />, path: '/settings' },
-  ];
-
   return (
-    <PageWrapper isDarkMode={isDarkMode}>
-      <StyledAppBar>
+    <>
+      <StyledAppBar position="fixed">
         <StyledToolbar>
           {isMobile ? (
-            <>
-              <Box 
-                onClick={() => navigate('/dashboard')} 
-                sx={{ 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexGrow: 1, 
-                }}
-              >
-                <LogoImage 
-                  src={isDarkMode ? logoMiniDarkPath : logoMiniLightPath} 
-                  alt="AESA Logo Mini" 
-                  sx={{ 
-                      height: '28px',
-                      width: 'auto'
-                  }}
-                 />
-                 <Typography 
-                  variant="h6" 
-                  noWrap 
-                  component="div"
-                  sx={{ 
-                    color: isDarkMode ? '#ffffff' : '#000000',
-                    fontWeight: 600,
-                    letterSpacing: '-0.5px',
-                    fontSize: {xs: '1rem', sm: '1.1rem', md: '1.2rem'},
-                    ml: 1
-                  }}
-                >
-                  Transport
-                </Typography>
-              </Box>
-              <Box sx={{ 
-                display: 'flex',
-                gap: {xs: 1, sm: 1.5},
-                alignItems: 'center',
-                marginLeft: {xs: 1, sm: 1.5},
-                zIndex: theme.zIndex.drawer + 2
-              }}>
-                <IconButton
-                  onClick={handleNotificationClick}
-                  sx={{ 
-                    padding: {xs: '8px', sm: '10px'}, 
-                    color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
-                    '&:hover': {
-                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
-                      backgroundColor: isDarkMode 
-                        ? 'rgba(99, 102, 241, 0.1)' 
-                        : 'rgba(99, 102, 241, 0.05)',
-                    }
-                  }}
-                >
-                  <Badge badgeContent={unreadCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }}>
-                    <NotificationsIcon sx={{ fontSize: '1.5rem' }} />
-                  </Badge>
-                </IconButton>
-                <IconButton
-                  onClick={toggleChat}
-                  sx={{ 
-                    padding: {xs: '8px', sm: '10px'}, 
-                    color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)'),
-                    backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
-                    '&:hover': {
-                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
-                      backgroundColor: isDarkMode 
-                        ? 'rgba(99, 102, 241, 0.1)' 
-                        : 'rgba(99, 102, 241, 0.05)',
-                    }
-                  }}
-                >
-                  <Badge badgeContent={unreadConversationsCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }}>
-                    <ChatIcon sx={{ fontSize: '1.5rem' }} />
-                  </Badge>
-                </IconButton>
-              </Box>
-              <MenuButton
-                edge="end"
-                sx={{
-                  color: isDarkMode ? '#ffffff' : '#000000',
-                  padding: {xs: '4px', sm: '6px', md: '8px'},
-                  '&:hover': {
-                    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)',
-                  }
-                }}
-                aria-label="menu"
-                onClick={handleMobileMenuClick}
-              >
-                <MenuIcon sx={{ fontSize: {xs: '1.1rem', sm: '1.2rem', md: '1.4rem'} }} />
-              </MenuButton>
-            </>
-          ) : (
-            <>
-              <BrandContainer>
-                <Box 
-                  onClick={() => navigate('/dashboard')} 
-                  sx={{ 
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: {lg: 1, xl: 2},
-                    transition: 'opacity 0.2s ease-in-out',
-                    '&:hover': {
-                      opacity: 0.8
-                    }
-                  }}
-                >
-                  <LogoImage src={isDarkMode ? logoDarkPath : logoLightPath} alt="AESA Logo" sx={{ height: {lg: '28px', xl: '32px'} }} />
-                  <Typography 
-                    variant="h6" 
-                    noWrap 
-                    component="div"
-                    sx={{ 
-                      color: isDarkMode ? '#ffffff' : '#000000',
-                      fontWeight: 600,
-                      letterSpacing: '-0.5px',
-                      fontSize: {lg: '1.1rem', xl: '1.25rem'}
-                    }}
-                  >
-                    Transport Platform
-                  </Typography>
-                </Box>
-              </BrandContainer>
-              
-              <Box sx={{
-                display: 'flex',
-                gap: { lg: 0.5, xl: 1 },
-                alignItems: 'center',
-                height: '40px',
-                flexShrink: 1,
-                overflow: 'hidden',
-                minWidth: 0 
-              }}>
-                {menuItems.map((item) => (
-                  <NavListItem key={item.text} disablePadding isDarkMode={isDarkMode}>
-                    <ListItemButton
-                      component={Link}
-                      to={item.path ?? '#'}
-                      selected={location.pathname === item.path}
-                      onClick={item.onClick}
-                      sx={{
-                        borderRadius: '6px',
-                        padding: {lg: '6px 8px', xl: '8px 12px'},
-                        margin: '0 1px',
-                        minWidth: 'auto',
-                        color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
-                        '&:hover': {
-                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                          color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
-                        },
-                        '&.Mui-selected': {
-                          backgroundColor: isDarkMode 
-                            ? 'rgba(99, 102, 241, 0.15)' 
-                            : 'rgba(99, 102, 241, 0.1)',
-                          color: colors.primary.main,
-                          borderRadius: '8px',
-                          outline: 'none',
-                        }
-                      }}
-                    >
-                      <ListItemIconStyled sx={{ minWidth: {lg: '16px', xl: '20px'}, mr: {lg: 0.5, xl: 1.5} }}>
-                        {React.cloneElement(item.icon as React.ReactElement, { 
-                          sx: { fontSize: {lg: '1.1rem', xl: '1.3rem'} } 
-                        })}
-                      </ListItemIconStyled>
-                    </ListItemButton>
-                  </NavListItem>
-                ))}
-              </Box>
-
-              <Box sx={{ flexGrow: 1 }} />
-              
-              <Box 
-                sx={{
-                  display: 'flex',
-                  gap: { xs: 1, sm: 1.5 },
-                  alignItems: 'center',
-                  mr: 0,
-                }}
-              >
-                <IconButton
-                  onClick={handleNotificationClick}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    handleNavigateToNotifications();
-                  }}
-                  aria-label="Zobraziť notifikácie"
-                  title="Klik: Zobraziť popover, Pravý klik: Prejsť na stránku notifikácií"
-                  sx={{
-                    padding: {xs: '8px', sm: '10px'}, 
-                    color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
-                    borderRadius: '8px',
-                    backgroundColor: 'transparent',
-                    transition: 'all 0.2s ease-in-out',
-                    outline: 'none',
-                    '&:hover': {
-                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
-                      backgroundColor: isDarkMode 
-                        ? 'rgba(99, 102, 241, 0.1)' 
-                        : 'rgba(99, 102, 241, 0.05)',
-                    },
-                    '&:focus': { outline: 'none' },
-                    '&:focus-visible': {
-                       outline: `2px solid ${colors.primary.light}`,
-                       outlineOffset: '2px',
-                       backgroundColor: 'transparent',
-                    },
-                    '&:active': {
-                        transform: 'scale(0.98)' 
-                    }
-                  }}
-                >
-                  <Badge badgeContent={unreadCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }}>
-                    <NotificationsIcon sx={{ fontSize: '1.5rem' }} />
-                  </Badge>
-                </IconButton>
-                <IconButton
-                  onClick={toggleChat}
-                  sx={{ 
-                    padding: {xs: '8px', sm: '10px'}, 
-                    color: chatOpen ? colors.primary.main : (isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)'),
-                    backgroundColor: chatOpen ? (isDarkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)') : 'transparent',
-                    borderRadius: '8px',
-                    transition: 'all 0.2s ease-in-out',
-                    outline: 'none',
-                    '&:hover': {
-                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
-                      backgroundColor: isDarkMode 
-                        ? 'rgba(99, 102, 241, 0.1)' 
-                        : 'rgba(99, 102, 241, 0.05)',
-                    },
-                    '&:focus': { outline: 'none' },
-                    '&:focus-visible': {
-                       outline: `2px solid ${colors.primary.light}`,
-                       outlineOffset: '2px',
-                       backgroundColor: 'transparent',
-                    },
-                    '&:active': {
-                        transform: 'scale(0.98)' 
-                    }
-                  }}
-                >
-                  <Badge badgeContent={unreadConversationsCount} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem', height: '16px', minWidth: '16px', top: 4, right: 4 } }}>
-                    <ChatIcon sx={{ fontSize: '1.5rem' }} />
-                  </Badge>
-                </IconButton>
-                <IconButton
-                  onClick={toggleTheme}
-                   sx={{
-                    padding: {xs: '8px', sm: '10px'}, 
-                    color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
-                    borderRadius: '8px',
-                    backgroundColor: 'transparent',
-                    transition: 'all 0.2s ease-in-out',
-                    outline: 'none',
-                    '&:hover': {
-                      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.8)',
-                      backgroundColor: isDarkMode 
-                        ? 'rgba(99, 102, 241, 0.1)' 
-                        : 'rgba(99, 102, 241, 0.05)',
-                    },
-                    '&:focus': { outline: 'none' },
-                    '&:focus-visible': {
-                       outline: `2px solid ${colors.primary.light}`,
-                       outlineOffset: '2px',
-                       backgroundColor: 'transparent',
-                    },
-                    '&:active': {
-                        transform: 'scale(0.98)' 
-                    }
-                  }}
-                >
-                  {isDarkMode ? <Brightness7Icon sx={{ fontSize: '1.5rem' }} /> : <Brightness4Icon sx={{ fontSize: '1.5rem' }} />}
-                </IconButton>
-                <IconButton
-                  onClick={handleLogoutClick}
-                   sx={{
-                    padding: {xs: '8px', sm: '10px'}, 
-                    color: isDarkMode ? '#f87171' : '#ef4444',
-                    borderRadius: '8px',
-                    backgroundColor: 'transparent',
-                    transition: 'all 0.2s ease-in-out',
-                    outline: 'none',
-                    '&:hover': {
-                      backgroundColor: isDarkMode ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.05)',
-                      color: isDarkMode ? '#ef4444' : '#dc2626'
-                    },
-                    '&:focus': { outline: 'none' },
-                    '&:focus-visible': {
-                       outline: `2px solid ${isDarkMode ? '#f87171' : '#ef4444'}`,
-                       outlineOffset: '2px',
-                       backgroundColor: 'transparent',
-                    },
-                    '&:active': {
-                        transform: 'scale(0.98)' 
-                    }
-                  }}
-                >
-                  <LogoutIcon sx={{ fontSize: '1.5rem' }} />
-                </IconButton>
-              </Box>
-            </>
-          )}
-        </StyledToolbar>
-      </StyledAppBar>
-      {/* Mobilné menu drawer */}
-      <MobileDrawer
-        anchor="right"
-        open={mobileMenuOpen}
-        onClose={handleMobileMenuClose}
-        isDarkMode={isDarkMode}
-      >
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px' }}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>Menu</Typography>
-            <IconButton onClick={handleMobileMenuClose}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-          <List sx={{ flexGrow: 1 }}>
-            {menuItems.map((item) => (
-              <ListItem disablePadding key={item.text}>
-                <MenuItemWrapper 
-                  onClick={() => handleNavigation(item.path || '/dashboard')} 
-                  isDarkMode={isDarkMode}
-                  selected={location.pathname === item.path}
-                  sx={{
-                    '&.Mui-selected': {
-                      backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
-                      color: colors.primary.main,
-                      '& .MuiSvgIcon-root': {
-                        color: colors.primary.main,
-                      },
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: '4px',
-                        backgroundColor: colors.primary.main,
-                        borderRadius: '0 4px 4px 0',
-                      }
-                    }
-                  }}
-                >
-                  <MenuItemIcon>{item.icon}</MenuItemIcon>
-                  <MenuItemContent>
-                    <Typography 
-                      variant="body1" 
-                      sx={{ 
-                        fontWeight: location.pathname === item.path ? 'bold' : 'normal',
-                        color: location.pathname === item.path ? colors.primary.main : 'inherit'
-                      }}
-                    >
-                      {item.text}
-                    </Typography>
-                    {item.description && (
-                      <Typography variant="caption" color="text.secondary">
-                        {item.description}
-                      </Typography>
-                    )}
-                  </MenuItemContent>
-                </MenuItemWrapper>
-              </ListItem>
-            ))}
-            {/* Pridáme položku notifikácií do mobilného menu */}
-            <ListItem disablePadding>
-              <MenuItemWrapper 
-                onClick={() => handleNavigation('/notifications')} 
-                isDarkMode={isDarkMode}
-                selected={location.pathname === '/notifications'}
-                sx={{
-                  '&.Mui-selected': {
-                    backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
-                    color: colors.primary.main,
-                    '& .MuiSvgIcon-root': {
-                      color: colors.primary.main,
-                    },
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: '4px',
-                      backgroundColor: colors.primary.main,
-                      borderRadius: '0 4px 4px 0',
-                    }
-                  }
-                }}
-              >
-                <MenuItemIcon><NotificationsIcon /></MenuItemIcon>
-                <MenuItemContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography 
-                      variant="body1" 
-                      sx={{ 
-                        fontWeight: location.pathname === '/notifications' ? 'bold' : 'normal',
-                        color: location.pathname === '/notifications' ? colors.primary.main : 'inherit'
-                      }}
-                    >
-                      Notifikácie
-                    </Typography>
-                    {unreadCount > 0 && (
-                      <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.6rem' } }} />
-                    )}
-                  </Box>
-                </MenuItemContent>
-              </MenuItemWrapper>
-            </ListItem>
-          </List>
-          <Divider sx={{ mt: 2 }} />
-          <BottomActions>
-            <ActionItem 
-              onClick={toggleTheme} 
-              isDarkMode={isDarkMode}
+            <IconButton
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              onClick={() => setDrawerOpen(true)}
+              sx={{ mr: 2 }}
             >
-              {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
-              <Typography>{isDarkMode ? 'Svetlý režim' : 'Tmavý režim'}</Typography>
-            </ActionItem>
-            <ActionItem 
-              onClick={handleLogoutClick} 
-              isDarkMode={isDarkMode} 
-              isLogout
+              <MenuIcon />
+            </IconButton>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <img 
+                src={isDarkMode ? logoDarkPath : logoLightPath} 
+                alt="Logo" 
+                style={{ height: '40px', marginRight: '16px' }} 
+              />
+              <Typography variant="h6" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                Transport Platform
+              </Typography>
+            </Box>
+          )}
+
+          {!isMobile && (
+            <Box sx={{ display: 'flex', flexGrow: 1, ml: 4 }}>
+              <Button
+                color="inherit"
+                startIcon={<DashboardIcon />}
+                onClick={() => navigate('/dashboard')}
+                sx={{ mr: 2 }}
+              >
+                Dashboard
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<BusinessIcon />}
+                onClick={() => navigate('/business-cases')}
+                sx={{ mr: 2 }}
+              >
+                Business Cases
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<LocalShippingIcon />}
+                onClick={() => navigate('/orders')}
+                sx={{ mr: 2 }}
+              >
+                Objednávky
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<VisibilityIcon />}
+                onClick={() => navigate('/tracked-shipments')}
+                sx={{ mr: 2 }}
+              >
+                Sledované prepravy
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<PeopleIcon />}
+                onClick={() => navigate('/team')}
+                sx={{ mr: 2 }}
+              >
+                Tím
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<SettingsIcon />}
+                onClick={() => navigate('/settings')}
+                sx={{ mr: 2 }}
+              >
+                Nastavenia
+              </Button>
+            </Box>
+          )}
+
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton color="inherit" onClick={handleNotificationsClick}>
+              <Badge badgeContent={unreadCount} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+            <IconButton 
+              color="inherit" 
+              onClick={toggleChat}
+              sx={{ ml: 1 }}
+            >
+              <ChatIcon />
+            </IconButton>
+            <IconButton color="inherit" onClick={toggleTheme} sx={{ ml: 1 }}>
+              {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+            </IconButton>
+            <IconButton
+              color="inherit"
+              onClick={handleLogoutClick}
+              sx={{ ml: 1 }}
             >
               <LogoutIcon />
-              <Typography>Odhlásiť sa</Typography>
-            </ActionItem>
-          </BottomActions>
+            </IconButton>
+          </Box>
+        </StyledToolbar>
+      </StyledAppBar>
+
+      {/* Mobilné menu */}
+      <MobileDrawer
+        anchor="left"
+        open={drawerOpen && isMobile}
+        onClose={() => setDrawerOpen(false)}
+        isDarkMode={isDarkMode}
+      >
+        <Box sx={{ width: 250, pt: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', px: 2, mb: 2 }}>
+            <img 
+              src={isDarkMode ? logoDarkPath : logoLightPath} 
+              alt="Logo" 
+              style={{ height: '32px', marginRight: '12px' }} 
+            />
+            <Typography variant="subtitle1">
+              Transport Platform
+            </Typography>
+          </Box>
+          <Divider />
+          <List>
+            <ListItemButton onClick={() => { navigate('/dashboard'); setDrawerOpen(false); }}>
+              <ListItemIcon><DashboardIcon /></ListItemIcon>
+              <ListItemText primary="Dashboard" />
+            </ListItemButton>
+            <ListItemButton onClick={() => { navigate('/business-cases'); setDrawerOpen(false); }}>
+              <ListItemIcon><BusinessIcon /></ListItemIcon>
+              <ListItemText primary="Business Cases" />
+            </ListItemButton>
+            <ListItemButton onClick={() => { navigate('/orders'); setDrawerOpen(false); }}>
+              <ListItemIcon><LocalShippingIcon /></ListItemIcon>
+              <ListItemText primary="Objednávky" />
+            </ListItemButton>
+            <ListItemButton onClick={() => { navigate('/tracked-shipments'); setDrawerOpen(false); }}>
+              <ListItemIcon><VisibilityIcon /></ListItemIcon>
+              <ListItemText primary="Sledované prepravy" />
+            </ListItemButton>
+            <ListItemButton onClick={() => { navigate('/team'); setDrawerOpen(false); }}>
+              <ListItemIcon><PeopleIcon /></ListItemIcon>
+              <ListItemText primary="Tím" />
+            </ListItemButton>
+            <ListItemButton onClick={() => { navigate('/settings'); setDrawerOpen(false); }}>
+              <ListItemIcon><SettingsIcon /></ListItemIcon>
+              <ListItemText primary="Nastavenia" />
+            </ListItemButton>
+          </List>
         </Box>
       </MobileDrawer>
 
-      {/* Dialog pre potvrdenie odhlásenia */}
+      {/* Dialóg pre odhlásenie */}
       <Dialog
         open={logoutDialogOpen}
         onClose={handleLogoutCancel}
-        aria-labelledby="logout-dialog-title"
+        PaperProps={{
+          sx: {
+            background: 'none',
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            borderRadius: '24px',
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)'
+          }
+        }}
       >
-        <DialogTitle id="logout-dialog-title">Potvrdiť odhlásenie</DialogTitle>
-        <DialogContent>
-          <Typography>Naozaj sa chcete odhlásiť?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleLogoutCancel} color="primary">Zrušiť</Button>
-          <Button onClick={handleLogoutConfirm} color="primary" autoFocus>Odhlásiť</Button>
-        </DialogActions>
+        <Box sx={{
+          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+          color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
+          padding: '0px',
+          borderRadius: '24px',
+          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          <DialogTitle sx={{ padding: '24px 24px 16px 24px', fontSize: '1.25rem', fontWeight: 600 }}>
+            Odhlásenie
+          </DialogTitle>
+          <DialogContent sx={{ padding: '16px 24px', color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)', overflowY: 'auto' }}>
+            <DialogContentText sx={{ color: 'inherit', fontSize: '1rem' }}>
+              Naozaj sa chcete odhlásiť?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ padding: '16px 24px 24px 24px' }}>
+            <Button onClick={handleLogoutCancel} variant="outlined" color="inherit" sx={{ borderRadius: '12px', padding: '8px 20px' }}>Zrušiť</Button>
+            <Button onClick={handleLogoutConfirm} variant="contained" sx={{
+              backgroundColor: '#ff9f43',
+              color: '#fff',
+              fontWeight: 500,
+              borderRadius: '12px',
+              padding: '8px 20px',
+              '&:hover': { backgroundColor: '#f9872f' }
+            }}>Odhlásiť</Button>
+          </DialogActions>
+        </Box>
       </Dialog>
-      
-      {/* Notifikačný popover */}
-      <NotificationPopover
-        open={Boolean(notificationsEl)}
-        anchorEl={notificationsEl}
-        onClose={handleNotificationClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-      >
-        <NotificationHeader isDarkMode={isDarkMode}>
-          <Typography variant="subtitle1" fontWeight={600}>
-            Notifikácie
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}>
-              <NotificationsIcon fontSize="small" />
-            </Badge>
-            {unreadCount > 0 && (
-              <Button size="small" onClick={handleMarkAllAsRead} sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
-                Označiť všetky ako prečítané
-              </Button>
-            )}
-          </Box>
-        </NotificationHeader>
-        
-        <NotificationContainer>
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
-              <CircularProgress size={32} />
-            </Box>
-          ) : notifications.length === 0 ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                Nemáte žiadne notifikácie
-              </Typography>
-            </Box>
-          ) : (
-            notifications.map((notification) => (
-              <NotificationItem 
-                key={notification.id} 
-                isDarkMode={isDarkMode} 
-                isRead={notification.read}
-              >
-                <Box>
-                  {renderNotificationContent(notification)}
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center', 
-                    mt: 1.5, 
-                    pt: 1, 
-                    borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}` 
-                  }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDateTime(notification.createdAt)}
-                    </Typography>
-                    {!notification.read && (
-                      <Button 
-                        size="small" 
-                        onClick={() => handleMarkAsRead(notification.id)}
-                        sx={{ 
-                          fontSize: '0.7rem', 
-                          p: 0.5, 
-                          minWidth: 'auto',
-                          color: colors.primary.main
-                        }}
-                      >
-                        Označiť ako prečítané
-                      </Button>
-                    )}
-                  </Box>
-                </Box>
-              </NotificationItem>
-            ))
-          )}
-        </NotificationContainer>
-        
-        <NotificationFooter isDarkMode={isDarkMode}>
-          <Button 
-            size="small" 
-            onClick={handleNavigateToNotifications}
-            sx={{ 
-              textTransform: 'none', 
-              fontSize: '0.9rem'
-            }}
-          >
-            Zobraziť všetky notifikácie
-          </Button>
-        </NotificationFooter>
-      </NotificationPopover>
-    </PageWrapper>
+    </>
   );
 };
 

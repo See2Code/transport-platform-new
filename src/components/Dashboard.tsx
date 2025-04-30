@@ -180,213 +180,173 @@ export default function Dashboard() {
   });
   const [activeVehicles, setActiveVehicles] = useState<VehicleLocation[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchDashboardData = async () => {
-    console.log('Dashboard: Začínam načítavanie dát');
-
-    if (!userData) {
-      console.log('Dashboard: userData je null - užívateľ nie je prihlásený alebo údaje neboli načítané');
-      return;
-    }
-
-    if (!userData.companyID) {
-      console.log('Dashboard: companyID nie je nastavené - užívateľ nemá priradenú firmu');
-      return;
-    }
-
-    console.log('Dashboard: Načítavam dáta pre companyID:', userData.companyID);
+  // Fetch jednorazových dát
+  const fetchStaticData = async () => {
+    if (!userData?.companyID) return;
 
     try {
-      // Fetch business cases
-      const businessCasesQuery = query(
-        collection(db, 'businessCases'),
-        where('companyID', '==', userData.companyID),
-        orderBy('createdAt', 'desc'),
-        limit(15)
-      );
+      const [contactsSnap, usersSnap, driversSnap] = await Promise.all([
+        getDocs(query(collection(db, 'contacts'), where('companyID', '==', userData.companyID))),
+        getDocs(query(collection(db, 'users'), where('companyID', '==', userData.companyID))),
+        getDocs(query(collection(db, 'users'), 
+          where('companyID', '==', userData.companyID),
+          where('role', '==', 'driver')
+        ))
+      ]);
 
-      const businessCasesSnapshot = await getDocs(businessCasesQuery);
-      console.log('Dashboard: Počet dokumentov v snapshot:', businessCasesSnapshot.size);
-      
-      const businessCases = businessCasesSnapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('Dashboard: Spracovávam dokument:', {
-          id: doc.id,
-          createdAt: data.createdAt,
-          companyName: data.companyName,
-          status: data.status
-        });
-        
-        // Konvertujeme createdAt na Timestamp ak to nie je
-        const createdAt = data.createdAt instanceof Timestamp ? 
-          data.createdAt : 
-          Timestamp.fromDate(new Date(data.createdAt));
-        
-        const businessCase: BusinessCase = {
-          id: doc.id,
-          companyName: data.companyName || '',
-          vatNumber: data.vatNumber || '',
-          status: data.status || '',
-          createdAt,
-          companyID: data.companyID || '',
-          client: data.client || '',
-          value: data.value || 0,
-          currency: data.currency || ''
-        };
-        
-        console.log('Dashboard: Konvertovaný dokument:', {
-          id: businessCase.id,
-          createdAt: businessCase.createdAt,
-          companyName: businessCase.companyName,
-          status: businessCase.status
-        });
-        
-        return businessCase;
-      }) as BusinessCase[];
-
-      // Zoradenie podľa dátumu
-      businessCases.sort((a, b) => {
-        const dateA = a.createdAt instanceof Timestamp ? 
-          a.createdAt.toDate().getTime() : 
-          new Date(a.createdAt).getTime();
-        const dateB = b.createdAt instanceof Timestamp ? 
-          b.createdAt.toDate().getTime() : 
-          new Date(b.createdAt).getTime();
-        
-        console.log('Dashboard: Porovnávam dátumy:', {
-          a: {
-            id: a.id,
-            date: a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt),
-            timestamp: dateA
-          },
-          b: {
-            id: b.id,
-            date: b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(b.createdAt),
-            timestamp: dateB
-          }
-        });
-        
-        return dateB - dateA;
-      });
-
-      // Vezmeme 5 najnovších prípadov
-      const recentBusinessCases = businessCases.slice(0, 5);
-      console.log('Dashboard: Najnovšie prípady:', recentBusinessCases.map(case_ => ({
-        id: case_.id,
-        companyName: case_.companyName,
-        createdAt: case_.createdAt instanceof Timestamp ? case_.createdAt.toDate() : new Date(case_.createdAt),
-        status: case_.status
-      })));
-
-      // Calculate active business cases
-      const activeBusinessCases = businessCases.filter(bc => 
-        bc.status !== 'CLOSED' && 
-        bc.status !== 'CANCELED' && 
-        bc.status !== 'REJECTED'
-      ).length;
-
-      console.log('Dashboard: Počet načítaných obchodných prípadov:', businessCases.length);
-      console.log('Dashboard: Počet aktívnych obchodných prípadov:', activeBusinessCases);
-
-      // Fetch contacts
-      const contactsQuery = query(
-        collection(db, 'contacts'),
-        where('companyID', '==', userData.companyID),
-        orderBy('createdAt', 'desc')
-      );
-      const contactsSnapshot = await getDocs(contactsQuery);
-
-      // Fetch team members
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('companyID', '==', userData.companyID)
-      );
-      const usersSnapshot = await getDocs(usersQuery);
-
-      // Fetch drivers - užívatelia s rolou "driver"
-      const driversQuery = query(
-        collection(db, 'users'),
-        where('companyID', '==', userData.companyID),
-        where('role', '==', 'driver')
-      );
-      const driversSnapshot = await getDocs(driversQuery);
-      const totalDrivers = driversSnapshot.size;
-      console.log('Dashboard: Počet vodičov:', totalDrivers);
-
-      // Calculate status distribution
-      const statusCounts: { [key: string]: number } = {};
-      businessCases.forEach(bc => {
-        if (bc.status) {
-          statusCounts[bc.status] = (statusCounts[bc.status] || 0) + 1;
-        }
-      });
-
-      const total = businessCases.length;
-      const statusDistribution = Object.entries(statusCounts)
-        .map(([name, value], index) => ({
-          name: name || 'Neznámy',
-          value,
-          fill: COLORS[index % COLORS.length],
-          total
-        }))
-        .sort((a, b) => b.value - a.value);
-
-      console.log('Dashboard: Aktualizujem stav s novými dátami');
       setStats(prev => ({
         ...prev,
-        totalBusinessCases: businessCasesSnapshot.size,
-        totalContacts: contactsSnapshot.size,
-        activeBusinessCases,
-        totalTeamMembers: usersSnapshot.size,
-        totalDrivers,
-        statusDistribution,
-        recentBusinessCases
+        totalContacts: contactsSnap.size,
+        totalTeamMembers: usersSnap.size,
+        totalDrivers: driversSnap.size
       }));
-
-    } catch (error) {
-      console.error('Dashboard: Chyba pri načítaní dát:', error);
-      if (error instanceof Error) {
-        console.error('Dashboard: Detail chyby:', error.message);
-        console.error('Dashboard: Stack trace:', error.stack);
-      }
+    } catch (err) {
+      console.error('Chyba pri načítaní statických dát:', err);
+      setError('Nepodarilo sa načítať všetky dáta');
     }
   };
 
-  // Sledovanie aktívnych vozidiel a vodičov
   useEffect(() => {
-    if (!userData?.companyID) {
-      console.log('Dashboard: userData je null alebo companyID chýba - nemôžem načítať vozidlá');
-      return;
-    }
+    let unsubscribeVehicles: (() => void) | undefined;
+    let unsubscribeBusinessCases: (() => void) | undefined;
+    let isMounted = true;
 
-    setVehiclesLoading(true);
-    console.log('Dashboard: Začínam sledovanie vozidiel pre companyID:', userData.companyID);
+    const setupListeners = async () => {
+      if (!userData?.companyID) return;
 
-    const vehiclesQuery = query(
-      collection(db, 'vehicleLocations'),
-      where('companyID', '==', userData.companyID)
-    );
+      try {
+        // Nastavenie poslucháča pre vozidlá s retry logikou
+        const setupVehiclesListener = async (retryCount = 0) => {
+          try {
+            const vehiclesQuery = query(
+              collection(db, 'vehicleLocations'),
+              where('companyID', '==', userData.companyID),
+              orderBy('lastUpdate', 'desc')
+            );
 
-    const unsubscribe = onSnapshot(vehiclesQuery, (snapshot) => {
-      const vehicleData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as VehicleLocation[];
+            unsubscribeVehicles = onSnapshot(vehiclesQuery, 
+              (snapshot) => {
+                if (!isMounted) return;
+                const vehicles = snapshot.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data()
+                })) as VehicleLocation[];
+                setActiveVehicles(vehicles);
+                setVehiclesLoading(false);
+              },
+              (error) => {
+                console.error('Chyba pri sledovaní vozidiel:', error);
+                if (retryCount < 3) {
+                  setTimeout(() => setupVehiclesListener(retryCount + 1), 1000 * (retryCount + 1));
+                } else {
+                  setError('Nepodarilo sa načítať údaje o vozidlách');
+                  setVehiclesLoading(false);
+                }
+              }
+            );
+          } catch (err) {
+            console.error('Chyba pri nastavovaní vehicle listenera:', err);
+            if (retryCount < 3) {
+              setTimeout(() => setupVehiclesListener(retryCount + 1), 1000 * (retryCount + 1));
+            }
+          }
+        };
 
-      console.log('Dashboard: Načítané vozidlá:', vehicleData.length);
-      setActiveVehicles(vehicleData);
-      setVehiclesLoading(false);
-    }, (error) => {
-      console.error('Dashboard: Chyba pri sledovaní vozidiel:', error);
-      setVehiclesLoading(false);
-    });
+        // Nastavenie poslucháča pre business cases s retry logikou
+        const setupBusinessCasesListener = async (retryCount = 0) => {
+          try {
+            const businessCasesQuery = query(
+              collection(db, 'businessCases'),
+              where('companyID', '==', userData.companyID),
+              orderBy('createdAt', 'desc'),
+              limit(5)
+            );
 
-    return () => unsubscribe();
-  }, [userData]);
+            unsubscribeBusinessCases = onSnapshot(businessCasesQuery,
+              (snapshot) => {
+                if (!isMounted) return;
+                const cases = snapshot.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data()
+                })) as BusinessCase[];
+                
+                // Výpočet rozdelenia podľa statusu
+                const statusMap: { [key: string]: number } = {};
+                cases.forEach(bc => {
+                  const status = (bc.status || 'Neznámy').toUpperCase();
+                  statusMap[status] = (statusMap[status] || 0) + 1;
+                });
+                const statusDistribution = Object.entries(statusMap).map(([name, value]) => ({
+                  name,
+                  value,
+                  total: cases.length
+                }));
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [userData, fetchDashboardData]);
+                setStats(prev => ({
+                  ...prev,
+                  totalBusinessCases: snapshot.size,
+                  recentBusinessCases: cases,
+                  activeBusinessCases: cases.filter(bc => 
+                    bc.status !== 'CLOSED' && 
+                    bc.status !== 'CANCELED' && 
+                    bc.status !== 'REJECTED'
+                  ).length,
+                  statusDistribution
+                }));
+              },
+              (error) => {
+                console.error('Chyba pri sledovaní business cases:', error);
+                if (retryCount < 3) {
+                  setTimeout(() => setupBusinessCasesListener(retryCount + 1), 1000 * (retryCount + 1));
+                } else {
+                  setError('Nepodarilo sa načítať obchodné prípady');
+                }
+              }
+            );
+          } catch (err) {
+            console.error('Chyba pri nastavovaní business cases listenera:', err);
+            if (retryCount < 3) {
+              setTimeout(() => setupBusinessCasesListener(retryCount + 1), 1000 * (retryCount + 1));
+            }
+          }
+        };
+
+        // Spustenie listenerov
+        await Promise.all([
+          setupVehiclesListener(),
+          setupBusinessCasesListener(),
+          fetchStaticData()
+        ]);
+
+      } catch (error) {
+        console.error('Chyba pri nastavovaní listenerov:', error);
+        setError('Nepodarilo sa načítať dáta');
+        setVehiclesLoading(false);
+      }
+    };
+
+    setupListeners();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribeVehicles) {
+        try {
+          unsubscribeVehicles();
+        } catch (err) {
+          console.error('Chyba pri odpájaní vehicle listenera:', err);
+        }
+      }
+      if (unsubscribeBusinessCases) {
+        try {
+          unsubscribeBusinessCases();
+        } catch (err) {
+          console.error('Chyba pri odpájaní business cases listenera:', err);
+        }
+      }
+    };
+  }, [userData?.companyID]);
 
   // Helper function to format time ago
   const formatTimeAgo = (timestamp: Timestamp | any) => {

@@ -1,5 +1,6 @@
 import React, { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
-import { OrderFormData as BaseOrderFormData, Customer as OrderCustomer, LoadingPlace, UnloadingPlace, SavedPlace } from '../types/orders';
+import { OrderFormData as BaseOrderFormData, LoadingPlace, UnloadingPlace, SavedPlace } from '../types/orders';
+import { Customer as CustomerType } from '../types/customers';
 import { countries } from '../constants/countries';
 import {
   Box,
@@ -382,21 +383,25 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const emptyLoadingPlace: LoadingPlace = {
+  id: '',
   street: '',
   city: '',
   zip: '',
   country: 'Slovensko',
-  dateTime: '',
-  contactPerson: ''
+  dateTime: null,
+  contactPerson: '',
+  goods: []
 };
 
 const emptyUnloadingPlace: UnloadingPlace = {
+  id: '',
   street: '',
   city: '',
   zip: '',
   country: 'Slovensko',
-  dateTime: '',
-  contactPerson: ''
+  dateTime: null,
+  contactPerson: '',
+  goods: []
 };
 
 interface OrderFormData extends BaseOrderFormData {
@@ -1607,13 +1612,13 @@ const OrdersList: React.FC = () => {
   const filteredCustomers = customers.filter(customer => {
     const searchLower = customerSearchQuery.toLowerCase();
     return (
-      customer.companyName.toLowerCase().includes(searchLower) ||
-      customer.contactName.toLowerCase().includes(searchLower) ||
-      customer.contactSurname.toLowerCase().includes(searchLower) ||
-      customer.contactEmail.toLowerCase().includes(searchLower) ||
-      (customer.ico && customer.ico.toLowerCase().includes(searchLower)) ||
-      (customer.dic && customer.dic.toLowerCase().includes(searchLower)) ||
-      (customer.icDph && customer.icDph.toLowerCase().includes(searchLower))
+      (customer.companyName || '').toLowerCase().includes(searchLower) ||
+      (customer.contactName || '').toLowerCase().includes(searchLower) ||
+      (customer.contactSurname || '').toLowerCase().includes(searchLower) ||
+      (customer.contactEmail || '').toLowerCase().includes(searchLower) ||
+      (customer.ico || '').toLowerCase().includes(searchLower) ||
+      (customer.dic || '').toLowerCase().includes(searchLower) ||
+      (customer.icDph || '').toLowerCase().includes(searchLower)
     );
   });
 
@@ -1674,14 +1679,14 @@ const OrdersList: React.FC = () => {
   const filteredCarriers = carriers.filter(carrier => {
     const searchLower = carrierSearchQuery.toLowerCase();
     return (
-      carrier.companyName.toLowerCase().includes(searchLower) ||
-      carrier.contactName.toLowerCase().includes(searchLower) ||
-      carrier.contactSurname.toLowerCase().includes(searchLower) ||
-      carrier.contactEmail.toLowerCase().includes(searchLower) ||
-      (carrier.contactPhone && carrier.contactPhone.toLowerCase().includes(searchLower)) ||
-      (carrier.ico && carrier.ico.toLowerCase().includes(searchLower)) ||
-      (carrier.dic && carrier.dic.toLowerCase().includes(searchLower)) ||
-      (carrier.icDph && carrier.icDph.toLowerCase().includes(searchLower))
+      (carrier.companyName || '').toLowerCase().includes(searchLower) ||
+      (carrier.contactName || '').toLowerCase().includes(searchLower) ||
+      (carrier.contactSurname || '').toLowerCase().includes(searchLower) ||
+      (carrier.contactEmail || '').toLowerCase().includes(searchLower) ||
+      (carrier.contactPhone || '').toLowerCase().includes(searchLower) ||
+      (carrier.ico || '').toLowerCase().includes(searchLower) ||
+      (carrier.dic || '').toLowerCase().includes(searchLower) ||
+      (carrier.icDph || '').toLowerCase().includes(searchLower)
     );
   });
 
@@ -1811,6 +1816,11 @@ const OrdersList: React.FC = () => {
   const handleCarrierDeleteCancel = () => {
     setShowCarrierDeleteConfirm(false);
     setCarrierToDelete('');
+  };
+
+  // Pridám pomocnú funkciu nad renderom tabuľky:
+  const getCustomerVatId = (customer: any) => {
+    return customer.icDph || customer.vatId || customer['IČ_DPH'] || customer['ic_dph'] || '-';
   };
 
   return (
@@ -2319,8 +2329,8 @@ const OrdersList: React.FC = () => {
                       <TableCell>Kontaktná osoba</TableCell>
                       <TableCell>Email</TableCell>
                       <TableCell>IČO</TableCell>
-                      <TableCell>DIČ</TableCell>
                       <TableCell>IČ DPH</TableCell>
+                      <TableCell>DIČ</TableCell>
                       <TableCell>Krajina</TableCell>
                       <TableCell>Dátum vytvorenia</TableCell>
                       <TableCell>Akcie</TableCell>
@@ -2329,22 +2339,14 @@ const OrdersList: React.FC = () => {
                   <TableBody>
                     {filteredCustomers.map((customer) => (
                       <TableRow key={customer.id}>
-                        <TableCell>{customer.companyName}</TableCell>
-                        <TableCell>{`${customer.contactName} ${customer.contactSurname}`}</TableCell>
-                        <TableCell>{customer.contactEmail}</TableCell>
+                        <TableCell>{customer.companyName || (customer as any)['company'] || (customer as any)['name'] || '-'}</TableCell>
+                        <TableCell>{`${customer.contactName || ''} ${customer.contactSurname || ''}`.trim() || '-'}</TableCell>
+                        <TableCell>{customer.contactEmail || '-'}</TableCell>
                         <TableCell>{customer.ico || '-'}</TableCell>
+                        <TableCell>{getCustomerVatId(customer)}</TableCell>
                         <TableCell>{customer.dic || '-'}</TableCell>
-                        <TableCell>{customer.icDph || '-'}</TableCell>
-                        <TableCell>{customer.country}</TableCell>
-                        <TableCell>
-                          {customer.createdAt.toLocaleDateString('sk-SK', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </TableCell>
+                        <TableCell>{customer.country || '-'}</TableCell>
+                        <TableCell>{customer.createdAt ? customer.createdAt.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
                             <Tooltip title="Upraviť">
@@ -2462,8 +2464,8 @@ const OrdersList: React.FC = () => {
                       <TableCell>Email</TableCell>
                       <TableCell>Telefón</TableCell>
                       <TableCell>IČO</TableCell>
-                      <TableCell>DIČ</TableCell>
                       <TableCell>IČ DPH</TableCell>
+                      <TableCell>DIČ</TableCell>
                       <TableCell>Typy vozidiel</TableCell>
                       <TableCell>Krajina</TableCell>
                       <TableCell>Dátum vytvorenia</TableCell>
@@ -2478,8 +2480,8 @@ const OrdersList: React.FC = () => {
                         <TableCell>{carrier.contactEmail}</TableCell>
                         <TableCell>{carrier.contactPhone || '-'}</TableCell>
                         <TableCell>{carrier.ico || '-'}</TableCell>
-                        <TableCell>{carrier.dic || '-'}</TableCell>
                         <TableCell>{carrier.icDph || '-'}</TableCell>
+                        <TableCell>{carrier.dic || '-'}</TableCell>
                         <TableCell>{carrier.vehicleTypes?.join(', ') || '-'}</TableCell>
                         <TableCell>{carrier.country}</TableCell>
                         <TableCell>

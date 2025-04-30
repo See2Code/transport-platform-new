@@ -1,64 +1,67 @@
 import React, { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
-import { OrderFormData as BaseOrderFormData, Customer, LoadingPlace, UnloadingPlace, GoodsItem } from '../types/orders'; // Adjust path if necessary
-import { countries } from '../constants/countries'; // Adjust path if necessary
+import { OrderFormData, LoadingPlace, UnloadingPlace, GoodsItem } from '../types/orders';
+import { Customer } from '../types/customers';
+import { Carrier } from '../types/carriers';
+import { countries } from '../constants/countries';
+import { normalizeVatId } from '../utils/helpers';
 import {
-  Box, Typography, TextField, Button, Paper, Grid, FormControl, InputLabel,
+  Box, Typography, TextField, Button, Grid, FormControl, InputLabel,
   Select, MenuItem, SelectChangeEvent, useTheme, Checkbox, FormControlLabel,
-  Autocomplete, IconButton, Divider, Tooltip, CircularProgress, GlobalStyles
+  Autocomplete, IconButton, Divider, CircularProgress
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../contexts/ThemeContext';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';
 import { sk } from 'date-fns/locale';
-import { Theme } from '@mui/material/styles';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import SearchIcon from '@mui/icons-material/Search';
-import AddIcon from '@mui/icons-material/Add'; // For Add Goods button
-import DeleteIcon from '@mui/icons-material/Delete'; // For Remove Goods/Place button
-import { collection, addDoc, query, where, getDocs, Timestamp, doc, updateDoc, orderBy, limit, runTransaction } from 'firebase/firestore';
-import { db } from '../firebase'; // Adjust path if necessary
-import { useAuth } from '../contexts/AuthContext'; // Adjust path if necessary
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { collection, addDoc, query, where, getDocs, Timestamp, doc, updateDoc, runTransaction, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import CloseIcon from '@mui/icons-material/Close';
-
-// --- Interfaces (Ensure they match your types/orders.ts) ---
-interface OrderFormData extends BaseOrderFormData {
-    id?: string;
-    createdAt?: Timestamp | Date;
-    datumPrijatia?: Date | null;
-    zakaznik?: string;
-    zakaznikData?: Customer | null;
-    kontaktnaOsoba?: string;
-    suma?: string;
-    mena?: string;
-    vyuctovaniePodlaMnozstva?: boolean;
-    cisloNakladuZakaznika?: string;
-    internaPoznamka?: string;
-    vyzadujeSaTypNavesu?: string;
-    poziadavky?: string;
-    // Ensure loading/unloading places include goods
-    loadingPlaces: LoadingPlace[];
-    unloadingPlaces: UnloadingPlace[];
-    carrierCompany: string;
-    carrierContact: string;
-    carrierVehicleReg: string;
-    carrierPrice: string;
-}
-
-// --- Styled Components ---
-// Odstránené nepoužívané styled components ako PageWrapper, StyledPaper, StyledFieldset, StyledLegend, FormSection, SectionHeader, AddButton, NextButton, PlaceCard, GoodsWrapper
+import CustomerDialog from './dialogs/CustomerDialog';
+import CarrierDialog from './dialogs/CarrierDialog';
+import { AutocompleteRenderInputParams } from '@mui/material/Autocomplete';
+import type { FilterOptionsState } from '@mui/material/useAutocomplete';
 
 // --- Initial Empty States ---
-const emptyGoodsItem: GoodsItem = { id: crypto.randomUUID(), name: '', quantity: 1, unit: 'ks', palletExchange: 'Bez výmeny', dimensions: '', description: '', adrClass: '', referenceNumber: '' };
-const emptyLoadingPlace: LoadingPlace = { id: crypto.randomUUID(), street: '', city: '', zip: '', country: 'Slovensko', dateTime: null, contactPerson: '', goods: [{ ...emptyGoodsItem }] };
-const emptyUnloadingPlace: UnloadingPlace = { id: crypto.randomUUID(), street: '', city: '', zip: '', country: 'Slovensko', dateTime: null, contactPerson: '', goods: [{ ...emptyGoodsItem }] };
+const emptyGoodsItem: GoodsItem = {
+    id: crypto.randomUUID(),
+    name: '',
+    quantity: 1,
+    unit: 'ks',
+    palletExchange: 'Bez výmeny',
+    dimensions: '',
+    description: '',
+    adrClass: '',
+    referenceNumber: ''
+};
 
-// --- Component ---
+const emptyLoadingPlace: LoadingPlace = {
+    id: crypto.randomUUID(),
+    street: '',
+    city: '',
+    zip: '',
+    country: 'Slovensko',
+    dateTime: null,
+    contactPerson: '',
+    goods: [{ ...emptyGoodsItem }]
+};
+
+const emptyUnloadingPlace: UnloadingPlace = {
+    id: crypto.randomUUID(),
+    street: '',
+    city: '',
+    zip: '',
+    country: 'Slovensko',
+    dateTime: null,
+    contactPerson: '',
+    goods: [{ ...emptyGoodsItem }]
+};
+
 interface NewOrderFormProps {
     isModal?: boolean;
     onClose?: () => void;
@@ -68,7 +71,6 @@ interface NewOrderFormProps {
 
 const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, isEdit = false, orderData = {} }) => {
     const theme = useTheme();
-    const { isDarkMode } = useThemeMode();
     const { userData } = useAuth();
     const navigate = useNavigate();
 
@@ -84,19 +86,58 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
         internaPoznamka: '',
         vyzadujeSaTypNavesu: '',
         poziadavky: '',
-        loadingPlaces: [{ ...emptyLoadingPlace, id: crypto.randomUUID(), goods: [{...emptyGoodsItem, id: crypto.randomUUID()}] }], // Start with one loading place and one goods item
-        unloadingPlaces: [{ ...emptyUnloadingPlace, id: crypto.randomUUID(), goods: [{...emptyGoodsItem, id: crypto.randomUUID()}] }], // Start with one unloading place and one goods item
+        loadingPlaces: [{ ...emptyLoadingPlace }],
+        unloadingPlaces: [{ ...emptyUnloadingPlace }],
         carrierCompany: '',
         carrierContact: '',
         carrierVehicleReg: '',
         carrierPrice: '',
     });
     const [customerOptions, setCustomerOptions] = useState<Customer[]>([]);
-    const [customerSearchTerm, setCustomerSearchTerm] = useState('');
     const [isCustomerLoading, setIsCustomerLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+    const [isCarrierDialogOpen, setIsCarrierDialogOpen] = useState(false);
+    const [carriers, setCarriers] = useState<Carrier[]>([]);
+    const [isCarrierLoading, setIsCarrierLoading] = useState(false);
 
-    // Načítať dáta existujúcej objednávky pri editácii
+    // Pridáme funkcie pre načítanie dopravcov
+    const fetchCarriers = useCallback(async () => {
+        if (!userData?.companyID) return;
+        setIsCarrierLoading(true);
+        
+        try {
+            const q = query(
+                collection(db, 'carriers'),
+                where('companyID', '==', userData.companyID),
+                orderBy('companyName')
+            );
+            
+            const snapshot = await getDocs(q);
+            const carriersData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as Carrier[];
+            
+            setCarriers(carriersData);
+        } catch (error) {
+            console.error('Chyba pri načítaní dopravcov:', error);
+        } finally {
+            setIsCarrierLoading(false);
+        }
+    }, [userData?.companyID]);
+
+    // Pridávam závislosti pre useEffect, ktorý sleduje zmeny formData
+    useEffect(() => {
+        console.log("Form data updated:", formData);
+    }, [formData]);
+
+    // Pridávam závislosti pre useEffect, ktorý sleduje zmeny zakaznika
+    useEffect(() => {
+        console.log("Aktuálna hodnota zakaznik:", formData.zakaznik);
+    }, [formData.zakaznik]);
+
+    // Pridávam závislosti pre useEffect, ktorý načítava dáta pre editáciu
     useEffect(() => {
         if (isEdit && orderData) {
             console.log('Načítavám dáta pre editáciu', orderData);
@@ -119,6 +160,67 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             });
         }
     }, [isEdit, orderData]);
+
+    // Pridávam závislosti pre useEffect, ktorý načítava zákazníkov
+    useEffect(() => {
+        const fetchCustomers = async () => {
+            if (!userData?.companyID) {
+                console.log("No companyID found, skipping customer fetch");
+                return;
+            }
+
+            setIsCustomerLoading(true);
+            try {
+                const customersRef = collection(db, 'customers');
+                const q = query(
+                    customersRef,
+                    where('companyID', '==', userData.companyID)
+                );
+                
+                console.log("Fetching customers for companyID:", userData.companyID);
+                
+                const querySnapshot = await getDocs(q);
+                const customersData = querySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    console.log("Raw customer data:", data);
+                    
+                    // Normalizácia IČ DPH
+                    const vatIdValue = normalizeVatId(data.vatId || data.IČ_DPH || data.ic_dph || '');
+                    console.log("Normalized vatId:", vatIdValue);
+                    
+                    return {
+                        id: doc.id,
+                        company: data.company || data.companyName || '',
+                        street: data.street || '',
+                        city: data.city || '',
+                        zip: data.zip || '',
+                        country: data.country || 'Slovensko',
+                        contactName: data.contactName || '',
+                        contactSurname: data.contactSurname || '',
+                        email: data.email || '',
+                        phone: data.phone || '',
+                        vatId: vatIdValue,
+                        companyID: data.companyID,
+                        createdAt: data.createdAt
+                    } as Customer;
+                });
+                
+                setCustomerOptions(customersData);
+                console.log("Loaded customers:", customersData);
+            } catch (error) {
+                console.error("Error fetching customers:", error);
+            } finally {
+                setIsCustomerLoading(false);
+            }
+        };
+
+        fetchCustomers();
+    }, [userData?.companyID, normalizeVatId]);
+
+    // Pridávam závislosti pre useEffect, ktorý načítava dopravcov
+    useEffect(() => {
+        fetchCarriers();
+    }, [fetchCarriers, userData?.companyID]);
 
     // --- Handlers ---
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -204,43 +306,49 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
         });
     };
 
-    // Debounced customer search (similar to BusinessCases)
-     useEffect(() => {
-        const fetchCustomers = async () => { /* ... same logic as in BusinessCases ... */ };
-        const debounceTimer = setTimeout(() => fetchCustomers(), 500);
-        return () => clearTimeout(debounceTimer);
-    }, [customerSearchTerm, userData?.companyID]);
+    const handleCustomerAutocompleteChange = (event: any, newValue: Customer | null) => {
+        if (!newValue) {
+            setFormData(prev => ({
+                ...prev,
+                zakaznik: '',
+                zakaznikData: null,
+                kontaktnaOsoba: '',
+                customerCompany: '',
+                customerVatId: '',
+                customerStreet: '',
+                customerCity: '',
+                customerZip: '',
+                customerCountry: '',
+                customerContactName: '',
+                customerContactSurname: '',
+                customerEmail: '',
+                customerPhone: ''
+            }));
+            return;
+        }
 
-     const handleCustomerAutocompleteChange = (event: any, newValue: Customer | string | null) => {
-         if (typeof newValue === 'string') {
-             console.log('Nastavujem zákazníka z textu:', newValue);
-             setFormData(prev => ({ ...prev, zakaznik: newValue, zakaznikData: null, kontaktnaOsoba: '' }));
-         } else if (newValue) {
-              console.log('Nastavujem zákazníka z objektu:', newValue);
-              setFormData(prev => ({ 
-                 ...prev, 
-                 zakaznik: newValue.company, 
-                 zakaznikData: newValue, 
-                 kontaktnaOsoba: `${newValue.contactName || ''} ${newValue.contactSurname || ''}`.trim(),
-                 // Auto-fill address?
-                 customerStreet: newValue.street,
-                 customerCity: newValue.city,
-                 customerZip: newValue.zip,
-                 customerCountry: newValue.country,
-                 customerEmail: newValue.email,
-                 customerPhone: newValue.phone,
-                 customerVatId: newValue.vatId,
-              }));
-         } else {
-             console.log('Čistím údaje zákazníka');
-             setFormData(prev => ({ ...prev, zakaznik: '', zakaznikData: null, kontaktnaOsoba: '', /* clear address fields too */ }));
-         }
-     };
+        console.log("Selected customer data:", newValue); // Pre debugovanie
 
-    // Pomocná funkcia pre debug - kontrola zakaznika pred odoslaním
-    useEffect(() => {
-        console.log("Aktuálna hodnota zakaznik:", formData.zakaznik);
-    }, [formData.zakaznik]);
+        const updatedData = {
+            ...formData,
+            zakaznik: newValue.company,
+            zakaznikData: newValue,
+            kontaktnaOsoba: `${newValue.contactName || ''} ${newValue.contactSurname || ''}`.trim(),
+            customerCompany: newValue.company,
+            customerVatId: newValue.vatId || '',
+            customerStreet: newValue.street || '',
+            customerCity: newValue.city || '',
+            customerZip: newValue.zip || '',
+            customerCountry: newValue.country || 'Slovensko',
+            customerContactName: newValue.contactName || '',
+            customerContactSurname: newValue.contactSurname || '',
+            customerEmail: newValue.email || '',
+            customerPhone: newValue.phone || ''
+        };
+
+        console.log("Updated form data:", updatedData); // Pre debugovanie
+        setFormData(updatedData);
+    };
 
     // Generovanie čísla objednávky vo formáte 0001/01/2025
     const generateOrderNumber = async () => {
@@ -541,6 +649,87 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
         }
     };
 
+    // Pridáme handleCarrierAutocompleteChange
+    const handleCarrierAutocompleteChange = (event: any, newValue: Carrier | null) => {
+        if (!newValue) {
+            setFormData(prev => ({
+                ...prev,
+                carrierCompany: '',
+                carrierContact: '',
+            }));
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            carrierCompany: newValue.companyName,
+            carrierContact: `${newValue.contactName || ''} ${newValue.contactSurname || ''} ${newValue.contactPhone || ''}`.trim(),
+        }));
+    };
+
+    // Pridáme handleAddNewCustomer a handleAddNewCarrier
+    const handleAddNewCustomer = () => {
+        setIsCustomerDialogOpen(true);
+    };
+
+    const handleAddNewCarrier = () => {
+        setIsCarrierDialogOpen(true);
+    };
+
+    const handleCustomerSubmit = async (customerData: Customer) => {
+        if (!userData?.companyID) {
+            alert('Chyba: Chýba ID spoločnosti');
+            return;
+        }
+
+        try {
+            const docRef = await addDoc(collection(db, 'customers'), {
+                ...customerData,
+                companyID: userData.companyID,
+                createdAt: Timestamp.now()
+            });
+            
+            const newCustomer = {
+                id: docRef.id,
+                ...customerData
+            };
+            
+            setCustomerOptions((prev: Customer[]) => [...prev, newCustomer]);
+            handleCustomerAutocompleteChange(null, newCustomer);
+            setIsCustomerDialogOpen(false);
+        } catch (error) {
+            console.error('Chyba pri pridávaní zákazníka:', error);
+            alert('Nepodarilo sa pridať zákazníka');
+        }
+    };
+
+    const handleCarrierSubmit = async (carrierData: Carrier) => {
+        if (!userData?.companyID) {
+            alert('Chyba: Chýba ID spoločnosti');
+            return;
+        }
+
+        try {
+            const docRef = await addDoc(collection(db, 'carriers'), {
+                ...carrierData,
+                companyID: userData.companyID,
+                createdAt: Timestamp.now()
+            });
+            
+            const newCarrier = {
+                id: docRef.id,
+                ...carrierData
+            };
+            
+            setCarriers((prev: Carrier[]) => [...prev, newCarrier]);
+            handleCarrierAutocompleteChange(null, newCarrier);
+            setIsCarrierDialogOpen(false);
+        } catch (error) {
+            console.error('Chyba pri pridávaní dopravcu:', error);
+            alert('Nepodarilo sa pridať dopravcu');
+        }
+    };
+
     return (
         <Box 
             sx={{ 
@@ -551,29 +740,6 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                 overflow: 'hidden' // Aby sa formulár nezväčšoval donekonečna
             }}
         >
-            <GlobalStyles 
-                styles={{
-                    '.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#ff9f43 !important'
-                    },
-                    '.MuiInputLabel-root.Mui-focused': {
-                        color: '#ff9f43 !important'
-                    },
-                    '.MuiCheckbox-root.Mui-checked': {
-                        color: '#ff9f43 !important'
-                    },
-                    '.MuiRadio-root.Mui-checked': {
-                        color: '#ff9f43 !important'
-                    },
-                    '.MuiSwitch-root .MuiSwitch-switchBase.Mui-checked': {
-                        color: '#ff9f43 !important'
-                    },
-                    '.MuiSwitch-root .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                        backgroundColor: '#ff9f43 !important'
-                    }
-                }}
-            />
-            
             <Box 
                 component="form" 
                 onSubmit={handleSubmit} 
@@ -607,51 +773,79 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <Autocomplete
-                            freeSolo 
-                            options={customerOptions} 
-                            getOptionLabel={(o) => typeof o === 'string' ? o : o.company}
-                            value={formData.zakaznikData ?? formData.zakaznik} 
+                            options={customerOptions}
+                            getOptionLabel={(option) => option.company}
+                            value={formData.zakaznikData}
                             onChange={handleCustomerAutocompleteChange}
-                            onInputChange={(e, val) => {
-                                setCustomerSearchTerm(val);
-                                // Ak nie je vybraný žiadny objekt zákazníka, nastavíme text ako zákazníka
-                                if (!formData.zakaznikData && val) {
-                                    setFormData(prev => ({ ...prev, zakaznik: val }));
-                                }
-                            }} 
                             loading={isCustomerLoading}
-                            renderInput={(params) => (
-                                <TextField 
-                                    {...params} 
-                                    label="Zákazník *" 
-                                    required 
-                                    InputProps={{ 
-                                        ...params.InputProps, 
+                            filterOptions={(options: Customer[], state: FilterOptionsState<Customer>): Customer[] => {
+                                const inputValue = state.inputValue.toLowerCase();
+                                return options.filter(option => {
+                                    const company = option.company?.toLowerCase() || '';
+                                    const contactName = option.contactName?.toLowerCase() || '';
+                                    const contactSurname = option.contactSurname?.toLowerCase() || '';
+                                    const email = option.email?.toLowerCase() || '';
+                                    const vatId = option.vatId?.toLowerCase() || '';
+                                    
+                                    return company.includes(inputValue) ||
+                                        contactName.includes(inputValue) ||
+                                        contactSurname.includes(inputValue) ||
+                                        email.includes(inputValue) ||
+                                        vatId.includes(inputValue);
+                                });
+                            }}
+                            renderInput={(params: AutocompleteRenderInputParams) => (
+                                <TextField
+                                    {...params}
+                                    label="Zákazník *"
+                                    required
+                                    InputProps={{
+                                        ...params.InputProps,
                                         endAdornment: (
-                                            <>{isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}{params.InputProps.endAdornment}</>
-                                        ) 
-                                    }} 
+                                            <>
+                                                {isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleAddNewCustomer();
+                                                    }}
+                                                    sx={{ mr: 1 }}
+                                                >
+                                                    <AddIcon />
+                                                </IconButton>
+                                                {params.InputProps.endAdornment}
+                                            </>
+                                        ),
+                                    }}
                                 />
                             )}
-                            renderOption={(props, option) => {
-                                const typedOption = option as Customer;
-                                return <li {...props} key={typedOption.id || ''}>{typedOption.company} ({typedOption.city})</li>;
-                            }}
-                            sx={{
-                                '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#ff9f43',
-                                },
-                                '& .MuiInputLabel-root.Mui-focused': {
-                                    color: '#ff9f43',
-                                }
-                            }}
-                         />
+                        />
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextField fullWidth label="Kontaktná osoba" name="kontaktnaOsoba" value={formData.kontaktnaOsoba || ''} onChange={handleInputChange} />
                     </Grid>
-                    <Grid item xs={12} sm={6}><TextField fullWidth label="IČ DPH" name="customerVatId" value={formData.customerVatId || ''} onChange={handleInputChange} /></Grid>
-                    <Grid item xs={12} sm={6}><TextField fullWidth label="Ulica" name="customerStreet" value={formData.customerStreet || ''} onChange={handleInputChange} /></Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField 
+                            fullWidth 
+                            label="IČ DPH" 
+                            name="customerVatId" 
+                            value={formData.customerVatId || ''} 
+                            onChange={handleInputChange}
+                            InputLabelProps={{
+                                shrink: true,
+                            }}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <TextField 
+                            fullWidth 
+                            label="Ulica" 
+                            name="customerStreet" 
+                            value={formData.customerStreet || ''} 
+                            onChange={handleInputChange} 
+                        />
+                    </Grid>
                 
                     {/* Cena */}
                     <Grid item xs={12}>
@@ -901,7 +1095,40 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                             Dopravca (Vykonávateľ)
                         </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={6}><TextField fullWidth label="Názov firmy dopravcu" name="carrierCompany" value={formData.carrierCompany || ''} onChange={handleInputChange} /></Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Autocomplete
+                            options={carriers}
+                            getOptionLabel={(option) => option.companyName}
+                            value={carriers.find(c => c.companyName === formData.carrierCompany) || null}
+                            onChange={handleCarrierAutocompleteChange}
+                            loading={isCarrierLoading}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Názov firmy dopravcu"
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                            <>
+                                                {isCarrierLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleAddNewCarrier();
+                                                    }}
+                                                    sx={{ mr: 1 }}
+                                                >
+                                                    <AddIcon />
+                                                </IconButton>
+                                                {params.InputProps.endAdornment}
+                                            </>
+                                        ),
+                                    }}
+                                />
+                            )}
+                        />
+                    </Grid>
                     <Grid item xs={12} sm={6}><TextField fullWidth label="Kontakt na dopravcu" name="carrierContact" value={formData.carrierContact || ''} onChange={handleInputChange} /></Grid>
                     <Grid item xs={12} sm={6}><TextField fullWidth label="EČV Vozidla" name="carrierVehicleReg" value={formData.carrierVehicleReg || ''} onChange={handleInputChange} /></Grid>
                     <Grid item xs={12} sm={6}><TextField fullWidth label="Cena za prepravu (€)" name="carrierPrice" type="number" value={formData.carrierPrice || ''} onChange={handleInputChange} inputProps={{ min: 0, step: "0.01" }}/></Grid>
@@ -945,8 +1172,34 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                   }
                 </Button>
             </Box>
+
+            {/* Pridáme dialógy */}
+            <CustomerDialog
+                open={isCustomerDialogOpen}
+                onClose={() => setIsCustomerDialogOpen(false)}
+                onSubmit={handleCustomerSubmit}
+            />
+            
+            <CarrierDialog
+                open={isCarrierDialogOpen}
+                onClose={() => setIsCarrierDialogOpen(false)}
+                onSubmit={handleCarrierSubmit}
+            />
         </Box>
     );
 };
+
+// Pridáme nové rozhrania
+interface CustomerDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (customerData: Customer) => void;
+}
+
+interface CarrierDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (carrierData: Carrier) => void;
+}
 
 export default NewOrderForm;

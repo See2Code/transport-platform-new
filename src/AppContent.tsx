@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline, GlobalStyles } from '@mui/material';
+import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline, GlobalStyles, Theme } from '@mui/material';
 import Box from '@mui/material/Box';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -16,12 +16,14 @@ import PrivateRoute from './components/PrivateRoute';
 import RegisterUser from './components/RegisterUser';
 import OrdersForm from './components/Orders';
 import NewOrderForm from './components/NewOrderForm';
-import InvoicesPage from './components/Invoices';
 import VehicleMap from './components/VehicleMap';
 import Notifications from './components/Notifications';
 import { useThemeMode } from './contexts/ThemeContext';
 import ChatDrawer from './components/chat/ChatDrawer';
 import { useChat } from './contexts/ChatContext';
+import styled from '@emotion/styled';
+import { Typography } from '@mui/material';
+import type { CSSObject } from '@emotion/styled';
 
 // Vytvoríme kontext pre chat UI
 type ChatUIContextType = {
@@ -53,60 +55,47 @@ type PageContentProps = {
   sx?: Record<string, any>;
 };
 
-const AppContainer = ({ isDarkMode, children }: AppContainerProps) => (
-  <Box
-    sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      minHeight: '100vh',
-      width: '100%',
-      background: isDarkMode ? 'transparent' : '#ffffff',
-      position: 'relative',
-      overflow: 'hidden',
-    }}
-  >
-    {children}
-  </Box>
-);
+const AppContainer = styled(Box)({
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: '100vh',
+  width: '100%',
+  background: 'transparent',
+  position: 'relative',
+  overflow: 'hidden',
+});
 
-const PageContent = ({ isDarkMode, children, sx = {} }: PageContentProps) => (
-  <Box
-    sx={{
-      flexGrow: 1,
-      marginTop: '48px',
-      padding: '24px 16px',
-      background: isDarkMode ? 'transparent' : '#ffffff',
-      position: 'relative',
-      zIndex: 1,
-      minHeight: 'calc(100vh - 48px)',
-      overflowX: 'hidden',
-      '@media (max-width: 600px)': {
-        marginTop: '40px',
-        padding: '16px',
-        minHeight: 'calc(100vh - 40px)',
-      },
-      ...sx
-    }}
-  >
-    {isDarkMode && (
-      <Box 
-        sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 0,
-          opacity: 0.03,
-          background: `radial-gradient(circle at 20% 30%, rgba(255, 159, 67, 0.8) 0%, transparent 100px),
-                      radial-gradient(circle at 80% 40%, rgba(48, 43, 99, 0.8) 0%, transparent 200px)`,
-          pointerEvents: 'none',
-        }}
-      />
-    )}
-    {children}
-  </Box>
-);
+const PageContent = styled(Box)({
+  flexGrow: 1,
+  marginTop: '48px',
+  padding: '24px 16px',
+  position: 'relative',
+  zIndex: 1,
+  minHeight: 'calc(100vh - 48px)',
+  overflowX: 'hidden',
+  '@media (max-width: 600px)': {
+    marginTop: '40px',
+    padding: '16px',
+    minHeight: 'calc(100vh - 40px)',
+  }
+});
+
+const PageTitle = styled(Typography)(({ theme }: { theme: Theme }) => ({
+  fontSize: '1.75rem',
+  fontWeight: 700,
+  color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
+  position: 'relative' as const,
+  '&::after': {
+    content: '""',
+    position: 'absolute' as const,
+    bottom: '-8px',
+    left: 0,
+    width: '60px',
+    height: '4px',
+    backgroundColor: '#ff9f43',
+    borderRadius: '2px',
+  }
+}));
 
 const AppContent: React.FC = () => {
   const { isDarkMode } = useThemeMode();
@@ -245,7 +234,7 @@ const AppContent: React.FC = () => {
             }}
           />
         )}
-        <AppContainer isDarkMode={isDarkMode}>
+        <AppContainer>
           <Routes>
             {/* Verejné cesty */}
             <Route path="/" element={<Home />} />
@@ -257,7 +246,7 @@ const AppContent: React.FC = () => {
             {/* Chránené cesty */}
             <Route path="/dashboard" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <Dashboard />
                 </PageContent>
@@ -266,7 +255,7 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/team" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <Team />
                 </PageContent>
@@ -275,7 +264,7 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/contacts" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <Contacts />
                 </PageContent>
@@ -284,7 +273,7 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/settings" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <Settings />
                 </PageContent>
@@ -293,7 +282,16 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/tracked-transports" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                  <Navbar />
+                  <TrackedTransports />
+                </PageContent>
+                <ChatDrawer open={chatOpen} onClose={closeChat} />
+              </PrivateRoute>
+            } />
+            <Route path="/tracked-shipments" element={
+              <PrivateRoute>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <TrackedTransports />
                 </PageContent>
@@ -302,7 +300,7 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/business-cases" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <BusinessCases />
                 </PageContent>
@@ -311,7 +309,7 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/orders" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <OrdersForm />
                 </PageContent>
@@ -320,25 +318,16 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/nova-objednavka" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <NewOrderForm />
                 </PageContent>
                 <ChatDrawer open={chatOpen} onClose={closeChat} />
               </PrivateRoute>
             } />
-            <Route path="/invoices" element={
-              <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <InvoicesPage />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
             <Route path="/vehicle-map" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <VehicleMap />
                 </PageContent>
@@ -347,7 +336,7 @@ const AppContent: React.FC = () => {
             } />
             <Route path="/notifications" element={
               <PrivateRoute>
-                <PageContent isDarkMode={isDarkMode} sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
+                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
                   <Navbar />
                   <Notifications />
                 </PageContent>

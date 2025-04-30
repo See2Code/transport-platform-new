@@ -1,23 +1,13 @@
-export interface Customer {
-  company: string;
-  vatId: string;
-  street: string;
-  city: string;
-  zip: string;
-  country: string;
-  contactName: string;
-  contactSurname: string;
-  email: string;
-  phone: string;
-  id?: string;
-}
+import { Timestamp } from 'firebase/firestore';
+import { Customer } from './customers';
+import { Carrier } from './carriers';
 
 export interface GoodsItem {
-  id?: string;
+  id: string;
   name: string;
   quantity: number;
   unit: string;
-  palletExchange?: string;
+  palletExchange: string;
   dimensions?: string;
   description?: string;
   adrClass?: string;
@@ -25,25 +15,25 @@ export interface GoodsItem {
 }
 
 export interface LoadingPlace {
-  id?: string;
+  id: string;
   street: string;
   city: string;
   zip: string;
   country: string;
-  dateTime: string | Date | null;
+  dateTime: Date | null;
   contactPerson: string;
-  goods?: GoodsItem[];
+  goods: GoodsItem[];
 }
 
 export interface UnloadingPlace {
-  id?: string;
+  id: string;
   street: string;
   city: string;
   zip: string;
   country: string;
-  dateTime: string | Date | null;
+  dateTime: Date | null;
   contactPerson: string;
-  goods?: GoodsItem[];
+  goods: GoodsItem[];
 }
 
 export interface SavedPlace {
@@ -62,45 +52,56 @@ export interface SavedPlace {
 }
 
 export interface OrderFormData {
-  // Údaje zákazníka
-  customerCompany: string;
-  customerVatId: string;
-  customerStreet: string;
-  customerCity: string;
-  customerZip: string;
-  customerCountry: string;
-  customerContactName: string;
-  customerContactSurname: string;
-  customerEmail: string;
-  customerPhone: string;
-  customerPrice: string;
-
-  // Miesta nakládky a vykládky
+  id?: string;
+  createdAt?: Timestamp | Date;
+  datumPrijatia?: Date | null;
+  zakaznik?: string;
+  zakaznikData?: Customer | null;
+  kontaktnaOsoba?: string;
+  suma?: string;
+  mena?: string;
+  vyuctovaniePodlaMnozstva?: boolean;
+  cisloNakladuZakaznika?: string;
+  internaPoznamka?: string;
+  vyzadujeSaTypNavesu?: string;
+  poziadavky?: string;
   loadingPlaces: LoadingPlace[];
   unloadingPlaces: UnloadingPlace[];
-
-  // Údaje o tovare
-  goodsDescription: string;
-  weightKg: string;
-  dimensionsL: string;
-  dimensionsW: string;
-  dimensionsH: string;
-  quantity: string;
-
-  // Údaje o dopravcovi
   carrierCompany: string;
   carrierContact: string;
   carrierVehicleReg: string;
   carrierPrice: string;
+  companyID?: string;
+  createdBy?: string;
+  createdByName?: string;
+  updatedAt?: Timestamp;
+  updatedBy?: string;
+  orderNumberFormatted?: string;
+  orderNumber?: string;
+  orderMonth?: string;
+  orderYear?: string;
+  customerCompany?: string;
+  customerVatId?: string;
+  customerStreet?: string;
+  customerCity?: string;
+  customerZip?: string;
+  customerCountry?: string;
+  customerContactName?: string;
+  customerContactSurname?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customerPrice?: string;
+  goodsDescription?: string;
+  weightKg?: string;
+  dimensionsL?: string;
+  dimensionsW?: string;
+  dimensionsH?: string;
+  quantity?: string;
 }
 
-export interface Order extends OrderFormData {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
-  userId: string;
-  companyId: string;
+export interface Order extends Omit<OrderFormData, 'createdAt' | 'updatedAt'> {
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 // Prázdny export aby TypeScript rozpoznal tento súbor ako modul

@@ -553,9 +553,16 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                       }}
                     >
                       <ListItemAvatar>
-                        <Avatar src={photoURL} alt={name}>
-                          {name.charAt(0)}
-                        </Avatar>
+                        <Badge
+                          color="primary"
+                          badgeContent={conversation.unreadCount && conversation.unreadCount > 0 ? conversation.unreadCount : undefined}
+                          overlap="circular"
+                          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                        >
+                          <Avatar src={photoURL} alt={name}>
+                            {name.charAt(0)}
+                          </Avatar>
+                        </Badge>
                       </ListItemAvatar>
                       <ListItemText
                         primary={

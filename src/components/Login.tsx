@@ -17,9 +17,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../contexts/ThemeContext';
-import { signInWithEmailAndPassword, getAuth } from 'firebase/auth';
-import { updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase';
 
 function Login() {
   const { login } = useAuth();
@@ -30,7 +27,6 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
-  const auth = getAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,19 +34,13 @@ function Login() {
     setError(null);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Nastavte createdAt na aktuálny čas pri každom prihlásení
-      await updateDoc(doc(db, 'users', user.uid), {
-        createdAt: new Date().toISOString()
-      });
-
+      const navigationPromise = navigate('/dashboard', { replace: true });
+      
       await login(email, password);
-      navigate('/dashboard');
+      
+      await navigationPromise;
     } catch (err) {
       setError('Nesprávne prihlasovacie údaje');
-    } finally {
       setLoading(false);
     }
   };
@@ -58,6 +48,24 @@ function Login() {
   const handleClose = () => {
     navigate('/');
   };
+
+  if (loading) {
+    return (
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
+          background: isDarkMode 
+            ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243e 100%)' 
+            : 'linear-gradient(135deg, #f5f7fa 0%, #e4e5e6 100%)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
+      >
+        <CircularProgress size={60} sx={{ color: '#ff9f43' }} />
+      </Box>
+    );
+  }
 
   return (
     <Box 
@@ -79,20 +87,6 @@ function Login() {
         }
       }}
     >
-      <Box 
-        sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 0,
-          opacity: 0.03,
-          background: `radial-gradient(circle at 20% 30%, ${isDarkMode ? 'rgba(255, 159, 67, 0.8)' : 'rgba(255, 159, 67, 0.4)'} 0%, transparent 100px),
-                      radial-gradient(circle at 80% 40%, ${isDarkMode ? 'rgba(48, 43, 99, 0.8)' : 'rgba(48, 43, 99, 0.4)'} 0%, transparent 200px)`,
-          pointerEvents: 'none',
-        }}
-      />
       <Container maxWidth="sm">
         <Paper 
           elevation={3} 
