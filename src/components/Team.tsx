@@ -24,7 +24,6 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Tooltip,
   DialogContentText,
   Grid,
   Card,
@@ -61,6 +60,8 @@ import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { sk } from 'date-fns/locale';
+import { styled as muiStyled } from '@mui/material/styles';
+import Tooltip, { TooltipProps } from '@mui/material/Tooltip';
 
 interface Country {
   code: string;
@@ -678,6 +679,26 @@ const alertVariants = {
     }
   }
 };
+
+const TransparentTooltip = muiStyled(({ className, ...props }: TooltipProps) => (
+  <Tooltip {...props} classes={{ popper: className }} />
+))(() => ({
+  '& .MuiTooltip-tooltip': {
+    backgroundColor: 'transparent',
+    color: 'inherit',
+    boxShadow: 'none',
+    border: 'none',
+    padding: 0,
+    margin: 0,
+    minWidth: 0,
+    minHeight: 0,
+    borderRadius: 0,
+    fontSize: '1rem',
+  },
+  '& .MuiTooltip-arrow': {
+    color: 'transparent',
+  },
+}));
 
 function Team() {
   const navigate = useNavigate();
@@ -1365,37 +1386,21 @@ function Team() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography 
-                          variant="button"
-                          fontWeight="regular"
-                          fontFamily={"Inter"}
-                          color="text"
-                          sx={{ display: 'flex', alignItems: 'center' }}
-                        >
-                          {member.lastLogin ? (
-                            <>
-                              <Tooltip title={
-                                `Presný čas: ${member.lastLogin.toDate().toLocaleString('sk-SK', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric', 
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  second: '2-digit'
-                                })}`
-                              }>
-                                <span>
-                                  {formatDistanceToNow(member.lastLogin.toDate(), { 
-                                    addSuffix: true,
-                                    locale: sk 
-                                  })}
-                                </span>
-                              </Tooltip>
-                            </>
-                          ) : (
-                            "Nikdy"
-                          )}
-                        </Typography>
+                        <TransparentTooltip title={`Presný čas: ${member.lastLogin?.toDate().toLocaleString('sk-SK', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric', 
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}`}>
+                          <span>
+                            {formatDistanceToNow(member.lastLogin?.toDate() || new Date(), { 
+                              addSuffix: true,
+                              locale: sk 
+                            })}
+                          </span>
+                        </TransparentTooltip>
                       </TableCell>
                       {isAdmin && (
                         <TableCell>

@@ -836,6 +836,14 @@ const Navbar: FC = () => {
               </Button>
               <Button
                 color="inherit"
+                startIcon={<LocationOnIcon />}
+                onClick={() => navigate('/vehicle-map')}
+                sx={{ mr: 2 }}
+              >
+                Mapa vozidiel
+              </Button>
+              <Button
+                color="inherit"
                 startIcon={<PeopleIcon />}
                 onClick={() => navigate('/team')}
                 sx={{ mr: 2 }}
@@ -915,6 +923,10 @@ const Navbar: FC = () => {
             <ListItemButton onClick={() => { navigate('/tracked-shipments'); setDrawerOpen(false); }}>
               <ListItemIcon><VisibilityIcon /></ListItemIcon>
               <ListItemText primary="Sledované prepravy" />
+            </ListItemButton>
+            <ListItemButton onClick={() => { navigate('/vehicle-map'); setDrawerOpen(false); }}>
+              <ListItemIcon><LocationOnIcon /></ListItemIcon>
+              <ListItemText primary="Mapa vozidiel" />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/team'); setDrawerOpen(false); }}>
               <ListItemIcon><PeopleIcon /></ListItemIcon>
