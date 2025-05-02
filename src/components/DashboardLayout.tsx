@@ -60,7 +60,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
             left: 0,
             right: 0,
             bottom: 0,
-            zIndex: 0,
+            zIndex: -1,
             opacity: 0.03,
             background: `radial-gradient(circle at 20% 30%, rgba(255, 159, 67, 0.8) 0%, transparent 100px),
                         radial-gradient(circle at 80% 40%, rgba(48, 43, 99, 0.8) 0%, transparent 200px)`,

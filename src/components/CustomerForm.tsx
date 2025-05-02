@@ -53,7 +53,10 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
 
   useEffect(() => {
     if (editCustomer) {
-      setFormData(editCustomer);
+      setFormData({
+        ...editCustomer,
+        icDph: editCustomer.icDph || (editCustomer as any).vatId || (editCustomer as any)['IČ_DPH'] || (editCustomer as any).ic_dph || '',
+      });
     } else {
       setFormData({
         companyName: '',

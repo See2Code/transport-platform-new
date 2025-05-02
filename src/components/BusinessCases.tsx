@@ -161,15 +161,35 @@ interface Phase {
 }
 
 const MobileBusinessCard = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
-  backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
-  borderRadius: theme.spacing(1),
+  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
+  borderRadius: '16px !important',
+  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'} !important`,
+  boxShadow: `${isDarkMode 
+    ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+    : '0 4px 12px rgba(0, 0, 0, 0.1)'} !important`,
+  transition: 'all 0.2s ease-in-out',
+  overflow: 'hidden',
+  position: 'relative',
   padding: theme.spacing(2),
   marginBottom: theme.spacing(2),
-  boxShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)',
   color: isDarkMode ? '#ffffff' : '#000000',
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(1),
+  '&:before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '4px',
+    backgroundColor: '#ff9f43'
+  },
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 8px 24px rgba(255, 159, 67, 0.3) !important',
+    border: '1px solid rgba(255, 159, 67, 0.3) !important',
+  }
 }));
 
 const MobileCardHeader = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({

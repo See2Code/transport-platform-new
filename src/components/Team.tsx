@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -720,137 +720,103 @@ function Team() {
   const [isCreating, setIsCreating] = useState(false);
   const [isInitializingLastLogin, setIsInitializingLastLogin] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setLoading(true);
-        try {
-          // Get company 
-          const userRef = doc(db, 'users', user.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
-            
-            if (userData) {
-              // Nastavenie companyID pre neskoršie použitie
-              setCompanyID(userData.companyID || userData.companyId || "");
-              setIsAdmin(userData.role === 'admin');
-              
-              // Načítanie členov tímu
-              const companyQuery = query(
-                collection(db, 'users'),
-                where('companyID', '==', userData.companyID || userData.companyId),
-                where('role', 'in', ['admin', 'user', 'manager', 'driver', 'viewer']),
-                orderBy('createdAt', 'desc')
-              );
-              
-              const companySnap = await getDocs(companyQuery);
-              
-              const members: TeamMember[] = [];
-              
-              companySnap.forEach((doc) => {
-                const memberData = doc.data();
-                
-                // Funkcia pre bezpečné spracovanie lastLogin hodnoty
-                const processLastLogin = (lastLoginValue: any) => {
-                  console.log('Processing lastLogin:', lastLoginValue, typeof lastLoginValue);
-                  
-                  if (!lastLoginValue) return null;
-                  
-                  // Ak je to už Timestamp objekt z Firestore
-                  if (lastLoginValue instanceof Timestamp) {
-                    console.log('Timestamp instance detected');
-                    return lastLoginValue;
-                  }
-                  
-                  // Ak je to objekt s seconds a nanoseconds (serializovaný Timestamp)
-                  if (typeof lastLoginValue === 'object' && 'seconds' in lastLoginValue) {
-                    console.log('Timestamp-like object detected');
-                    return new Timestamp(lastLoginValue.seconds, lastLoginValue.nanoseconds || 0);
-                  }
-                  
-                  // Ak je to string (ISO formát dátumu)
-                  if (typeof lastLoginValue === 'string') {
-                    console.log('String date detected');
-                    return Timestamp.fromDate(new Date(lastLoginValue));
-                  }
-                  
-                  // Ak je to Date objekt
-                  if (lastLoginValue instanceof Date) {
-                    console.log('Date instance detected');
-                    return Timestamp.fromDate(lastLoginValue);
-                  }
-                  
-                  console.log('Unrecognized lastLogin format:', lastLoginValue);
-                  return null;
-                };
-                
-                const processedLastLogin = processLastLogin(memberData.lastLogin);
-                
-                const member = {
-                  id: doc.id,
-                  firstName: memberData.firstName || '',
-                  lastName: memberData.lastName || '',
-                  email: memberData.email || '',
-                  phone: memberData.phone || '',
-                  role: memberData.role || '',
-                  status: memberData.status || 'active',
-                  createdAt: memberData.createdAt || null,
-                  userId: memberData.userId || doc.id,
-                  lastLogin: processedLastLogin
-                };
-                
-                members.push(member);
-              });
-              
-              setTeamMembers(members);
-              
-              // Oddelené načítanie pozvánok
-              const invitationsQuery = query(
-                collection(db, 'invitations'),
-                where('companyID', '==', userData.companyID || userData.companyId),
-                where('status', '==', 'pending')
-              );
-              
-              const invitationsSnap = await getDocs(invitationsQuery);
-              
-              const pendingInvitations: Invitation[] = [];
-              
-              invitationsSnap.forEach((doc) => {
-                const invitationData = doc.data();
-                
-                const invitation: Invitation = {
-                  id: doc.id,
-                  firstName: invitationData.firstName || '',
-                  lastName: invitationData.lastName || '',
-                  email: invitationData.email || '',
-                  phone: invitationData.phone || '',
-                  role: invitationData.role || '',
-                  status: 'pending',
-                  createdAt: invitationData.createdAt || new Date(),
-                  userId: invitationData.userId
-                };
-                
-                pendingInvitations.push(invitation);
-              });
-              
-              setInvitations(pendingInvitations);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching team data:', error);
-          setError('Nepodarilo sa načítať údaje o tíme.');
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        navigate('/login');
-      }
-    });
+  const fetchData = useCallback(async () => {
+    const user = auth.currentUser;
+    if (user) {
+      setLoading(true);
+      try {
+        // Get company
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
 
-    return () => unsubscribe();
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+
+          if (userData) {
+            const currentCompanyID = userData.companyID || userData.companyId || "";
+            setCompanyID(currentCompanyID);
+            setIsAdmin(userData.role === 'admin');
+
+            // Načítanie členov tímu
+            const companyQuery = query(
+              collection(db, 'users'),
+              where('companyID', '==', currentCompanyID),
+              where('role', 'in', ['admin', 'user', 'manager', 'driver', 'viewer']),
+              orderBy('createdAt', 'desc')
+            );
+
+            const companySnap = await getDocs(companyQuery);
+            const members: TeamMember[] = [];
+            companySnap.forEach((doc) => {
+              const memberData = doc.data();
+              const processLastLogin = (lastLoginValue: any) => {
+                if (!lastLoginValue) return null;
+                if (lastLoginValue instanceof Timestamp) return lastLoginValue;
+                if (typeof lastLoginValue === 'object' && 'seconds' in lastLoginValue) return new Timestamp(lastLoginValue.seconds, lastLoginValue.nanoseconds || 0);
+                if (typeof lastLoginValue === 'string') return Timestamp.fromDate(new Date(lastLoginValue));
+                if (lastLoginValue instanceof Date) return Timestamp.fromDate(lastLoginValue);
+                return null;
+              };
+              const processedLastLogin = processLastLogin(memberData.lastLogin);
+              const member = {
+                id: doc.id,
+                firstName: memberData.firstName || '',
+                lastName: memberData.lastName || '',
+                email: memberData.email || '',
+                phone: memberData.phone || '',
+                role: memberData.role || '',
+                status: memberData.status || 'active',
+                createdAt: memberData.createdAt instanceof Timestamp ? memberData.createdAt.toDate() : (memberData.createdAt ? new Date(memberData.createdAt) : new Date()),
+                userId: memberData.userId || doc.id,
+                lastLogin: processedLastLogin
+              };
+              members.push(member);
+            });
+            setTeamMembers(members);
+
+            // Načítanie pozvánok
+            const invitationsQuery = query(
+              collection(db, 'invitations'),
+              where('companyID', '==', currentCompanyID),
+              where('status', '==', 'pending')
+            );
+            const invitationsSnap = await getDocs(invitationsQuery);
+            const pendingInvitations: Invitation[] = [];
+            invitationsSnap.forEach((doc) => {
+              const invitationData = doc.data();
+              const invitation: Invitation = {
+                id: doc.id,
+                firstName: invitationData.firstName || '',
+                lastName: invitationData.lastName || '',
+                email: invitationData.email || '',
+                phone: invitationData.phone || '',
+                role: invitationData.role || '',
+                status: 'pending',
+                createdAt: invitationData.createdAt instanceof Timestamp ? invitationData.createdAt.toDate() : (invitationData.createdAt ? new Date(invitationData.createdAt) : new Date()),
+                userId: invitationData.userId
+              };
+              pendingInvitations.push(invitation);
+            });
+            setInvitations(pendingInvitations);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching team data:', error);
+        setError('Nepodarilo sa načítať údaje o tíme.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      navigate('/login');
+    }
   }, [navigate]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, () => {
+      fetchData();
+    });
+    return () => unsubscribe();
+  }, [fetchData]);
 
   useEffect(() => {
     setIsEmailValid(validateEmail(email));
@@ -858,6 +824,7 @@ function Team() {
 
   const handleInvite = async () => {
     if (!isEmailValid) {
+      setError('Prosím zadajte platný email');
       return;
     }
     if (!email || !role || !companyID || !firstName || !lastName || !phoneNumber) {
@@ -870,13 +837,11 @@ function Team() {
       setError('');
       setSuccess('');
 
-      // Kontrola autentifikácie
       const currentUser = auth.currentUser;
       if (!currentUser) {
         throw new Error('Užívateľ nie je prihlásený');
       }
 
-      // Vytvorenie pozvánky v Firestore
       const invitationRef = await addDoc(collection(db, 'invitations'), {
         email,
         firstName,
@@ -888,7 +853,6 @@ function Team() {
         status: 'pending'
       });
 
-      // Volanie Cloud Function na odoslanie emailu
       const sendInvitationEmail = httpsCallable(functions, 'sendInvitationEmail');
       await sendInvitationEmail({
         email,
@@ -901,8 +865,8 @@ function Team() {
       });
 
       setSuccess('Pozvánka bola úspešne odoslaná.');
-      
-      // Zatvorenie dialógu a reset formulára po 1 sekunde
+      fetchData();
+
       setTimeout(() => {
         setOpenInvite(false);
         setEmail('');
@@ -913,7 +877,6 @@ function Team() {
         setIsCreating(false);
       }, 1000);
 
-      // Skrytie success správy po 5 sekundách
       setTimeout(() => {
         setSuccess('');
       }, 5000);
@@ -942,7 +905,6 @@ function Team() {
   const handleUpdate = async () => {
     if (!editingInvite || !firstName || !lastName || !email || !phoneNumber || !role) {
       setError('Prosím vyplňte všetky polia');
-      // Skrytie error správy po 5 sekundách
       setTimeout(() => {
         setError('');
       }, 5000);
@@ -956,7 +918,6 @@ function Team() {
 
       const fullPhoneNumber = `${phonePrefix}${phoneNumber}`;
 
-      // Ak je to pozvánka (nemá userId)
       if (!editingInvite.userId) {
         await updateDoc(doc(db, 'invitations', editingInvite.id), {
           firstName,
@@ -967,7 +928,6 @@ function Team() {
           updatedAt: new Date()
         });
       } else {
-        // Ak je to člen tímu (má userId)
         await updateDoc(doc(db, 'users', editingInvite.userId), {
           firstName,
           lastName,
@@ -979,6 +939,8 @@ function Team() {
       }
 
       setSuccess('Záznam bol úspešne aktualizovaný.');
+      fetchData();
+
       setOpenEdit(false);
       setEditingInvite(null);
       setEmail('');
@@ -986,15 +948,13 @@ function Team() {
       setLastName('');
       setPhoneNumber('');
       setRole('user');
-      
-      // Skrytie success správy po 5 sekundách
+
       setTimeout(() => {
         setSuccess('');
       }, 5000);
     } catch (err: any) {
       console.error('Chyba pri aktualizácii záznamu:', err);
       setError(err.message || 'Nastala chyba pri aktualizácii záznamu.');
-      // Skrytie error správy po 5 sekundách
       setTimeout(() => {
         setError('');
       }, 5000);
@@ -1014,28 +974,26 @@ function Team() {
     try {
       setLoading(true);
       if ('userId' in inviteToDelete && inviteToDelete.userId) {
-        // Ak je to člen tímu
         console.log('Mazanie člena tímu s ID:', inviteToDelete.userId);
         setDeletingMemberId(inviteToDelete.id);
         await deleteDoc(doc(db, 'users', inviteToDelete.userId));
       } else {
-        // Ak je to pozvánka
+        console.log('Mazanie pozvánky s ID:', inviteToDelete.id);
         const invitationRef = doc(db, 'invitations', inviteToDelete.id);
         await deleteDoc(invitationRef);
-        console.log('Pozvánka vymazaná:', inviteToDelete.id);
       }
       setSuccess('Záznam bol úspešne vymazaný.');
+      fetchData();
+
       setDeleteConfirmOpen(false);
       setInviteToDelete(null);
-      
-      // Skrytie success správy po 5 sekundách
+
       setTimeout(() => {
         setSuccess('');
       }, 5000);
     } catch (err: any) {
       console.error('Chyba pri mazaní záznamu:', err);
       setError(err.message || 'Nastala chyba pri mazaní záznamu.');
-      // Skrytie error správy po 5 sekundách
       setTimeout(() => {
         setError('');
       }, 5000);
@@ -1057,14 +1015,14 @@ function Team() {
       });
 
       setSuccess('Status člena tímu bol úspešne overený.');
-      // Skrytie success správy po 5 sekundách
+      fetchData();
+
       setTimeout(() => {
         setSuccess('');
       }, 5000);
     } catch (err: any) {
       console.error('Chyba pri overovaní statusu:', err);
       setError(err.message || 'Nastala chyba pri overovaní statusu.');
-      // Skrytie error správy po 5 sekundách
       setTimeout(() => {
         setError('');
       }, 5000);
@@ -1087,60 +1045,53 @@ function Team() {
   };
 
   const handleResendInvitation = async (invitationId: string) => {
-    try {
-      setIsResending(true);
-      setResendingInvitationId(invitationId);
-      
-      const invitationDoc = await getDoc(doc(db, 'invitations', invitationId));
-      if (!invitationDoc.exists()) {
-        throw new Error('Pozvánka nebola nájdená');
+      try {
+        setIsResending(true);
+        setResendingInvitationId(invitationId);
+
+        const invitationDoc = await getDoc(doc(db, 'invitations', invitationId));
+        if (!invitationDoc.exists()) {
+          throw new Error('Pozvánka nebola nájdená');
+        }
+
+        const invitationData = invitationDoc.data();
+        const sendInvitationEmail = httpsCallable(functions, 'sendInvitationEmail');
+        await sendInvitationEmail({
+          email: invitationData.email,
+          firstName: invitationData.firstName,
+          lastName: invitationData.lastName,
+          phone: invitationData.phone,
+          role: invitationData.role,
+          companyId: companyID,
+          invitationId: invitationId
+        });
+
+        await updateDoc(doc(db, 'invitations', invitationId), {
+          lastSentAt: new Date() // Používame priamo Date objekt
+        });
+
+        // fetch data to update the UI immediately
+        fetchData();
+
+        setNotification({
+          open: true,
+          message: 'Pozvánka bola úspešne preposlaná',
+          severity: 'success'
+        });
+      } catch (error) {
+        console.error('Chyba pri preposielaní pozvánky:', error);
+        setNotification({
+          open: true,
+          message: 'Nepodarilo sa preposlať pozvánku',
+          severity: 'error'
+        });
+      } finally {
+        setTimeout(() => {
+          setIsResending(false);
+          setResendingInvitationId(null);
+        }, 1000);
       }
-
-      const invitationData = invitationDoc.data();
-      const sendInvitationEmail = httpsCallable(functions, 'sendInvitationEmail');
-      await sendInvitationEmail({
-        email: invitationData.email,
-        firstName: invitationData.firstName,
-        lastName: invitationData.lastName,
-        phone: invitationData.phone,
-        role: invitationData.role,
-        companyId: companyID,
-        invitationId: invitationId
-      });
-
-      // Aktualizácia času posledného odoslania
-      await updateDoc(doc(db, 'invitations', invitationId), {
-        lastSentAt: new Date().toISOString()
-      });
-
-      // Aktualizácia lokálneho stavu
-      setInvitations(prev => prev.map(inv => 
-        inv.id === invitationId 
-          ? { ...inv, lastSentAt: new Date().toISOString() }
-          : inv
-      ));
-
-      // Zobrazenie notifikácie
-      setNotification({
-        open: true,
-        message: 'Pozvánka bola úspešne preposlaná',
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Chyba pri preposielaní pozvánky:', error);
-      setNotification({
-        open: true,
-        message: 'Nepodarilo sa preposlať pozvánku',
-        severity: 'error'
-      });
-    } finally {
-      // Zatiahneme zatvorenie dialogu o 1 sekundu, aby sa užívateľ stihol pozrieť na loading stav
-      setTimeout(() => {
-        setIsResending(false);
-        setResendingInvitationId(null);
-      }, 1000);
-    }
-  };
+    };
 
   const handleInitializeLastLogin = async () => {
     try {
@@ -1155,6 +1106,8 @@ function Team() {
           message: data.message,
           severity: 'success'
         });
+        // After successful initialization, refetch data to show updated last login times
+        fetchData(); 
       }
     } catch (error: any) {
       console.error('Chyba pri inicializácii lastLogin:', error);
