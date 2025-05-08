@@ -167,7 +167,103 @@ const StatsCardContent = styled(CardContent)({
   }
 });
 
-const COLORS = ['#ff9f43', '#ffd43b', '#ff6b6b', '#ff9ff3', '#48dbfb'];
+const COLORS = ['#ff9f43', '#ffd43b', '#ff6b6b', '#ff9ff3', '#48dbfb', '#4caf50', '#9e9e9e'];
+
+// Definujeme mapovanie statusov na farby, aby sme mali konzistenciu v celej aplikácii
+const STATUS_COLORS: Record<string, string> = {
+  'ACTIVE': '#ff9f43',     // oranžová
+  'PENDING': '#ffd43b',    // žltá
+  'MEETING': '#ffd43b',    // žltá
+  'INTERESTED': '#4caf50', // zelená
+  'EMAIL_SENT': '#48dbfb', // modrá
+  'CALLED': '#ff9f43',     // oranžová
+  'CALL_LATER': '#ff9ff3', // ružová
+  'NOT_CALLED': '#800020', // bordová
+  'NOT_INTERESTED': '#ff6b6b', // červená
+  'CLOSED': '#9e9e9e',     // šedá
+  'CANCELED': '#616161',   // tmavá šedá
+  'REJECTED': '#d32f2f',   // tmavá červená
+  'IN_PROGRESS': '#ff9f43', // oranžová
+};
+
+// Pridáme animovaný box komponent
+const AnimatedBox = styled(Box)<{ delay?: string; duration?: string; animation?: string }>(
+  ({ delay = '0s', duration = '0.6s', animation = 'fadeIn' }) => ({
+    opacity: 0,
+    animation: `${animation} ${duration} cubic-bezier(0.4, 0, 0.2, 1) ${delay} forwards`,
+    '@keyframes fadeIn': {
+      '0%': {
+        opacity: 0,
+        transform: 'translateY(8px)',
+      },
+      '100%': {
+        opacity: 1,
+        transform: 'translateY(0)',
+      },
+    },
+    '@keyframes scaleIn': {
+      '0%': {
+        opacity: 0,
+        transform: 'scale(0.95)',
+      },
+      '100%': {
+        opacity: 1,
+        transform: 'scale(1)',
+      },
+    },
+    '@keyframes slideFromLeft': {
+      '0%': {
+        opacity: 0,
+        transform: 'translateX(-20px)',
+      },
+      '100%': {
+        opacity: 1,
+        transform: 'translateX(0)',
+      },
+    },
+  })
+);
+
+// Vytvoríme animovaný kontajner pre celý graf - nový prístup s maska efektom
+const AnimatedGraphContainer = styled(Box)(({ theme }) => ({
+  width: '100%',
+  height: '100%',
+  position: 'relative',
+  overflow: 'hidden',
+  maskImage: 'linear-gradient(to right, black 0%, black 100%)',
+  WebkitMaskImage: 'linear-gradient(to right, black 0%, black 100%)',
+  maskSize: '0% 100%',
+  WebkitMaskSize: '0% 100%',
+  maskRepeat: 'no-repeat',
+  WebkitMaskRepeat: 'no-repeat',
+  maskPosition: 'left',
+  WebkitMaskPosition: 'left',
+  animation: 'revealMask 1.4s cubic-bezier(0.33, 1, 0.68, 1) forwards',
+  '@keyframes revealMask': {
+    '0%': {
+      maskSize: '0% 100%',
+      WebkitMaskSize: '0% 100%'
+    },
+    '100%': {
+      maskSize: '100% 100%',
+      WebkitMaskSize: '100% 100%'
+    }
+  }
+}));
+
+// Upravíme progressbar segment - odstránime vlastnú animáciu
+const ProgressBarSegment = styled(Box)<{ 
+  percentage: number; 
+  isDarkMode: boolean; 
+  color: string; 
+  isLast: boolean;
+}>(({ percentage, isDarkMode, color, isLast }) => ({
+  width: `${percentage}%`,
+  height: '100%',
+  backgroundColor: color,
+  position: 'relative',
+  borderRight: isLast ? 'none' : `2px solid ${isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.3)'}`,
+}));
 
 export default function Dashboard() {
   const { userData } = useAuth();
@@ -289,11 +385,15 @@ export default function Dashboard() {
                   const status = (bc.status || 'Neznámy').toUpperCase();
                   statusMap[status] = (statusMap[status] || 0) + 1;
                 });
-                const statusDistribution = Object.entries(statusMap).map(([name, value]) => ({
-                  name,
-                  value,
-                  total: cases.length
-                }));
+                
+                // Prevedieme na pole a zoradíme podľa hodnoty (zostupne)
+                const statusDistribution = Object.entries(statusMap)
+                  .map(([name, value]) => ({
+                    name,
+                    value,
+                    total: cases.length
+                  }))
+                  .sort((a, b) => b.value - a.value); // Zoradíme zostupne podľa hodnoty
 
                 setStats(prev => ({
                   ...prev,
@@ -307,10 +407,10 @@ export default function Dashboard() {
                   statusDistribution
                 }));
                 
-                // Pridáme malé oneskorenie aby sa animácia zobrazila
+                // Pridáme oneskorenie, aby používateľ videl plynulý prechod
                 setTimeout(() => {
                   setStatusGraphLoading(false);
-                }, 800);
+                }, 1000);
               },
               (error) => {
                 console.error('Chyba pri sledovaní business cases:', error);
@@ -427,25 +527,21 @@ export default function Dashboard() {
     }
   };
 
+  // Upravíme funkciu getStatusChipStyles aby používala naše definované farby
   const getStatusChipStyles = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'ACTIVE':
-        return { backgroundColor: 'rgba(76, 175, 80, 0.2)', color: '#4caf50' };
-      case 'PENDING':
-        return { backgroundColor: 'rgba(255, 152, 0, 0.2)', color: '#ff9800' };
-      case 'INTERESTED':
-        return { backgroundColor: 'rgba(33, 150, 243, 0.2)', color: '#2196f3' }; // Blue
-      case 'EMAIL_SENT':
-        return { backgroundColor: 'rgba(156, 39, 176, 0.2)', color: '#9c27b0' }; // Purple
-      case 'CLOSED':
-        return { backgroundColor: 'rgba(158, 158, 158, 0.2)', color: '#9e9e9e' }; // Grey
-      case 'CANCELED':
-        return { backgroundColor: 'rgba(97, 97, 97, 0.2)', color: '#616161' };    // Dark Grey
-      case 'REJECTED':
-        return { backgroundColor: 'rgba(211, 47, 47, 0.2)', color: '#d32f2f' };   // Dark Red
-      default:
-        return { backgroundColor: 'rgba(244, 67, 54, 0.2)', color: '#f44336' }; // Default Red
-    }
+    const statusKey = status?.toUpperCase() || 'NOT_CALLED';
+    
+    // Získame farbu zo statusu, alebo použijeme default červenú ak status nie je definovaný
+    const color = STATUS_COLORS[statusKey] || '#f44336';
+    
+    return { 
+      backgroundColor: `${color}20`, // 20 je hex pre 12% priehľadnosť
+      color: color,
+      fontWeight: 600,
+      fontSize: '0.75rem',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+      border: `1px solid ${color}40` // 40 je hex pre 25% priehľadnosť
+    };
   };
 
   return (
@@ -594,164 +690,188 @@ export default function Dashboard() {
               </Typography>
               
               {statusGraphLoading ? (
-                <Fade in={statusGraphLoading} timeout={800}>
-                  <Box sx={{ width: '100%' }}>
-                    {/* Skeleton pre graf počas načítania */}
-                    <Skeleton 
-                      variant="rectangular" 
-                      width="100%" 
-                      height={24} 
-                      sx={{ 
-                        borderRadius: '12px',
-                        bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                        mb: 2
-                      }} 
-                    />
-                    
-                    <Box sx={{ 
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 2,
-                      mt: 1
-                    }}>
-                      {[1, 2, 3, 4].map((item) => (
-                        <Box
-                          key={item}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            flexBasis: { xs: '45%', sm: 'auto' }
-                          }}
-                        >
-                          <Skeleton 
-                            variant="rectangular" 
-                            width={12} 
-                            height={12} 
-                            sx={{ 
-                              borderRadius: '3px',
-                              bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                            }} 
-                          />
-                          <Skeleton 
-                            variant="text" 
-                            width={100} 
-                            sx={{ 
-                              bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                            }} 
-                          />
-                        </Box>
-                      ))}
-                    </Box>
-                    
+                <Box sx={{ width: '100%' }}>
+                  {/* Skeleton pre graf počas načítania */}
+                  <Skeleton 
+                    variant="rectangular" 
+                    width="100%" 
+                    height={24} 
+                    sx={{ 
+                      borderRadius: '12px',
+                      bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                      mb: 2,
+                      animation: 'pulse 1.5s ease-in-out 0.5s infinite',
+                      '@keyframes pulse': {
+                        '0%': { opacity: 0.6 },
+                        '50%': { opacity: 0.8 },
+                        '100%': { opacity: 0.6 },
+                      }
+                    }} 
+                  />
+                  
+                  <Box sx={{ 
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                    mt: 2
+                  }}>
+                    {[...Array(4)].map((_, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          flexBasis: { xs: '45%', sm: 'auto' },
+                          opacity: 0,
+                          animation: `fadeIn 0.5s ease-out ${0.2 + index * 0.1}s forwards`,
+                          '@keyframes fadeIn': {
+                            from: { opacity: 0, transform: 'translateY(8px)' },
+                            to: { opacity: 1, transform: 'translateY(0)' }
+                          }
+                        }}
+                      >
+                        <Skeleton 
+                          variant="rectangular" 
+                          width={12} 
+                          height={12} 
+                          sx={{ 
+                            borderRadius: '3px',
+                            bgcolor: isDarkMode ? `rgba(255, 255, 255, ${0.1 + index * 0.1})` : `rgba(0, 0, 0, ${0.1 + index * 0.04})`,
+                            animation: 'pulse 1.5s ease-in-out 0.5s infinite',
+                          }} 
+                        />
+                        <Skeleton 
+                          variant="text" 
+                          width={80 + index * 10} 
+                          sx={{ 
+                            bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                            animation: 'pulse 1.5s ease-in-out 0.5s infinite',
+                          }} 
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                  
+                  <Box 
+                    sx={{ 
+                      mt: 2,
+                      opacity: 0,
+                      animation: 'fadeIn 0.5s ease-out 0.6s forwards',
+                    }}
+                  >
                     <Skeleton 
                       variant="text" 
                       width={80} 
                       sx={{ 
-                        mt: 1,
-                        bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                        bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        animation: 'pulse 1.5s ease-in-out 0.5s infinite'
                       }} 
                     />
                   </Box>
-                </Fade>
+                </Box>
               ) : (
-                <Grow in={!statusGraphLoading} timeout={800}>
+                <Box sx={{ 
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: { xs: 1.5, sm: 2 },
+                  position: 'relative',
+                  animation: 'fadeIn 0.3s ease-out',
+                  '@keyframes fadeIn': {
+                    from: { opacity: 0 },
+                    to: { opacity: 1 }
+                  }
+                }}>
+                  {/* Progress Bar Container */}
                   <Box sx={{ 
                     width: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: { xs: 1.5, sm: 2 },
-                    position: 'relative'
+                    height: { xs: '20px', sm: '24px' },
+                    borderRadius: { xs: '10px', sm: '12px' },
+                    overflow: 'hidden',
+                    position: 'relative',
+                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
                   }}>
-                    {/* Progress Bar Container */}
-                    <Box sx={{ 
-                      width: '100%',
-                      height: { xs: '20px', sm: '24px' },
-                      borderRadius: { xs: '10px', sm: '12px' },
-                      overflow: 'hidden',
-                      display: 'flex',
-                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                    }}>
-                      {stats.statusDistribution.map((item, index) => {
-                        const percentage = (item.value / (item.total || 1)) * 100;
-                        return (
-                          <Box
-                            key={item.name}
-                            sx={{
-                              width: `${percentage}%`,
-                              height: '100%',
-                              backgroundColor: COLORS[index % COLORS.length],
-                              position: 'relative',
-                              borderRight: index !== stats.statusDistribution.length - 1 ? '2px solid rgba(0,0,0,0.1)' : 'none',
-                              transition: 'width 1s ease-in-out',
-                              animation: `growWidth 1.2s ease-out ${index * 0.15}s`,
-                              '@keyframes growWidth': {
-                                from: { width: '0%' },
-                                to: { width: `${percentage}%` }
-                              }
-                            }}
-                          />
-                        );
-                      })}
-                    </Box>
-
-                    {/* Legend */}
-                    <Box
-                      sx={{ 
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: { xs: 1, sm: 2 },
-                        mt: { xs: 0.5, sm: 1 }
-                      }}
-                    >
-                      {stats.statusDistribution.map((item, index) => (
-                        <Fade 
-                          key={item.name}
-                          in={true} 
-                          timeout={500} 
-                          style={{ transitionDelay: `${150 + index * 100}ms` }}
-                        >
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1,
-                              flexBasis: { xs: '45%', sm: 'auto' }
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: { xs: '10px', sm: '12px' },
-                                height: { xs: '10px', sm: '12px' },
-                                borderRadius: '3px',
-                                backgroundColor: COLORS[index % COLORS.length]
-                              }}
+                    <AnimatedGraphContainer>
+                      <Box sx={{ display: 'flex', width: '100%', height: '100%' }}>
+                        {stats.statusDistribution.map((item, index) => {
+                          const percentage = (item.value / (item.total || 1)) * 100;
+                          const color = STATUS_COLORS[item.name] || COLORS[index % COLORS.length];
+                          
+                          return (
+                            <ProgressBarSegment
+                              key={item.name}
+                              percentage={percentage}
+                              isDarkMode={isDarkMode}
+                              color={color}
+                              isLast={index === stats.statusDistribution.length - 1}
                             />
-                            <Typography sx={{ 
-                              color: isDarkMode ? '#ffffff' : '#000000',
-                              fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                              fontWeight: 500
-                            }}>
-                              {item.name}: {item.value} ({((item.value / (item.total || 1)) * 100).toFixed(1)}%)
-                            </Typography>
-                          </Box>
-                        </Fade>
-                      ))}
-                    </Box>
-
-                    {/* Total */}
-                    <Fade in={true} timeout={800} style={{ transitionDelay: '600ms' }}>
-                      <Typography sx={{ 
-                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                        fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                        fontWeight: 500,
-                        mt: { xs: 0.5, sm: 1 }
-                      }}>
-                        Celkom: {stats.statusDistribution.reduce((acc, curr) => acc + curr.value, 0)}
-                      </Typography>
-                    </Fade>
+                          );
+                        })}
+                      </Box>
+                    </AnimatedGraphContainer>
                   </Box>
-                </Grow>
+
+                  {/* Legend */}
+                  <Box
+                    sx={{ 
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: { xs: 1, sm: 2 },
+                      mt: { xs: 1.5, sm: 2 }
+                    }}
+                  >
+                    {stats.statusDistribution.map((item, index) => (
+                      <AnimatedBox 
+                        key={item.name}
+                        delay={`${0.3 + index * 0.1}s`}
+                        duration="0.6s"
+                        animation="fadeIn"
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          flexBasis: { xs: '45%', sm: 'auto' }
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: { xs: '10px', sm: '12px' },
+                            height: { xs: '10px', sm: '12px' },
+                            borderRadius: '3px',
+                            backgroundColor: STATUS_COLORS[item.name] || COLORS[index % COLORS.length],
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                          }}
+                        />
+                        <Typography sx={{ 
+                          color: isDarkMode ? '#ffffff' : '#000000',
+                          fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                          fontWeight: 500
+                        }}>
+                          {item.name}: {item.value} ({((item.value / (item.total || 1)) * 100).toFixed(1)}%)
+                        </Typography>
+                      </AnimatedBox>
+                    ))}
+                  </Box>
+
+                  {/* Total */}
+                  <AnimatedBox 
+                    delay="0.8s"
+                    duration="0.5s"
+                    animation="fadeIn"
+                    sx={{ 
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                      fontWeight: 500,
+                      mt: { xs: 1, sm: 1.5 }
+                    }}
+                  >
+                    <Typography component="span">
+                      Celkom: {stats.statusDistribution.reduce((acc, curr) => acc + curr.value, 0)}
+                    </Typography>
+                  </AnimatedBox>
+                </Box>
               )}
             </StatsCardContent>
           </StatsCard>
