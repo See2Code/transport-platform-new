@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, FC } from 'react';
+import React, { useState, useEffect, useRef, FC, useCallback } from 'react';
 import CssBaseline from '@mui/material/CssBaseline';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
@@ -770,6 +770,7 @@ const BareTooltip: FC<BareTooltipProps> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const enterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isHoveringRef = useRef(false);
   
   const theme = useTheme();
   const { isDarkMode } = useThemeMode();
@@ -790,54 +791,97 @@ const BareTooltip: FC<BareTooltipProps> = ({
     };
   }, []);
 
-  const handleMouseEnter = () => {
+  // Sledovanie dokumentu na strate fokusu/prekliknutí na inú aplikáciu
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Skryť tooltip, keď je okno neaktívne
+        setIsVisible(false);
+        if (enterTimeoutRef.current) {
+          clearTimeout(enterTimeoutRef.current);
+          enterTimeoutRef.current = null;
+        }
+        if (leaveTimeoutRef.current) {
+          clearTimeout(leaveTimeoutRef.current);
+          leaveTimeoutRef.current = null;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  const updateTooltipPosition = useCallback(() => {
+    if (!childRef.current || !isHoveringRef.current) return;
+    
+    const rect = childRef.current.getBoundingClientRect();
+    let top = 0;
+    let left = 0;
+    
+    switch (placement) {
+      case 'top':
+        top = rect.top - (tooltipRef.current?.offsetHeight || 0) - 10;
+        left = rect.left + rect.width / 2;
+        break;
+      case 'bottom':
+        top = rect.bottom + 10;
+        left = rect.left + rect.width / 2;
+        break;
+      case 'left':
+        top = rect.top + rect.height / 2;
+        left = rect.left - (tooltipRef.current?.offsetWidth || 0) - 10;
+        break;
+      case 'right':
+        top = rect.top + rect.height / 2;
+        left = rect.right + 10;
+        break;
+    }
+    
+    setPosition({ top, left });
+  }, [placement]);
+
+  const handleMouseEnter = useCallback(() => {
+    isHoveringRef.current = true;
+    
     if (leaveTimeoutRef.current) {
       clearTimeout(leaveTimeoutRef.current);
       leaveTimeoutRef.current = null;
     }
     
+    // Ak je tooltip už zobrazený, netreba čakať
+    if (isVisible) {
+      updateTooltipPosition();
+      return;
+    }
+    
+    if (enterTimeoutRef.current) return;
+    
     enterTimeoutRef.current = setTimeout(() => {
-      if (childRef.current) {
-        const rect = childRef.current.getBoundingClientRect();
-        
-        let top = 0;
-        let left = 0;
-        
-        switch (placement) {
-          case 'top':
-            top = rect.top - (tooltipRef.current?.offsetHeight || 0) - 10;
-            left = rect.left + rect.width / 2;
-            break;
-          case 'bottom':
-            top = rect.bottom + 10;
-            left = rect.left + rect.width / 2;
-            break;
-          case 'left':
-            top = rect.top + rect.height / 2;
-            left = rect.left - (tooltipRef.current?.offsetWidth || 0) - 10;
-            break;
-          case 'right':
-            top = rect.top + rect.height / 2;
-            left = rect.right + 10;
-            break;
-        }
-        
-        setPosition({ top, left });
-        setIsVisible(true);
-      }
+      updateTooltipPosition();
+      setIsVisible(true);
+      enterTimeoutRef.current = null;
     }, enterDelay);
-  };
+  }, [enterDelay, isVisible, updateTooltipPosition]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
+    isHoveringRef.current = false;
+    
     if (enterTimeoutRef.current) {
       clearTimeout(enterTimeoutRef.current);
       enterTimeoutRef.current = null;
     }
     
+    if (leaveTimeoutRef.current) return;
+    
     leaveTimeoutRef.current = setTimeout(() => {
       setIsVisible(false);
+      leaveTimeoutRef.current = null;
     }, leaveDelay);
-  };
+  }, [leaveDelay]);
 
   // Čistenie timeoutov pri unmount
   useEffect(() => {
@@ -885,8 +929,8 @@ const BareTooltip: FC<BareTooltipProps> = ({
             animationName: 'fadeInTooltip',
             animationDuration: '0.2s',
             animationFillMode: 'forwards',
+            willChange: 'transform, opacity', // Optimalizácia pre GPU
           }}
-          onMouseEnter={handleMouseLeave}
         >
           {title}
         </div>,
