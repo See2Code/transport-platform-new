@@ -16,6 +16,9 @@ import {
   Chip,
   Avatar,
   CircularProgress,
+  Fade,
+  Grow,
+  Skeleton,
 } from '@mui/material';
 import {
   Business as BusinessIcon,
@@ -180,6 +183,7 @@ export default function Dashboard() {
   });
   const [activeVehicles, setActiveVehicles] = useState<VehicleLocation[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
+  const [statusGraphLoading, setStatusGraphLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch jednorazových dát
@@ -257,11 +261,18 @@ export default function Dashboard() {
         // Nastavenie poslucháča pre business cases s retry logikou
         const setupBusinessCasesListener = async (retryCount = 0) => {
           try {
+            setStatusGraphLoading(true);
+            
+            // Nastavíme dátum pred 14 dňami pre filtrovanie záznamov
+            const fourteenDaysAgo = new Date();
+            fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+            const fourteenDaysAgoTimestamp = Timestamp.fromDate(fourteenDaysAgo);
+
             const businessCasesQuery = query(
               collection(db, 'businessCases'),
               where('companyID', '==', userData.companyID),
-              orderBy('createdAt', 'desc'),
-              limit(5)
+              where('createdAt', '>=', fourteenDaysAgoTimestamp),
+              orderBy('createdAt', 'desc')
             );
 
             unsubscribeBusinessCases = onSnapshot(businessCasesQuery,
@@ -287,7 +298,7 @@ export default function Dashboard() {
                 setStats(prev => ({
                   ...prev,
                   totalBusinessCases: snapshot.size,
-                  recentBusinessCases: cases,
+                  recentBusinessCases: cases.slice(0, 5), // Zobrazíme len 5 najnovších prípadov v zozname
                   activeBusinessCases: cases.filter(bc => 
                     bc.status !== 'CLOSED' && 
                     bc.status !== 'CANCELED' && 
@@ -295,6 +306,11 @@ export default function Dashboard() {
                   ).length,
                   statusDistribution
                 }));
+                
+                // Pridáme malé oneskorenie aby sa animácia zobrazila
+                setTimeout(() => {
+                  setStatusGraphLoading(false);
+                }, 800);
               },
               (error) => {
                 console.error('Chyba pri sledovaní business cases:', error);
@@ -302,6 +318,7 @@ export default function Dashboard() {
                   setTimeout(() => setupBusinessCasesListener(retryCount + 1), 1000 * (retryCount + 1));
                 } else {
                   setError('Nepodarilo sa načítať obchodné prípady');
+                  setStatusGraphLoading(false);
                 }
               }
             );
@@ -309,6 +326,8 @@ export default function Dashboard() {
             console.error('Chyba pri nastavovaní business cases listenera:', err);
             if (retryCount < 3) {
               setTimeout(() => setupBusinessCasesListener(retryCount + 1), 1000 * (retryCount + 1));
+            } else {
+              setStatusGraphLoading(false);
             }
           }
         };
@@ -571,89 +590,169 @@ export default function Dashboard() {
                 fontSize: { xs: '1.1rem', sm: '1.25rem' },
                 fontWeight: 600
               }}>
-                Rozdelenie podľa statusu
+                Rozdelenie podľa statusu (posledných 14 dní)
               </Typography>
-              <Box sx={{ 
-                width: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: { xs: 1.5, sm: 2 },
-                position: 'relative'
-              }}>
-                {/* Progress Bar Container */}
-                <Box sx={{ 
-                  width: '100%',
-                  height: { xs: '20px', sm: '24px' },
-                  borderRadius: { xs: '10px', sm: '12px' },
-                  overflow: 'hidden',
-                  display: 'flex',
-                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                }}>
-                  {stats.statusDistribution.map((item, index) => {
-                    const percentage = (item.value / (item.total || 1)) * 100;
-                    return (
-                      <Box
-                        key={item.name}
-                        sx={{
-                          width: `${percentage}%`,
-                          height: '100%',
-                          backgroundColor: COLORS[index % COLORS.length],
-                          position: 'relative',
-                          borderRight: index !== stats.statusDistribution.length - 1 ? '2px solid rgba(0,0,0,0.1)' : 'none'
-                        }}
-                      />
-                    );
-                  })}
-                </Box>
-
-                {/* Legend */}
-                <Box
-                  sx={{ 
+              
+              {statusGraphLoading ? (
+                <Fade in={statusGraphLoading} timeout={800}>
+                  <Box sx={{ width: '100%' }}>
+                    {/* Skeleton pre graf počas načítania */}
+                    <Skeleton 
+                      variant="rectangular" 
+                      width="100%" 
+                      height={24} 
+                      sx={{ 
+                        borderRadius: '12px',
+                        bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        mb: 2
+                      }} 
+                    />
+                    
+                    <Box sx={{ 
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 2,
+                      mt: 1
+                    }}>
+                      {[1, 2, 3, 4].map((item) => (
+                        <Box
+                          key={item}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            flexBasis: { xs: '45%', sm: 'auto' }
+                          }}
+                        >
+                          <Skeleton 
+                            variant="rectangular" 
+                            width={12} 
+                            height={12} 
+                            sx={{ 
+                              borderRadius: '3px',
+                              bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                            }} 
+                          />
+                          <Skeleton 
+                            variant="text" 
+                            width={100} 
+                            sx={{ 
+                              bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                            }} 
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                    
+                    <Skeleton 
+                      variant="text" 
+                      width={80} 
+                      sx={{ 
+                        mt: 1,
+                        bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                      }} 
+                    />
+                  </Box>
+                </Fade>
+              ) : (
+                <Grow in={!statusGraphLoading} timeout={800}>
+                  <Box sx={{ 
+                    width: '100%',
                     display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: { xs: 1, sm: 2 },
-                    mt: { xs: 0.5, sm: 1 }
-                  }}
-                >
-                  {stats.statusDistribution.map((item, index) => (
+                    flexDirection: 'column',
+                    gap: { xs: 1.5, sm: 2 },
+                    position: 'relative'
+                  }}>
+                    {/* Progress Bar Container */}
+                    <Box sx={{ 
+                      width: '100%',
+                      height: { xs: '20px', sm: '24px' },
+                      borderRadius: { xs: '10px', sm: '12px' },
+                      overflow: 'hidden',
+                      display: 'flex',
+                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    }}>
+                      {stats.statusDistribution.map((item, index) => {
+                        const percentage = (item.value / (item.total || 1)) * 100;
+                        return (
+                          <Box
+                            key={item.name}
+                            sx={{
+                              width: `${percentage}%`,
+                              height: '100%',
+                              backgroundColor: COLORS[index % COLORS.length],
+                              position: 'relative',
+                              borderRight: index !== stats.statusDistribution.length - 1 ? '2px solid rgba(0,0,0,0.1)' : 'none',
+                              transition: 'width 1s ease-in-out',
+                              animation: `growWidth 1.2s ease-out ${index * 0.15}s`,
+                              '@keyframes growWidth': {
+                                from: { width: '0%' },
+                                to: { width: `${percentage}%` }
+                              }
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
+
+                    {/* Legend */}
                     <Box
-                      key={item.name}
-                      sx={{
+                      sx={{ 
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        flexBasis: { xs: '45%', sm: 'auto' }
+                        flexWrap: 'wrap',
+                        gap: { xs: 1, sm: 2 },
+                        mt: { xs: 0.5, sm: 1 }
                       }}
                     >
-                      <Box
-                        sx={{
-                          width: { xs: '10px', sm: '12px' },
-                          height: { xs: '10px', sm: '12px' },
-                          borderRadius: '3px',
-                          backgroundColor: COLORS[index % COLORS.length]
-                        }}
-                      />
-                      <Typography sx={{ 
-                        color: isDarkMode ? '#ffffff' : '#000000',
-                        fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                        fontWeight: 500
-                      }}>
-                        {item.name}: {item.value} ({((item.value / (item.total || 1)) * 100).toFixed(1)}%)
-                      </Typography>
+                      {stats.statusDistribution.map((item, index) => (
+                        <Fade 
+                          key={item.name}
+                          in={true} 
+                          timeout={500} 
+                          style={{ transitionDelay: `${150 + index * 100}ms` }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              flexBasis: { xs: '45%', sm: 'auto' }
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: { xs: '10px', sm: '12px' },
+                                height: { xs: '10px', sm: '12px' },
+                                borderRadius: '3px',
+                                backgroundColor: COLORS[index % COLORS.length]
+                              }}
+                            />
+                            <Typography sx={{ 
+                              color: isDarkMode ? '#ffffff' : '#000000',
+                              fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                              fontWeight: 500
+                            }}>
+                              {item.name}: {item.value} ({((item.value / (item.total || 1)) * 100).toFixed(1)}%)
+                            </Typography>
+                          </Box>
+                        </Fade>
+                      ))}
                     </Box>
-                  ))}
-                </Box>
 
-                {/* Total */}
-                <Typography sx={{ 
-                  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                  fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                  fontWeight: 500,
-                  mt: { xs: 0.5, sm: 1 }
-                }}>
-                  Celkom: {stats.statusDistribution.reduce((acc, curr) => acc + curr.value, 0)}
-                </Typography>
-              </Box>
+                    {/* Total */}
+                    <Fade in={true} timeout={800} style={{ transitionDelay: '600ms' }}>
+                      <Typography sx={{ 
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                        fontWeight: 500,
+                        mt: { xs: 0.5, sm: 1 }
+                      }}>
+                        Celkom: {stats.statusDistribution.reduce((acc, curr) => acc + curr.value, 0)}
+                      </Typography>
+                    </Fade>
+                  </Box>
+                </Grow>
+              )}
             </StatsCardContent>
           </StatsCard>
         </Grid>
