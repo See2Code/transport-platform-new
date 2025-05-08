@@ -66,6 +66,9 @@ import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { useChatUI } from '../AppContent';
 import { alpha } from '@mui/material/styles';
+import Tooltip from '@mui/material/Tooltip';
+import { TooltipProps } from '@mui/material/Tooltip';
+import { createPortal } from 'react-dom';
 
 const drawerWidth = 240;
 const miniDrawerWidth = 64;
@@ -731,6 +734,168 @@ const SolidDialogPaper = styled(Paper)(({ theme }) => ({
   backgroundImage: 'none',
 }));
 
+// Pridáme klučové animácie do globálnych štýlov
+const globalStyles = {
+  '@keyframes fadeInTooltip': {
+    '0%': { 
+      opacity: 0, 
+      transform: 'translateX(-50%) translateY(10px)' 
+    },
+    '100%': { 
+      opacity: 1, 
+      transform: 'translateX(-50%) translateY(0)' 
+    },
+  },
+};
+
+// Úplne nový vlastný tooltip bez závislosti na MUI Tooltip
+interface BareTooltipProps {
+  title: React.ReactNode;
+  children: React.ReactElement;
+  placement?: 'top' | 'bottom' | 'left' | 'right';
+  enterDelay?: number;
+  leaveDelay?: number;
+}
+
+const BareTooltip: FC<BareTooltipProps> = ({ 
+  title, 
+  children, 
+  placement = 'bottom',
+  enterDelay = 300,
+  leaveDelay = 200
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const childRef = useRef<HTMLElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const enterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const theme = useTheme();
+  const { isDarkMode } = useThemeMode();
+
+  // Prida globálne štýly
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes fadeInTooltip {
+        from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+    
+    enterTimeoutRef.current = setTimeout(() => {
+      if (childRef.current) {
+        const rect = childRef.current.getBoundingClientRect();
+        
+        let top = 0;
+        let left = 0;
+        
+        switch (placement) {
+          case 'top':
+            top = rect.top - (tooltipRef.current?.offsetHeight || 0) - 10;
+            left = rect.left + rect.width / 2;
+            break;
+          case 'bottom':
+            top = rect.bottom + 10;
+            left = rect.left + rect.width / 2;
+            break;
+          case 'left':
+            top = rect.top + rect.height / 2;
+            left = rect.left - (tooltipRef.current?.offsetWidth || 0) - 10;
+            break;
+          case 'right':
+            top = rect.top + rect.height / 2;
+            left = rect.right + 10;
+            break;
+        }
+        
+        setPosition({ top, left });
+        setIsVisible(true);
+      }
+    }, enterDelay);
+  };
+
+  const handleMouseLeave = () => {
+    if (enterTimeoutRef.current) {
+      clearTimeout(enterTimeoutRef.current);
+      enterTimeoutRef.current = null;
+    }
+    
+    leaveTimeoutRef.current = setTimeout(() => {
+      setIsVisible(false);
+    }, leaveDelay);
+  };
+
+  // Čistenie timeoutov pri unmount
+  useEffect(() => {
+    return () => {
+      if (enterTimeoutRef.current) clearTimeout(enterTimeoutRef.current);
+      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
+    };
+  }, []);
+
+  // Pridávame event handlery pre hover a focus
+  const child = React.cloneElement(children, {
+    ref: childRef,
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+    onFocus: handleMouseEnter,
+    onBlur: handleMouseLeave,
+  });
+
+  return (
+    <>
+      {child}
+      {isVisible && createPortal(
+        <div
+          ref={tooltipRef}
+          style={{
+            position: 'fixed',
+            top: position.top,
+            left: position.left,
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            padding: '10px 16px',
+            backgroundColor: isDarkMode 
+              ? 'rgba(15, 23, 42, 0.85)'
+              : 'rgba(255, 255, 255, 0.92)',
+            color: isDarkMode ? '#ffffff' : '#0f172a',
+            borderRadius: '12px',
+            fontSize: '0.85rem',
+            fontWeight: 500,
+            letterSpacing: '0.2px',
+            boxShadow: isDarkMode
+              ? '0 16px 24px -6px rgba(0, 0, 0, 0.3), 0 4px 10px -3px rgba(0, 0, 0, 0.25)'
+              : '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            backdropFilter: 'blur(12px)',
+            pointerEvents: 'none', // Aby tooltip nereagoval na mouse eventy
+            animationName: 'fadeInTooltip',
+            animationDuration: '0.2s',
+            animationFillMode: 'forwards',
+          }}
+          onMouseEnter={handleMouseLeave}
+        >
+          {title}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
+
 const Navbar: FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -802,62 +967,153 @@ const Navbar: FC = () => {
 
           {!isMobile && (
             <Box sx={{ display: 'flex', flexGrow: 1, ml: 4 }}>
-              <Button
-                color="inherit"
-                startIcon={<DashboardIcon />}
-                onClick={() => navigate('/dashboard')}
-                sx={{ mr: 2 }}
+              <BareTooltip
+                title="Dashboard"
+                placement="bottom"
+                enterDelay={300}
+                leaveDelay={200}
               >
-                Dashboard
-              </Button>
-              <Button
-                color="inherit"
-                startIcon={<BusinessIcon />}
-                onClick={() => navigate('/business-cases')}
-                sx={{ mr: 2 }}
+                <Button
+                  color="inherit"
+                  startIcon={<DashboardIcon />}
+                  onClick={() => navigate('/dashboard')}
+                  sx={{
+                    mr: 2,
+                    transition: 'transform 0.2s ease, background-color 0.2s ease',
+                    '&:hover, &.Mui-focusVisible': {
+                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      transform: 'translateY(-2px)'
+                    },
+                  }}
+                  aria-label="Dashboard"
+                />
+              </BareTooltip>
+              <BareTooltip
+                title="Business Cases"
+                placement="bottom"
+                enterDelay={300}
+                leaveDelay={200}
               >
-                Business Cases
-              </Button>
-              <Button
-                color="inherit"
-                startIcon={<LocalShippingIcon />}
-                onClick={() => navigate('/orders')}
-                sx={{ mr: 2 }}
+                <Button
+                  color="inherit"
+                  startIcon={<BusinessIcon />}
+                  onClick={() => navigate('/business-cases')}
+                  sx={{
+                    mr: 2,
+                    transition: 'transform 0.2s ease, background-color 0.2s ease',
+                    '&:hover, &.Mui-focusVisible': {
+                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      transform: 'translateY(-2px)'
+                    },
+                  }}
+                  aria-label="Business Cases"
+                />
+              </BareTooltip>
+              <BareTooltip
+                title="Objednávky"
+                placement="bottom"
+                enterDelay={300}
+                leaveDelay={200}
               >
-                Objednávky
-              </Button>
-              <Button
-                color="inherit"
-                startIcon={<VisibilityIcon />}
-                onClick={() => navigate('/tracked-shipments')}
-                sx={{ mr: 2 }}
+                <Button
+                  color="inherit"
+                  startIcon={<LocalShippingIcon />}
+                  onClick={() => navigate('/orders')}
+                  sx={{
+                    mr: 2,
+                    transition: 'transform 0.2s ease, background-color 0.2s ease',
+                    '&:hover, &.Mui-focusVisible': {
+                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      transform: 'translateY(-2px)'
+                    },
+                  }}
+                  aria-label="Objednávky"
+                />
+              </BareTooltip>
+              <BareTooltip
+                title="Sledované prepravy"
+                placement="bottom"
+                enterDelay={300}
+                leaveDelay={200}
               >
-                Sledované prepravy
-              </Button>
-              <Button
-                color="inherit"
-                startIcon={<LocationOnIcon />}
-                onClick={() => navigate('/vehicle-map')}
-                sx={{ mr: 2 }}
+                <Button
+                  color="inherit"
+                  startIcon={<VisibilityIcon />}
+                  onClick={() => navigate('/tracked-shipments')}
+                  sx={{
+                    mr: 2,
+                    transition: 'transform 0.2s ease, background-color 0.2s ease',
+                    '&:hover, &.Mui-focusVisible': {
+                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      transform: 'translateY(-2px)'
+                    },
+                  }}
+                  aria-label="Sledované prepravy"
+                />
+              </BareTooltip>
+              <BareTooltip
+                title="Mapa vozidiel"
+                placement="bottom"
+                enterDelay={300}
+                leaveDelay={200}
               >
-                Mapa vozidiel
-              </Button>
-              <Button
-                color="inherit"
-                startIcon={<PeopleIcon />}
-                onClick={() => navigate('/team')}
-                sx={{ mr: 2 }}
+                <Button
+                  color="inherit"
+                  startIcon={<LocationOnIcon />}
+                  onClick={() => navigate('/vehicle-map')}
+                  sx={{
+                    mr: 2,
+                    transition: 'transform 0.2s ease, background-color 0.2s ease',
+                    '&:hover, &.Mui-focusVisible': {
+                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      transform: 'translateY(-2px)'
+                    },
+                  }}
+                  aria-label="Mapa vozidiel"
+                />
+              </BareTooltip>
+              <BareTooltip
+                title="Tím"
+                placement="bottom"
+                enterDelay={300}
+                leaveDelay={200}
               >
-                Tím
-              </Button>
-              <Button
-                color="inherit"
-                startIcon={<SettingsIcon />}
-                onClick={() => navigate('/settings')}
-                sx={{ mr: 2 }}
+                <Button
+                  color="inherit"
+                  startIcon={<PeopleIcon />}
+                  onClick={() => navigate('/team')}
+                  sx={{
+                    mr: 2,
+                    transition: 'transform 0.2s ease, background-color 0.2s ease',
+                    '&:hover, &.Mui-focusVisible': {
+                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      transform: 'translateY(-2px)'
+                    },
+                  }}
+                  aria-label="Tím"
+                />
+              </BareTooltip>
+              <BareTooltip
+                title="Nastavenia"
+                placement="bottom"
+                enterDelay={300}
+                leaveDelay={200}
               >
-                Nastavenia
-              </Button>
+                <Button
+                  color="inherit"
+                  startIcon={<SettingsIcon />}
+                  onClick={() => navigate('/settings')}
+                  sx={{
+                    mr: 2,
+                    transition: 'transform 0.2s ease, background-color 0.2s ease',
+                    '&:hover, &.Mui-focusVisible': {
+                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      transform: 'translateY(-2px)'
+                    },
+                  }}
+                  aria-label="Nastavenia"
+                />
+              </BareTooltip>
             </Box>
           )}
 
