@@ -178,7 +178,7 @@ const STATUS_COLORS: Record<string, string> = {
   'EMAIL_SENT': '#48dbfb', // modrá
   'CALLED': '#ff9f43',     // oranžová
   'CALL_LATER': '#ff9ff3', // ružová
-  'NOT_CALLED': '#800020', // bordová
+  'NOT_CALLED': '#9c27b0', // tmavo fialová (zmenené z bordovej)
   'NOT_INTERESTED': '#ff6b6b', // červená
   'CLOSED': '#9e9e9e',     // šedá
   'CANCELED': '#616161',   // tmavá šedá
