@@ -1061,7 +1061,7 @@ const Navbar: FC = () => {
               >
                 <Button
                   color="inherit"
-                  startIcon={<LocalShippingIcon />}
+                  startIcon={<ReceiptIcon />}
                   onClick={() => navigate('/orders')}
                   sx={{
                     mr: 2,
@@ -1217,7 +1217,7 @@ const Navbar: FC = () => {
               <ListItemText primary="Business Cases" />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/orders'); setDrawerOpen(false); }}>
-              <ListItemIcon><LocalShippingIcon /></ListItemIcon>
+              <ListItemIcon><ReceiptIcon /></ListItemIcon>
               <ListItemText primary="Objednávky" />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/tracked-shipments'); setDrawerOpen(false); }}>

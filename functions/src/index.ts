@@ -175,7 +175,7 @@ export const sendInvitationEmail = functions
         <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td align="center" bgcolor="#ff9f43" style="padding: 40px 30px; border-radius: 8px 8px 0 0;">
+            <td align="center" bgcolor="#333" style="padding: 40px 30px; border-radius: 8px 8px 0 0;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; font-family: 'Segoe UI', Arial, sans-serif;">AESA Transport Platform</h1>
             </td>
           </tr>
@@ -218,7 +218,7 @@ export const sendInvitationEmail = functions
         <table border="0" cellpadding="0" cellspacing="0" width="100%">
           <tr>
             <td align="center" style="padding: 25px 0;">
-              <a href="${invitationLink}" style="display: inline-block; padding: 14px 32px; background-color: #ff9f43; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Prijať pozvánku</a>
+              <a href="${invitationLink}" style="display: inline-block; padding: 14px 32px; background-color: #333; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Prijať pozvánku</a>
             </td>
           </tr>
         </table>
@@ -328,7 +328,7 @@ export const checkBusinessCaseReminders = functions
         <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td align="center" bgcolor="#ff9f43" style="padding: 40px 30px; border-radius: 8px 8px 0 0;">
+            <td align="center" bgcolor="#333" style="padding: 40px 30px; border-radius: 8px 8px 0 0;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; font-family: 'Segoe UI', Arial, sans-serif;">AESA Transport Platform</h1>
             </td>
           </tr>
@@ -364,7 +364,7 @@ export const checkBusinessCaseReminders = functions
             <table border="0" cellpadding="0" cellspacing="0" width="100%">
               <tr>
                 <td align="center" style="padding: 25px 0;">
-                  <a href="https://core-app-423c7.web.app/business-cases/${reminder.businessCaseId}" style="display: inline-block; padding: 14px 32px; background-color: #ff9f43; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Zobraziť obchodný prípad</a>
+                  <a href="https://core-app-423c7.web.app/business-cases/${reminder.businessCaseId}" style="display: inline-block; padding: 14px 32px; background-color: #333; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Zobraziť obchodný prípad</a>
                 </td>
               </tr>
             </table>`;
@@ -865,6 +865,7 @@ export const generateOrderPdf = functions
         businessID?: string;
         vatID?: string;
         companyID?: string;
+        legalForm?: string;
         [key: string]: any;
       } = {};
       try {
@@ -970,10 +971,10 @@ export const generateOrderPdf = functions
         format: 'a4',
         printBackground: true,
         margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm'
+          top: '40mm',
+          right: '40mm',
+          bottom: '40mm',
+          left: '40mm'
         }
       });
       await browser.close();
@@ -1017,7 +1018,10 @@ function generateOrderHtml(orderData: any, settings: any): string {
   const customerVatID = orderData.customerVatId || 'N/A';
   
   // Informácie o dodávateľovi (z nastavení)
-  const companyName = settings?.companyName || 'AESA GROUP';
+  const companyName = settings?.companyName || 'AESA Group, SE';
+  // Priame použitie companyName bez ďalšieho pridávania právnej formy
+  const companyFullName = companyName;
+  
   const companyAddress = formatAddress(
     settings?.street || 'Pekárska 11',
     settings?.city || 'Trnava',
@@ -1133,13 +1137,14 @@ function generateOrderHtml(orderData: any, settings: any): string {
         }
         .container {
           max-width: 100%;
-          margin: 0;
-          padding: 0;
+          margin: 0 auto;
+          padding: 15px;
+          box-sizing: border-box;
         }
         .header {
-          margin-bottom: 20px;
-          border-bottom: 2px solid #ff9f43;
-          padding-bottom: 10px;
+          margin-bottom: 25px;
+          border-bottom: 2px solid #333;
+          padding-bottom: 15px;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -1147,14 +1152,18 @@ function generateOrderHtml(orderData: any, settings: any): string {
         .company-name {
           font-size: 24px;
           font-weight: bold;
-          color: #ff9f43;
+          color: #333;
         }
         .company-logo {
           max-height: 60px;
           max-width: 200px;
+          margin-bottom: 8px;
         }
         .date {
           text-align: right;
+        }
+        .company-info {
+          margin-top: 5px;
         }
         .order-title {
           text-align: center;
@@ -1167,6 +1176,7 @@ function generateOrderHtml(orderData: any, settings: any): string {
           display: flex;
           justify-content: space-between;
           margin-bottom: 25px;
+          page-break-inside: avoid;
         }
         .info-box {
           background-color: #f9f9f9;
@@ -1176,18 +1186,20 @@ function generateOrderHtml(orderData: any, settings: any): string {
           width: 48%;
         }
         h3 {
-          color: #ff9f43;
+          color: #333;
           border-bottom: 1px solid #eee;
-          padding-bottom: 5px;
-          margin-top: 25px;
+          padding-bottom: 8px;
+          margin-top: 30px;
           margin-bottom: 15px;
           font-size: 16px;
+          page-break-after: avoid;
         }
         h4 {
-          margin-top: 5px;
-          margin-bottom: 10px;
+          margin-top: 10px;
+          margin-bottom: 12px;
           color: #555;
           font-size: 14px;
+          page-break-after: avoid;
         }
         .place-box {
           background-color: #f9f9f9;
@@ -1195,16 +1207,18 @@ function generateOrderHtml(orderData: any, settings: any): string {
           border-radius: 5px;
           padding: 15px;
           margin-bottom: 15px;
+          page-break-inside: avoid;
         }
         .goods-list {
-          margin-top: 10px;
+          margin-top: 12px;
           padding-left: 15px;
         }
         .goods-item {
-          margin-bottom: 8px;
+          margin-bottom: 10px;
+          page-break-inside: avoid;
         }
         .goods-item p {
-          margin: 3px 0;
+          margin: 4px 0;
         }
         .description {
           font-style: italic;
@@ -1216,17 +1230,20 @@ function generateOrderHtml(orderData: any, settings: any): string {
           font-size: 10px;
           color: #777;
           border-top: 1px solid #eee;
-          padding-top: 10px;
+          padding-top: 12px;
+          page-break-inside: avoid;
         }
         .carrier-info {
-          margin-top: 25px;
+          margin-top: 30px;
+          page-break-inside: avoid;
         }
         .price-info {
-          margin-top: 25px;
+          margin-top: 30px;
           background-color: #f5f5f5;
           padding: 15px;
           border-radius: 5px;
-          border-left: 3px solid #ff9f43;
+          border-left: 3px solid #333;
+          page-break-inside: avoid;
         }
         .page-break {
           page-break-after: always;
@@ -1238,14 +1255,14 @@ function generateOrderHtml(orderData: any, settings: any): string {
         }
         th, td {
           text-align: left;
-          padding: 8px;
+          padding: 10px;
           border: 1px solid #ddd;
         }
         th {
           background-color: #f2f2f2;
         }
         @page {
-          margin: 0.5cm;
+          margin: 1cm;
         }
       </style>
     </head>
@@ -1257,8 +1274,9 @@ function generateOrderHtml(orderData: any, settings: any): string {
               ? `<img src="${settings.logoBase64}" alt="${safeText(companyName)}" class="company-logo" />`
               : `<div class="company-name">${safeText(companyName)}</div>`
             }
-            <div>${safeText(companyAddress)}</div>
-            <div>IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</div>
+            <div class="company-info">
+              <p><strong>${safeText(companyFullName)}</strong> | ${safeText(companyAddress)} | IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
+            </div>
           </div>
           <div class="date">
             <div>${safeText(settings?.city || 'Trnava')}, ${createdAtDate}</div>
@@ -1276,7 +1294,7 @@ function generateOrderHtml(orderData: any, settings: any): string {
           </div>
           <div class="info-box">
             <h3>Predajca</h3>
-            <p><strong>${safeText(companyName)}</strong></p>
+            <p><strong>${safeText(companyFullName)}</strong></p>
             <p>${safeText(companyAddress)}</p>
             <p>IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
           </div>
@@ -1298,7 +1316,7 @@ function generateOrderHtml(orderData: any, settings: any): string {
 
         <div class="footer">
           <p>Dokument bol automaticky vygenerovaný v AESA Transport Platform | ${new Date().toLocaleDateString('sk-SK')}</p>
-          <p>${safeText(companyName)} | ${safeText(companyAddress)} | IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
+          <p>${safeText(companyFullName)} | ${safeText(companyAddress)} | IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
         </div>
       </div>
     </body>

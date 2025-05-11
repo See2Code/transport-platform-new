@@ -653,6 +653,7 @@ const OrdersList: React.FC = () => {
   const [selectedCarrierForEdit, setSelectedCarrierForEdit] = useState<Carrier | null>(null);
   const [showCarrierDeleteConfirm, setShowCarrierDeleteConfirm] = useState(false);
   const [carrierToDelete, setCarrierToDelete] = useState<string>('');
+  const [loadingPdf, setLoadingPdf] = useState(false);
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   
@@ -1011,7 +1012,8 @@ const OrdersList: React.FC = () => {
         return;
       }
       
-      setLoading(true);
+      setLoadingPdf(true);
+      setShowPdfPreview(true);
       
       // Volanie serverovej funkcie pre generovanie PDF
       const generatePdf = httpsCallable(functions, 'generateOrderPdf');
@@ -1032,13 +1034,13 @@ const OrdersList: React.FC = () => {
       // Vytvorenie URL pre blob
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
-      setShowPdfPreview(true);
       
-      setLoading(false);
+      setLoadingPdf(false);
     } catch (error) {
       console.error('Chyba pri generovaní náhľadu PDF:', error);
       alert('Nastala chyba pri generovaní PDF objednávky: ' + (error as Error).message);
-      setLoading(false);
+      setLoadingPdf(false);
+      setShowPdfPreview(false);
     }
   };
 
@@ -2268,12 +2270,36 @@ const OrdersList: React.FC = () => {
             </Box>
         </DialogTitle>
         <DialogContent sx={{ padding: 0, height: 'calc(100% - 64px)' }}>
-            {pdfUrl && (
+            {loadingPdf ? (
+                <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    height: '100%',
+                    width: '100%',
+                    p: 3
+                }}>
+                    <CircularProgress size={60} sx={{ mb: 2 }} />
+                    <Typography variant="h6" sx={{ mb: 1 }}>Načítavam PDF objednávky...</Typography>
+                    <Typography variant="body2" color="text.secondary">Tento proces môže trvať niekoľko sekúnd, prosím počkajte.</Typography>
+                </Box>
+            ) : pdfUrl ? (
                 <iframe 
                     src={pdfUrl} 
                     style={{ width: '100%', height: '100%', border: 'none' }}
                     title="PDF preview"
                 />
+            ) : (
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    height: '100%',
+                    width: '100%'
+                }}>
+                    <Typography>PDF sa nepodarilo načítať.</Typography>
+                </Box>
             )}
         </DialogContent>
     </Dialog>
