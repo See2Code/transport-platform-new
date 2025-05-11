@@ -854,33 +854,96 @@ export const generateOrderPdf = functions
       }
 
       // Získanie nastavení spoločnosti (logo, farby, atď.)
-      let companySettings = null;
+      let companySettings: {
+        logoUrl?: string;
+        logoBase64?: string;
+        logoName?: string;
+        companyName?: string;
+        street?: string;
+        city?: string;
+        zip?: string;
+        businessID?: string;
+        vatID?: string;
+        companyID?: string;
+        [key: string]: any;
+      } = {};
       try {
-        const settingsQuery = await admin.firestore()
-          .collection('companySettings')
-          .where('companyID', '==', orderData.companyID)
-          .limit(1)
-          .get();
+        console.log("Hľadám nastavenia spoločnosti pre companyID:", orderData.companyID);
         
-        if (!settingsQuery.empty) {
-          companySettings = settingsQuery.docs[0].data();
+        // Najprv skúsime získať logo priamo zo storage zo správnej cesty
+        try {
+          // Z obrázku vidíme, že logo je v ceste companies/AESA-9614-0263/logo.png
+          // Použijeme companyID z orderData
+          console.log("Skúšam načítať logo priamo z cesty: companies/" + orderData.companyID + "/logo.png");
           
-          // Pokúsime sa stiahnuť logo ak existuje URL
-          if (companySettings.logoUrl && typeof companySettings.logoUrl === 'string') {
+          const storagePath = `companies/${orderData.companyID}/logo.png`;
+          const storageFile = admin.storage().bucket().file(storagePath);
+          
+          // Kontrola, či súbor existuje
+          const [exists] = await storageFile.exists();
+          if (exists) {
+            console.log("Logo nájdené v Storage na ceste:", storagePath);
+            
+            // Načítame priamo binárny obsah súboru namiesto použitia URL
             try {
-              console.log("Sťahujem logo z URL:", companySettings.logoUrl);
-              // Pokúsime sa stiahnuť logo pomocou axios alebo node-fetch
-              const axios = require('axios');
-              const response = await axios.get(companySettings.logoUrl, { responseType: 'arraybuffer' });
-              const logoBase64 = Buffer.from(response.data).toString('base64');
-              const mimeType = response.headers['content-type'] || 'image/png';
+              const [fileContent] = await storageFile.download();
+              // Konvertujeme na base64
+              const logoBase64 = fileContent.toString('base64');
+              const mimeType = 'image/png';  // Pevne nastavujeme PNG, keďže vieme, že je to PNG
               companySettings.logoBase64 = `data:${mimeType};base64,${logoBase64}`;
-              console.log("Logo úspešne stiahnuté a konvertované na base64");
-            } catch (logoError) {
-              console.error('Chyba pri sťahovaní loga:', logoError);
-              // Necháme companySettings.logoBase64 ako undefined
+              console.log("Logo úspešne načítané priamo zo Storage a konvertované do base64, dĺžka:", logoBase64.length);
+            } catch (downloadError) {
+              console.error("Chyba pri sťahovaní súboru zo Storage:", downloadError);
+            }
+          } else {
+            console.log("Logo nebolo nájdené na ceste:", storagePath);
+          }
+        } catch (storageError) {
+          console.error("Chyba pri načítaní loga zo Storage:", storageError);
+        }
+        
+        // Ak sme nenašli logo v Storage, skúsime nastavenia spoločnosti a iné metódy
+        if (!companySettings.logoBase64) {
+          // Skúsime získať nastavenia z companySettings kolekcie
+          const settingsQuery = await admin.firestore()
+            .collection('companySettings')
+            .where('companyID', '==', orderData.companyID)
+            .limit(1)
+            .get();
+          
+          if (!settingsQuery.empty) {
+            const settingsData = settingsQuery.docs[0].data();
+            // Zlúčime existujúce nastavenia s novými
+            companySettings = { ...companySettings, ...settingsData };
+            console.log("Nastavenia spoločnosti nájdené v kolekcii companySettings");
+            
+            // Ak máme logoUrl z nastavení, pokúsime sa ho stiahnuť
+            if (companySettings.logoUrl && typeof companySettings.logoUrl === 'string' && !companySettings.logoBase64) {
+              try {
+                console.log("Sťahujem logo z URL z nastavení:", companySettings.logoUrl);
+                // Pokúsime sa stiahnuť logo pomocou axios
+                const axios = require('axios');
+                const response = await axios.get(companySettings.logoUrl, { 
+                  responseType: 'arraybuffer',
+                  headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                  } 
+                });
+                const logoBase64 = Buffer.from(response.data).toString('base64');
+                const mimeType = response.headers['content-type'] || 'image/png';
+                companySettings.logoBase64 = `data:${mimeType};base64,${logoBase64}`;
+                console.log("Logo úspešne stiahnuté a konvertované na base64, dĺžka base64:", logoBase64.length);
+              } catch (logoError) {
+                console.error('Chyba pri sťahovaní loga z URL:', logoError);
+              }
             }
           }
+        }
+        
+        if (!companySettings.logoBase64) {
+          console.log("Logo sa nepodarilo načítať žiadnym spôsobom");
         }
       } catch (error) {
         console.error('Chyba pri načítaní nastavení spoločnosti:', error);
