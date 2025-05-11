@@ -2,6 +2,8 @@ import * as functions from 'firebase-functions/v1';
 import { CallableContext } from 'firebase-functions/v1/https';
 import * as admin from 'firebase-admin';
 import * as nodemailer from 'nodemailer';
+import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
 // Inicializácia Firebase Admin
 admin.initializeApp();
@@ -740,4 +742,472 @@ export const getConversationMessages = chatFunctions.getConversationMessages;
 export const deleteConversation = chatFunctions.deleteConversation;
 
 // Prípadné ďalšie funkcie
-// export const otherApiProxy = apiProxy.otherApiProxy; 
+// export const otherApiProxy = apiProxy.otherApiProxy;
+
+// TODO: Implementovať generovanie PDF na serveri
+// 
+// Plán implementácie serverového generovania PDF:
+// 1. Nainštalovať potrebné knižnice (napr. puppeteer alebo pdfkit) do Firebase Functions
+// 2. Vytvoriť HTTP funkciu, ktorá prijme JSON údaje objednávky
+// 3. Vygenerovať HTML šablónu s údajmi objednávky
+// 4. Použiť knižnicu na konverziu HTML do PDF
+// 5. Vrátiť vygenerované PDF ako odpoveď
+// 6. Uložiť vygenerované PDF do Storage pre neskoršie stiahnutie
+
+// Pomocná funkcia na konverziu dátumu
+const convertToDate = (date: any): Date | null => {
+  if (!date) return null;
+  if (date instanceof Date) return date;
+  if (typeof date === 'object' && 'toDate' in date && typeof date.toDate === 'function') 
+    return date.toDate();
+  if (date.seconds) 
+    return new Date(date.seconds * 1000); // Pre Timestamp
+  if (typeof date === 'string' || typeof date === 'number')
+    return new Date(date);
+  return null; // Pre prípad, že typ nesedí s očakávanými
+};
+
+// Formátovanie dátumu pre zobrazenie v PDF
+const formatDate = (date: any, format: string = 'dd.MM.yyyy'): string => {
+  const d = convertToDate(date);
+  if (!d) return 'Neurčený';
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  if (format === 'dd.MM.yyyy') {
+    return `${day}.${month}.${year}`;
+  } else if (format === 'dd.MM.yyyy HH:mm') {
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  }
+  
+  return `${day}.${month}.${year}`;
+};
+
+// Funkcia pre bezpečný text
+const safeText = (text: any): string => {
+  if (text === undefined || text === null) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
+// Pomocná funkcia na formátovanie adresy
+const formatAddress = (street?: string, city?: string, zip?: string, country?: string): string => {
+  return [
+    street,
+    zip && city ? `${zip} ${city}` : (zip || city),
+    country
+  ].filter(Boolean).join(', ');
+};
+
+export const generateOrderPdf = functions
+  .region(REGION)
+  .runWith({
+    memory: '2GB',
+    timeoutSeconds: 300,
+  })
+  .https.onCall(async (data, context) => {
+    try {
+      // Kontrola autentifikácie
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          'unauthenticated',
+          'Vyžaduje sa prihlásenie pre generovanie PDF'
+        );
+      }
+
+      // Získanie ID objednávky alebo priamych údajov
+      let orderData;
+      if (data.orderId) {
+        const orderDoc = await admin.firestore().collection('orders').doc(data.orderId).get();
+        if (!orderDoc.exists) {
+          throw new functions.https.HttpsError('not-found', 'Objednávka nebola nájdená');
+        }
+        orderData = { id: data.orderId, ...orderDoc.data() };
+      } else if (data.orderData) {
+        orderData = data.orderData;
+      } else {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Chýba ID objednávky alebo údaje objednávky'
+        );
+      }
+
+      // Kontrola, či používateľ patrí k spoločnosti, ktorá vlastní objednávku
+      const userRef = await admin.firestore().collection('users').doc(context.auth.uid).get();
+      const userData = userRef.data();
+      
+      if (userData?.companyID !== orderData.companyID) {
+        console.log(`Používateľ ${context.auth.uid} nemá oprávnenie na prístup k objednávke spoločnosti ${orderData.companyID}`);
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Nemáte oprávnenie na prístup k tejto objednávke'
+        );
+      }
+
+      // Získanie nastavení spoločnosti (logo, farby, atď.)
+      let companySettings = null;
+      try {
+        const settingsQuery = await admin.firestore()
+          .collection('companySettings')
+          .where('companyID', '==', orderData.companyID)
+          .limit(1)
+          .get();
+        
+        if (!settingsQuery.empty) {
+          companySettings = settingsQuery.docs[0].data();
+        }
+      } catch (error) {
+        console.error('Chyba pri načítaní nastavení spoločnosti:', error);
+      }
+
+      // Generovanie HTML pre PDF
+      const htmlContent = generateOrderHtml(orderData, companySettings);
+
+      console.log('Spustenie prehliadača pomocou chrome-aws-lambda');
+      
+      // Generovanie PDF pomocou chrome-aws-lambda a puppeteer
+      const browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath,
+        headless: chromium.headless,
+      });
+
+      console.log('Chrome spustený úspešne');
+      
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      const pdfBuffer = await page.pdf({
+        format: 'a4',
+        printBackground: true,
+        margin: {
+          top: '20mm',
+          right: '20mm',
+          bottom: '20mm',
+          left: '20mm'
+        }
+      });
+      await browser.close();
+
+      // Vrátiť PDF priamo ako base64 string namiesto ukladania na Storage
+      const base64Data = pdfBuffer.toString('base64');
+      
+      return { 
+        success: true, 
+        pdfBase64: base64Data,
+        fileName: `objednavka_${orderData.orderNumberFormatted || orderData.id?.substring(0, 8) || 'temp'}.pdf`
+      };
+    } catch (error: any) {
+      console.error('Chyba pri generovaní PDF:', error);
+      throw new functions.https.HttpsError(
+        'internal',
+        `Nastala chyba pri generovaní PDF: ${error.message}`
+      );
+    }
+  });
+
+// Funkcia pre generovanie HTML šablóny objednávky
+function generateOrderHtml(orderData: any, settings: any): string {
+  const orderNumber = orderData.orderNumberFormatted || (orderData.id?.substring(0, 8) || 'N/A');
+  const createdAtDate = formatDate(orderData.createdAt);
+  
+  // Informácie o zákazníkovi
+  const customerCompany = orderData.zakaznik || orderData.customerCompany || 'N/A';
+  const customerAddress = formatAddress(
+    orderData.customerStreet,
+    orderData.customerCity,
+    orderData.customerZip,
+    orderData.customerCountry
+  );
+  const customerVatID = orderData.customerVatId || 'N/A';
+  
+  // Informácie o dodávateľovi (z nastavení)
+  const companyName = settings?.companyName || 'AESA GROUP';
+  const companyAddress = formatAddress(
+    settings?.street || 'Pekárska 11',
+    settings?.city || 'Trnava',
+    settings?.zip || 'SK91701',
+    'Slovensko'
+  );
+  const companyID = settings?.businessID || '55361731';
+  const companyVatID = settings?.vatID || 'SK2121966220';
+
+  // Generovanie sekcií pre miesta nakládky
+  let loadingPlacesHtml = '';
+  if (orderData.loadingPlaces && orderData.loadingPlaces.length > 0) {
+    orderData.loadingPlaces.forEach((place: any, index: number) => {
+      const dateTimeStr = place.dateTime ? formatDate(place.dateTime, 'dd.MM.yyyy HH:mm') : 'neurčený';
+      const refNumber = place.referenceNumber || 'N/A';
+      const hasGoods = place.goods && place.goods.length > 0;
+
+      let goodsHtml = '';
+      if (hasGoods) {
+        goodsHtml = '<div class="goods-list">';
+        place.goods.forEach((item: any) => {
+          goodsHtml += `
+            <div class="goods-item">
+              <p><strong>${safeText(item.name)}</strong> - ${safeText(item.quantity)} ${safeText(item.unit)}</p>
+              ${item.description ? `<p class="description">${safeText(item.description)}</p>` : ''}
+            </div>
+          `;
+        });
+        goodsHtml += '</div>';
+      }
+
+      loadingPlacesHtml += `
+        <div class="place-box">
+          <h4>Nakládka ${index + 1} - ${dateTimeStr}</h4>
+          <p><strong>Adresa:</strong> ${safeText(formatAddress(place.street, place.city, place.zip, place.country))}</p>
+          <p><strong>Kontaktná osoba:</strong> ${safeText(place.contactPerson)}</p>
+          <p><strong>Referenčné číslo:</strong> ${safeText(refNumber)}</p>
+          ${goodsHtml}
+        </div>
+      `;
+    });
+  } else {
+    loadingPlacesHtml = '<p>Žiadne miesta nakládky</p>';
+  }
+
+  // Generovanie sekcií pre miesta vykládky
+  let unloadingPlacesHtml = '';
+  if (orderData.unloadingPlaces && orderData.unloadingPlaces.length > 0) {
+    orderData.unloadingPlaces.forEach((place: any, index: number) => {
+      const dateTimeStr = place.dateTime ? formatDate(place.dateTime, 'dd.MM.yyyy HH:mm') : 'neurčený';
+      const refNumber = place.referenceNumber || 'N/A';
+      const hasGoods = place.goods && place.goods.length > 0;
+
+      let goodsHtml = '';
+      if (hasGoods) {
+        goodsHtml = '<div class="goods-list">';
+        place.goods.forEach((item: any) => {
+          goodsHtml += `
+            <div class="goods-item">
+              <p><strong>${safeText(item.name)}</strong> - ${safeText(item.quantity)} ${safeText(item.unit)}</p>
+              ${item.description ? `<p class="description">${safeText(item.description)}</p>` : ''}
+            </div>
+          `;
+        });
+        goodsHtml += '</div>';
+      }
+
+      unloadingPlacesHtml += `
+        <div class="place-box">
+          <h4>Vykládka ${index + 1} - ${dateTimeStr}</h4>
+          <p><strong>Adresa:</strong> ${safeText(formatAddress(place.street, place.city, place.zip, place.country))}</p>
+          <p><strong>Kontaktná osoba:</strong> ${safeText(place.contactPerson)}</p>
+          <p><strong>Referenčné číslo:</strong> ${safeText(refNumber)}</p>
+          ${goodsHtml}
+        </div>
+      `;
+    });
+  } else {
+    unloadingPlacesHtml = '<p>Žiadne miesta vykládky</p>';
+  }
+
+  // Generovanie sekcie dopravcu
+  let carrierHtml = '';
+  if (orderData.carrierCompany) {
+    carrierHtml = `
+      <div class="carrier-info">
+        <h3>Dopravca</h3>
+        <div class="info-box">
+          <p><strong>Názov:</strong> ${safeText(orderData.carrierCompany)}</p>
+          <p><strong>Kontakt:</strong> ${safeText(orderData.carrierContact || 'N/A')}</p>
+          <p><strong>EČV:</strong> ${safeText(orderData.carrierVehicleReg || 'N/A')}</p>
+          <p><strong>Cena prepravy:</strong> ${safeText(orderData.carrierPrice || '0')} EUR</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // Generovanie kompletného HTML pre PDF
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Objednávka prepravy ${orderNumber}</title>
+      <style>
+        body {
+          font-family: 'Helvetica', 'Arial', sans-serif;
+          line-height: 1.6;
+          color: #333;
+          margin: 0;
+          padding: 0;
+          font-size: 12px;
+        }
+        .container {
+          max-width: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        .header {
+          margin-bottom: 20px;
+          border-bottom: 2px solid #ff9f43;
+          padding-bottom: 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .company-name {
+          font-size: 24px;
+          font-weight: bold;
+          color: #ff9f43;
+        }
+        .date {
+          text-align: right;
+        }
+        .order-title {
+          text-align: center;
+          font-size: 20px;
+          font-weight: bold;
+          margin: 30px 0;
+          color: #333;
+        }
+        .info-section {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 25px;
+        }
+        .info-box {
+          background-color: #f9f9f9;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          padding: 15px;
+          width: 48%;
+        }
+        h3 {
+          color: #ff9f43;
+          border-bottom: 1px solid #eee;
+          padding-bottom: 5px;
+          margin-top: 25px;
+          margin-bottom: 15px;
+          font-size: 16px;
+        }
+        h4 {
+          margin-top: 5px;
+          margin-bottom: 10px;
+          color: #555;
+          font-size: 14px;
+        }
+        .place-box {
+          background-color: #f9f9f9;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          padding: 15px;
+          margin-bottom: 15px;
+        }
+        .goods-list {
+          margin-top: 10px;
+          padding-left: 15px;
+        }
+        .goods-item {
+          margin-bottom: 8px;
+        }
+        .goods-item p {
+          margin: 3px 0;
+        }
+        .description {
+          font-style: italic;
+          color: #777;
+        }
+        .footer {
+          margin-top: 30px;
+          text-align: center;
+          font-size: 10px;
+          color: #777;
+          border-top: 1px solid #eee;
+          padding-top: 10px;
+        }
+        .carrier-info {
+          margin-top: 25px;
+        }
+        .price-info {
+          margin-top: 25px;
+          background-color: #f5f5f5;
+          padding: 15px;
+          border-radius: 5px;
+          border-left: 3px solid #ff9f43;
+        }
+        .page-break {
+          page-break-after: always;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+        }
+        th, td {
+          text-align: left;
+          padding: 8px;
+          border: 1px solid #ddd;
+        }
+        th {
+          background-color: #f2f2f2;
+        }
+        @page {
+          margin: 0.5cm;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div>
+            <div class="company-name">${safeText(companyName)}</div>
+            <div>${safeText(companyAddress)}</div>
+            <div>IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</div>
+          </div>
+          <div class="date">
+            <div>${safeText(settings?.city || 'Trnava')}, ${createdAtDate}</div>
+          </div>
+        </div>
+
+        <div class="order-title">Dopravná objednávka č. ${safeText(orderNumber)}</div>
+
+        <div class="info-section">
+          <div class="info-box">
+            <h3>Príjemca</h3>
+            <p><strong>${safeText(customerCompany)}</strong></p>
+            <p>${safeText(customerAddress)}</p>
+            <p>IČ DPH: ${safeText(customerVatID)}</p>
+          </div>
+          <div class="info-box">
+            <h3>Predajca</h3>
+            <p><strong>${safeText(companyName)}</strong></p>
+            <p>${safeText(companyAddress)}</p>
+            <p>IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
+          </div>
+        </div>
+
+        <h3>Miesta nakládky</h3>
+        ${loadingPlacesHtml}
+
+        <h3>Miesta vykládky</h3>
+        ${unloadingPlacesHtml}
+
+        ${carrierHtml}
+
+        <div class="price-info">
+          <h3>Platobné informácie</h3>
+          <p><strong>Cena pre zákazníka:</strong> ${safeText(orderData.suma || orderData.customerPrice || '0')} ${safeText(orderData.mena || 'EUR')}</p>
+          <p><strong>Platobné podmienky:</strong> 14 dní</p>
+        </div>
+
+        <div class="footer">
+          <p>Dokument bol automaticky vygenerovaný v AESA Transport Platform | ${new Date().toLocaleDateString('sk-SK')}</p>
+          <p>${safeText(companyName)} | ${safeText(companyAddress)} | IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+} 

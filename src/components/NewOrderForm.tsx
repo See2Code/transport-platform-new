@@ -20,12 +20,12 @@ import { collection, addDoc, query, where, getDocs, Timestamp, doc, updateDoc, r
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import CustomerDialog from './dialogs/CustomerDialog';
 import CarrierDialog from './dialogs/CarrierDialog';
 import { AutocompleteRenderInputParams } from '@mui/material/Autocomplete';
 import type { FilterOptionsState } from '@mui/material/useAutocomplete';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
 
 // --- Initial Empty States ---
 const emptyGoodsItem: GoodsItem = {
@@ -536,116 +536,41 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
     };
 
     // Funkcia na generovanie PDF
-    const generatePDF = (orderData: OrderFormData & { id: string }) => {
+    const generatePDF = async (orderData: OrderFormData & { id: string }) => {
         try {
-            const doc = new jsPDF();
-            const pageWidth = doc.internal.pageSize.getWidth();
+            setIsSubmitting(true);
             
-            // Hlavička
-            doc.setFontSize(20);
-            doc.text('OBJEDNÁVKA PREPRAVY', pageWidth / 2, 20, { align: 'center' });
-            doc.setFontSize(12);
-            doc.text(`Číslo: ${orderData.id.substring(0, 8)}`, pageWidth / 2, 30, { align: 'center' });
-            doc.text(`Dátum: ${new Date().toLocaleDateString('sk-SK')}`, pageWidth / 2, 40, { align: 'center' });
+            // Volanie serverovej funkcie pre generovanie PDF
+            const generatePdf = httpsCallable(functions, 'generateOrderPdf');
+            const result = await generatePdf({ orderId: orderData.id });
             
-            // Údaje zákazníka
-            doc.setFontSize(14);
-            doc.text('Údaje zákazníka:', 14, 60);
-            doc.setFontSize(10);
-            doc.text(`Firma: ${orderData.zakaznik || ''}`, 14, 70);
-            doc.text(`Kontaktná osoba: ${orderData.kontaktnaOsoba || ''}`, 14, 80);
-            doc.text(`Suma: ${orderData.suma || ''} ${orderData.mena || 'EUR'}`, 14, 90);
+            // @ts-ignore - výsledok obsahuje pdfBase64 a fileName
+            const { pdfBase64, fileName } = result.data;
             
-            // Miesta nakládky
-            doc.setFontSize(14);
-            doc.text('Miesta nakládky:', 14, 110);
-            doc.setFontSize(10);
-            
-            let yPos = 120;
-            orderData.loadingPlaces?.forEach((place, index) => {
-                doc.text(`${index + 1}. ${place.street}, ${place.city}, ${place.zip}, ${place.country}`, 14, yPos);
-                yPos += 10;
-                doc.text(`Dátum a čas: ${place.dateTime instanceof Date ? place.dateTime.toLocaleString('sk-SK') : place.dateTime}`, 20, yPos);
-                yPos += 10;
-                doc.text(`Kontaktná osoba: ${place.contactPerson}`, 20, yPos);
-                yPos += 10;
-                
-                // Tovar na nakládke
-                if (place.goods && place.goods.length > 0) {
-                    doc.text('Tovar:', 20, yPos);
-                    yPos += 10;
-                    place.goods.forEach((item, itemIndex) => {
-                        doc.text(`- ${item.name}, ${item.quantity} ${item.unit}`, 25, yPos);
-                        yPos += 7;
-                    });
-                }
-                
-                yPos += 5;
-            });
-            
-            // Miesta vykládky
-            doc.setFontSize(14);
-            doc.text('Miesta vykládky:', 14, yPos);
-            yPos += 10;
-            doc.setFontSize(10);
-            
-            orderData.unloadingPlaces?.forEach((place, index) => {
-                // Ak sa blížime k spodku stránky, vytvoríme novú
-                if (yPos > 270) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                
-                doc.text(`${index + 1}. ${place.street}, ${place.city}, ${place.zip}, ${place.country}`, 14, yPos);
-                yPos += 10;
-                doc.text(`Dátum a čas: ${place.dateTime instanceof Date ? place.dateTime.toLocaleString('sk-SK') : place.dateTime}`, 20, yPos);
-                yPos += 10;
-                doc.text(`Kontaktná osoba: ${place.contactPerson}`, 20, yPos);
-                yPos += 10;
-                
-                // Tovar na vykládke
-                if (place.goods && place.goods.length > 0) {
-                    doc.text('Tovar:', 20, yPos);
-                    yPos += 10;
-                    place.goods.forEach((item, itemIndex) => {
-                        doc.text(`- ${item.name}, ${item.quantity} ${item.unit}`, 25, yPos);
-                        yPos += 7;
-                    });
-                }
-                
-                yPos += 5;
-            });
-            
-            // Dopravca
-            if (yPos > 240) {
-                doc.addPage();
-                yPos = 20;
+            // Konverzia base64 na Blob
+            const byteCharacters = atob(pdfBase64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
             }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
             
-            doc.setFontSize(14);
-            doc.text('Údaje dopravcu:', 14, yPos);
-            yPos += 10;
-            doc.setFontSize(10);
-            doc.text(`Firma: ${orderData.carrierCompany || '-'}`, 14, yPos);
-            doc.text(`Kontakt: ${orderData.carrierContact || '-'}`, 14, yPos);
-            doc.text(`EČV vozidla: ${orderData.carrierVehicleReg || '-'}`, 14, yPos);
-            yPos += 10;
-            doc.text(`Cena prepravy: ${orderData.carrierPrice || '-'} EUR`, 14, yPos);
+            // Vytvorenie URL a stiahnutie
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName || `objednavka_${orderData.id.substring(0, 8)}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
             
-            // Pätička
-            const pageCount = (doc as any).internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.text(`Strana ${i} z ${pageCount}`, pageWidth - 20, doc.internal.pageSize.getHeight() - 10);
-            }
-            
-            // Uloženie PDF
-            doc.save(`objednavka-${orderData.id.substring(0, 8)}.pdf`);
-            
+            setIsSubmitting(false);
         } catch (error) {
             console.error('Chyba pri generovaní PDF:', error);
-            alert('Nastala chyba pri generovaní PDF objednávky');
+            alert('Nastala chyba pri generovaní PDF objednávky: ' + (error as Error).message);
+            setIsSubmitting(false);
         }
     };
 

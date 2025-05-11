@@ -17,12 +17,14 @@
     "@mui/x-data-grid": "^7.28.3",
     "@mui/x-date-pickers": "^7.28.0",
     "@types/cors": "^2.8.17",
+    "chrome-aws-lambda": "^10.1.0",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "firebase-admin": "^11.11.1",
     "firebase-functions": "^6.3.2",
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.9",
+    "puppeteer-core": "^10.1.0",
     "react-router-dom": "^7.4.0"
   },
   "devDependencies": {
