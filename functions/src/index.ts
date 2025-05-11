@@ -807,6 +807,7 @@ const formatAddress = (street?: string, city?: string, zip?: string, country?: s
   ].filter(Boolean).join(', ');
 };
 
+// Funkcia na generovanie PDF
 export const generateOrderPdf = functions
   .region(REGION)
   .runWith({
@@ -863,6 +864,23 @@ export const generateOrderPdf = functions
         
         if (!settingsQuery.empty) {
           companySettings = settingsQuery.docs[0].data();
+          
+          // Pokúsime sa stiahnuť logo ak existuje URL
+          if (companySettings.logoUrl && typeof companySettings.logoUrl === 'string') {
+            try {
+              console.log("Sťahujem logo z URL:", companySettings.logoUrl);
+              // Pokúsime sa stiahnuť logo pomocou axios alebo node-fetch
+              const axios = require('axios');
+              const response = await axios.get(companySettings.logoUrl, { responseType: 'arraybuffer' });
+              const logoBase64 = Buffer.from(response.data).toString('base64');
+              const mimeType = response.headers['content-type'] || 'image/png';
+              companySettings.logoBase64 = `data:${mimeType};base64,${logoBase64}`;
+              console.log("Logo úspešne stiahnuté a konvertované na base64");
+            } catch (logoError) {
+              console.error('Chyba pri sťahovaní loga:', logoError);
+              // Necháme companySettings.logoBase64 ako undefined
+            }
+          }
         }
       } catch (error) {
         console.error('Chyba pri načítaní nastavení spoločnosti:', error);
@@ -898,6 +916,7 @@ export const generateOrderPdf = functions
       await browser.close();
 
       // Vrátiť PDF priamo ako base64 string namiesto ukladania na Storage
+      // @ts-ignore - Ignorujeme linter error pre toString
       const base64Data = pdfBuffer.toString('base64');
       
       return { 
@@ -919,6 +938,11 @@ function generateOrderHtml(orderData: any, settings: any): string {
   const orderNumber = orderData.orderNumberFormatted || (orderData.id?.substring(0, 8) || 'N/A');
   const createdAtDate = formatDate(orderData.createdAt);
   
+  // Debug informácie o nastaveniach spoločnosti a logu
+  console.log("Company settings:", settings ? Object.keys(settings) : 'No settings');
+  const hasLogo = settings?.logoBase64 && typeof settings.logoBase64 === 'string';
+  console.log("Has logo:", hasLogo);
+  
   // Informácie o zákazníkovi
   const customerCompany = orderData.zakaznik || orderData.customerCompany || 'N/A';
   const customerAddress = formatAddress(
@@ -939,7 +963,7 @@ function generateOrderHtml(orderData: any, settings: any): string {
   );
   const companyID = settings?.businessID || '55361731';
   const companyVatID = settings?.vatID || 'SK2121966220';
-
+  
   // Generovanie sekcií pre miesta nakládky
   let loadingPlacesHtml = '';
   if (orderData.loadingPlaces && orderData.loadingPlaces.length > 0) {
@@ -1062,6 +1086,10 @@ function generateOrderHtml(orderData: any, settings: any): string {
           font-weight: bold;
           color: #ff9f43;
         }
+        .company-logo {
+          max-height: 60px;
+          max-width: 200px;
+        }
         .date {
           text-align: right;
         }
@@ -1162,7 +1190,10 @@ function generateOrderHtml(orderData: any, settings: any): string {
       <div class="container">
         <div class="header">
           <div>
-            <div class="company-name">${safeText(companyName)}</div>
+            ${hasLogo 
+              ? `<img src="${settings.logoBase64}" alt="${safeText(companyName)}" class="company-logo" />`
+              : `<div class="company-name">${safeText(companyName)}</div>`
+            }
             <div>${safeText(companyAddress)}</div>
             <div>IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</div>
           </div>
