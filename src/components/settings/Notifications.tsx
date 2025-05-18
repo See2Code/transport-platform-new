@@ -20,9 +20,9 @@ import {
   Refresh as RefreshIcon,
   MarkEmailRead as MarkEmailReadIcon
 } from '@mui/icons-material';
-import { useNotifications, NotificationData } from '../contexts/NotificationsContext';
-import { useThemeMode } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useNotifications, NotificationData } from '../../contexts/NotificationsContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 

@@ -12,7 +12,7 @@ import {
   useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { countries } from '../constants/countries';
+import { countries } from '../../constants/countries';
 
 export interface CustomerData {
   companyName: string;

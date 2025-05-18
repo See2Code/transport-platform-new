@@ -46,16 +46,16 @@ import {
   AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
 import { collection, query, where, getDocs, addDoc, doc, getDoc, onSnapshot, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
-import { auth, db, functions } from '../firebase';
+import { auth, db, functions } from '../../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { httpsCallable } from 'firebase/functions';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { SelectChangeEvent } from '@mui/material';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';

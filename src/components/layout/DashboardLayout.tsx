@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Box, styled } from '@mui/material';
 import Navbar from './Navbar';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
 
 interface DashboardLayoutProps {
   children?: ReactNode;

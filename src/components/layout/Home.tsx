@@ -24,7 +24,7 @@ import {
   ListItemButton,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   LocalShipping,
   People,
@@ -47,7 +47,7 @@ import {
   ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
 
 // Navigation Menu
 const NavbarContainer = styled(AppBar)(({ theme }) => ({

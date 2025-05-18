@@ -32,13 +32,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import { collection, addDoc, query, deleteDoc, doc, updateDoc, getDocs, Timestamp, where, orderBy } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
+import { db } from '../../firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import styled from '@emotion/styled';
-import SearchField from './common/SearchField';
+import SearchField from '../common/SearchField';
 import { useMediaQuery } from '@mui/material';
 import { Phone as PhoneIcon, Email as EmailIcon, Person as PersonIcon, AccessTime as AccessTimeIcon } from '@mui/icons-material';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
 import {
   PageWrapper,
   PageHeader,
@@ -46,8 +46,8 @@ import {
   AddButton,
   SearchWrapper,
   StyledCard
-} from './styled';
-import { Contact, User, ContactFormData, SnackbarState } from '../types/contact';
+} from '../styled';
+import { Contact, User, ContactFormData, SnackbarState } from '../../types/contact';
 import type { GridColDef } from '@mui/x-data-grid';
 
 const colors = {

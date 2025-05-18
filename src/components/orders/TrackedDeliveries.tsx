@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, CircularProgress, Alert, Dialog, IconButton, DialogContent, DialogTitle } from '@mui/material';
-import VehicleTracker from './VehicleTracker';
-import { useVehicleTracking } from '../hooks/useVehicleTracking';
+import VehicleTracker from '../tracking/VehicleTracker';
+import { useVehicleTracking } from '../../hooks/useVehicleTracking';
 import CloseIcon from '@mui/icons-material/Close';
 import styled from '@mui/material/styles/styled';
 

@@ -28,10 +28,10 @@ import {
   AccessTime as AccessTimeIcon,
 } from '@mui/icons-material';
 import { collection, query, getDocs, where, Timestamp, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
+import { db } from '../../firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import CountUp from 'react-countup';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
 import { format, formatDistanceToNow } from 'date-fns';
 import { sk } from 'date-fns/locale';
 

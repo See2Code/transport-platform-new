@@ -23,8 +23,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { auth, db } from '../../firebase';
+import { useThemeMode } from '../../contexts/ThemeContext';
 
 interface Country {
   code: string;

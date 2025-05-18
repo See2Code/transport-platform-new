@@ -45,12 +45,12 @@ import BusinessIcon from '@mui/icons-material/Business';
 import PersonIcon from '@mui/icons-material/Person';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, getDoc, orderBy, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
+import { db } from '../../firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import 'react-phone-input-2/lib/material.css';
-import SearchField from './common/SearchField';
+import SearchField from '../common/SearchField';
 import { format } from 'date-fns';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
 import { useJsApiLoader } from '@react-google-maps/api';
 
 const euCountries = [

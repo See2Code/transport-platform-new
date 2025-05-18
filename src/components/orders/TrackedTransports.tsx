@@ -26,8 +26,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { sk } from 'date-fns/locale';
 import { collection, query, where, getDocs, addDoc, doc as firestoreDoc, updateDoc, Timestamp, orderBy, deleteDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
+import { db } from '../../firebase';
+import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -36,11 +36,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import RouteIcon from '@mui/icons-material/Route';
-import SearchField from './common/SearchField';
-import TransportMap from './common/TransportMap';
+import SearchField from '../common/SearchField';
+import TransportMap from '../common/TransportMap';
 import PersonIcon from '@mui/icons-material/Person';
 import CloseIcon from '@mui/icons-material/Close';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
 import { v4 as uuidv4 } from 'uuid';
 
 // Pomocná funkcia na konverziu dátumu

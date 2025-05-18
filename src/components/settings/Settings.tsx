@@ -25,7 +25,7 @@ import { CardProps } from '@mui/material/Card';
 import { TextFieldProps } from '@mui/material/TextField';
 import { SelectProps } from '@mui/material/Select';
 import { useNavigate } from 'react-router-dom';
-import { auth, db, storage } from '../firebase';
+import { auth, db, storage } from '../../firebase';
 import { doc, getDoc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged, updateProfile } from 'firebase/auth';
 import { 
@@ -38,13 +38,13 @@ import {
   Person as PersonIcon,
   Business as BusinessIcon
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import styled from '@emotion/styled';
-import { useThemeMode } from '../contexts/ThemeContext';
+import { useThemeMode } from '../../contexts/ThemeContext';
 import { SelectChangeEvent } from '@mui/material/Select';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import ImageCropper from './ImageCropper';
-import { UserData } from '../contexts/AuthContext';
+import ImageCropper from '../common/ImageCropper';
+import { UserData } from '../../contexts/AuthContext';
 
 interface CompanyData {
   id: string;
