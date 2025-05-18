@@ -69,6 +69,20 @@ import { alpha } from '@mui/material/styles';
 import Tooltip from '@mui/material/Tooltip';
 import { TooltipProps } from '@mui/material/Tooltip';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
+
+// Importujeme komponenty pre vlajky
+const SKFlagIcon = () => (
+  <span role="img" aria-label="Slovenská vlajka" style={{ fontSize: '1.5rem' }}>
+    🇸🇰
+  </span>
+);
+
+const ENFlagIcon = () => (
+  <span role="img" aria-label="Anglická vlajka" style={{ fontSize: '1.5rem' }}>
+    🇬🇧
+  </span>
+);
 
 const drawerWidth = 240;
 const miniDrawerWidth = 64;
@@ -953,6 +967,7 @@ const Navbar: FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { t, i18n } = useTranslation();
 
   const handleNotificationsClick = () => {
     setAnchorEl(null);
@@ -981,6 +996,14 @@ const Navbar: FC = () => {
       console.error('Error logging out:', error);
     }
   };
+
+  const changeLanguage = (language: string) => {
+    i18n.changeLanguage(language);
+    localStorage.setItem('i18nextLng', language);
+  };
+
+  const currentLanguage = i18n.language;
+  const isEN = currentLanguage === 'en';
 
   return (
     <>
@@ -1012,7 +1035,7 @@ const Navbar: FC = () => {
           {!isMobile && (
             <Box sx={{ display: 'flex', flexGrow: 1, ml: 4 }}>
               <BareTooltip
-                title="Dashboard"
+                title={t('navigation.dashboard')}
                 placement="bottom"
                 enterDelay={300}
                 leaveDelay={200}
@@ -1025,15 +1048,15 @@ const Navbar: FC = () => {
                     mr: 2,
                     transition: 'transform 0.2s ease, background-color 0.2s ease',
                     '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
                       transform: 'translateY(-2px)'
                     },
                   }}
-                  aria-label="Dashboard"
+                  aria-label={t('navigation.dashboard')}
                 />
               </BareTooltip>
               <BareTooltip
-                title="Business Cases"
+                title={t('navigation.cases')}
                 placement="bottom"
                 enterDelay={300}
                 leaveDelay={200}
@@ -1046,15 +1069,15 @@ const Navbar: FC = () => {
                     mr: 2,
                     transition: 'transform 0.2s ease, background-color 0.2s ease',
                     '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
                       transform: 'translateY(-2px)'
                     },
                   }}
-                  aria-label="Business Cases"
+                  aria-label={t('navigation.cases')}
                 />
               </BareTooltip>
               <BareTooltip
-                title="Objednávky"
+                title={t('navigation.orders')}
                 placement="bottom"
                 enterDelay={300}
                 leaveDelay={200}
@@ -1067,15 +1090,15 @@ const Navbar: FC = () => {
                     mr: 2,
                     transition: 'transform 0.2s ease, background-color 0.2s ease',
                     '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
                       transform: 'translateY(-2px)'
                     },
                   }}
-                  aria-label="Objednávky"
+                  aria-label={t('navigation.orders')}
                 />
               </BareTooltip>
               <BareTooltip
-                title="Sledované prepravy"
+                title={t('tracking.vehicleTracking')}
                 placement="bottom"
                 enterDelay={300}
                 leaveDelay={200}
@@ -1088,15 +1111,15 @@ const Navbar: FC = () => {
                     mr: 2,
                     transition: 'transform 0.2s ease, background-color 0.2s ease',
                     '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
                       transform: 'translateY(-2px)'
                     },
                   }}
-                  aria-label="Sledované prepravy"
+                  aria-label={t('tracking.vehicleTracking')}
                 />
               </BareTooltip>
               <BareTooltip
-                title="Mapa vozidiel"
+                title={t('tracking.liveLocation')}
                 placement="bottom"
                 enterDelay={300}
                 leaveDelay={200}
@@ -1109,15 +1132,15 @@ const Navbar: FC = () => {
                     mr: 2,
                     transition: 'transform 0.2s ease, background-color 0.2s ease',
                     '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
                       transform: 'translateY(-2px)'
                     },
                   }}
-                  aria-label="Mapa vozidiel"
+                  aria-label={t('tracking.liveLocation')}
                 />
               </BareTooltip>
               <BareTooltip
-                title="Tím"
+                title={t('navigation.team')}
                 placement="bottom"
                 enterDelay={300}
                 leaveDelay={200}
@@ -1130,112 +1153,159 @@ const Navbar: FC = () => {
                     mr: 2,
                     transition: 'transform 0.2s ease, background-color 0.2s ease',
                     '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
+                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
                       transform: 'translateY(-2px)'
                     },
                   }}
-                  aria-label="Tím"
-                />
-              </BareTooltip>
-              <BareTooltip
-                title="Nastavenia"
-                placement="bottom"
-                enterDelay={300}
-                leaveDelay={200}
-              >
-                <Button
-                  color="inherit"
-                  startIcon={<SettingsIcon />}
-                  onClick={() => navigate('/settings')}
-                  sx={{
-                    mr: 2,
-                    transition: 'transform 0.2s ease, background-color 0.2s ease',
-                    '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme) => alpha(theme.palette.action.hover, 0.8),
-                      transform: 'translateY(-2px)'
-                    },
-                  }}
-                  aria-label="Nastavenia"
+                  aria-label={t('navigation.team')}
                 />
               </BareTooltip>
             </Box>
           )}
 
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton color="inherit" onClick={handleNotificationsClick}>
-              <Badge badgeContent={unreadCount} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-            <IconButton 
-              color="inherit" 
-              onClick={toggleChat}
-              sx={{ ml: 1 }}
-            >
-              <ChatIcon />
-            </IconButton>
-            <IconButton color="inherit" onClick={toggleTheme} sx={{ ml: 1 }}>
-              {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
-            </IconButton>
-            <IconButton
-              color="inherit"
-              onClick={handleLogoutClick}
-              sx={{ ml: 1 }}
-            >
-              <LogoutIcon />
-            </IconButton>
+            <BareTooltip title={t('common.notifications')} placement="bottom">
+              <IconButton color="inherit" onClick={handleNotificationsClick}>
+                <Badge badgeContent={unreadCount} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+            </BareTooltip>
+            <BareTooltip title={t('common.chat')} placement="bottom">
+              <IconButton 
+                color="inherit" 
+                onClick={toggleChat}
+                sx={{ ml: 1 }}
+              >
+                <ChatIcon />
+              </IconButton>
+            </BareTooltip>
+            
+            {/* Prepínač jazykov */}
+            <Box sx={{ display: 'flex', ml: 1 }}>
+              <BareTooltip title="Slovenčina" placement="bottom">
+                <IconButton 
+                  onClick={() => changeLanguage('sk')}
+                  color="inherit"
+                  sx={{ 
+                    opacity: !isEN ? 1 : 0.6,
+                    '&:hover': { opacity: 1 }
+                  }}
+                >
+                  <SKFlagIcon />
+                </IconButton>
+              </BareTooltip>
+              <BareTooltip title="English" placement="bottom">
+                <IconButton 
+                  onClick={() => changeLanguage('en')}
+                  color="inherit"
+                  sx={{ 
+                    opacity: isEN ? 1 : 0.6,
+                    '&:hover': { opacity: 1 }
+                  }}
+                >
+                  <ENFlagIcon />
+                </IconButton>
+              </BareTooltip>
+            </Box>
+            
+            <BareTooltip title={t('settings.toggleTheme')} placement="bottom">
+              <IconButton color="inherit" onClick={toggleTheme} sx={{ ml: 1 }}>
+                {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+              </IconButton>
+            </BareTooltip>
+            <BareTooltip title={t('auth.logout')} placement="bottom">
+              <IconButton
+                color="inherit"
+                onClick={handleLogoutClick}
+                sx={{ ml: 1 }}
+              >
+                <LogoutIcon />
+              </IconButton>
+            </BareTooltip>
           </Box>
         </StyledToolbar>
       </StyledAppBar>
 
       {/* Mobilné menu */}
       <MobileDrawer
-        anchor="left"
-        open={drawerOpen && isMobile}
+        open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        isDarkMode={isDarkMode}
       >
-        <Box sx={{ width: 250, pt: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', px: 2, mb: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', p: 2 }}>
             <img 
               src={isDarkMode ? logoDarkPath : logoLightPath} 
               alt="Logo" 
-              style={{ height: '32px', marginRight: '12px' }} 
+              style={{ height: '32px' }} 
             />
-            <Typography variant="subtitle1">
-              Transport Platform
-            </Typography>
+            <Typography variant="h6" sx={{ ml: 2 }}>Transport Platform</Typography>
+            <IconButton 
+              onClick={() => setDrawerOpen(false)}
+              sx={{ ml: 'auto' }}
+            >
+              <CloseIcon />
+            </IconButton>
           </Box>
           <Divider />
           <List>
             <ListItemButton onClick={() => { navigate('/dashboard'); setDrawerOpen(false); }}>
               <ListItemIcon><DashboardIcon /></ListItemIcon>
-              <ListItemText primary="Dashboard" />
+              <ListItemText primary={t('navigation.dashboard')} />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/business-cases'); setDrawerOpen(false); }}>
               <ListItemIcon><BusinessIcon /></ListItemIcon>
-              <ListItemText primary="Business Cases" />
+              <ListItemText primary={t('navigation.cases')} />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/orders'); setDrawerOpen(false); }}>
               <ListItemIcon><ReceiptIcon /></ListItemIcon>
-              <ListItemText primary="Objednávky" />
+              <ListItemText primary={t('navigation.orders')} />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/tracked-shipments'); setDrawerOpen(false); }}>
               <ListItemIcon><VisibilityIcon /></ListItemIcon>
-              <ListItemText primary="Sledované prepravy" />
+              <ListItemText primary={t('tracking.vehicleTracking')} />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/vehicle-map'); setDrawerOpen(false); }}>
               <ListItemIcon><LocationOnIcon /></ListItemIcon>
-              <ListItemText primary="Mapa vozidiel" />
+              <ListItemText primary={t('tracking.liveLocation')} />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/team'); setDrawerOpen(false); }}>
               <ListItemIcon><PeopleIcon /></ListItemIcon>
-              <ListItemText primary="Tím" />
+              <ListItemText primary={t('navigation.team')} />
             </ListItemButton>
             <ListItemButton onClick={() => { navigate('/settings'); setDrawerOpen(false); }}>
               <ListItemIcon><SettingsIcon /></ListItemIcon>
-              <ListItemText primary="Nastavenia" />
+              <ListItemText primary={t('navigation.settings')} />
             </ListItemButton>
+            
+            <Divider sx={{ my: 2 }} />
+            
+            {/* Jazykové prepínanie v mobilnom menu */}
+            <Box sx={{ px: 2, py: 1 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, opacity: 0.7 }}>
+                {t('settings.language')}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton 
+                  onClick={() => { changeLanguage('sk'); setDrawerOpen(false); }}
+                  sx={{ 
+                    opacity: !isEN ? 1 : 0.6,
+                    '&:hover': { opacity: 1 }
+                  }}
+                >
+                  <SKFlagIcon />
+                </IconButton>
+                <IconButton 
+                  onClick={() => { changeLanguage('en'); setDrawerOpen(false); }}
+                  sx={{ 
+                    opacity: isEN ? 1 : 0.6,
+                    '&:hover': { opacity: 1 }
+                  }}
+                >
+                  <ENFlagIcon />
+                </IconButton>
+              </Box>
+            </Box>
           </List>
         </Box>
       </MobileDrawer>
@@ -1244,52 +1314,20 @@ const Navbar: FC = () => {
       <Dialog
         open={logoutDialogOpen}
         onClose={handleLogoutCancel}
-        PaperProps={{
-          sx: {
-            background: 'none',
-            boxShadow: 'none',
-            margin: { xs: '8px', sm: '16px' },
-            borderRadius: '24px',
-          }
-        }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(8px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)'
-          }
-        }}
+        aria-labelledby="logout-dialog-title"
       >
-        <Box sx={{
-          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-          color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-          padding: '0px',
-          borderRadius: '24px',
-          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          <DialogTitle sx={{ padding: '24px 24px 16px 24px', fontSize: '1.25rem', fontWeight: 600 }}>
-            Odhlásenie
-          </DialogTitle>
-          <DialogContent sx={{ padding: '16px 24px', color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)', overflowY: 'auto' }}>
-            <DialogContentText sx={{ color: 'inherit', fontSize: '1rem' }}>
-              Naozaj sa chcete odhlásiť?
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions sx={{ padding: '16px 24px 24px 24px' }}>
-            <Button onClick={handleLogoutCancel} variant="outlined" color="inherit" sx={{ borderRadius: '12px', padding: '8px 20px' }}>Zrušiť</Button>
-            <Button onClick={handleLogoutConfirm} variant="contained" sx={{
-              backgroundColor: '#ff9f43',
-              color: '#fff',
-              fontWeight: 500,
-              borderRadius: '12px',
-              padding: '8px 20px',
-              '&:hover': { backgroundColor: '#f9872f' }
-            }}>Odhlásiť</Button>
-          </DialogActions>
-        </Box>
+        <DialogTitle id="logout-dialog-title">{t('auth.logout')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t('auth.logout')}?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLogoutCancel}>{t('common.cancel')}</Button>
+          <Button onClick={handleLogoutConfirm} autoFocus>
+            {t('auth.logout')}
+          </Button>
+        </DialogActions>
       </Dialog>
     </>
   );

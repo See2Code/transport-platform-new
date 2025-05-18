@@ -52,6 +52,7 @@ import SearchField from '../common/SearchField';
 import { format } from 'date-fns';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import { useJsApiLoader } from '@react-google-maps/api';
+import { useTranslation } from 'react-i18next'; // Pridaný import pre preklady
 
 const euCountries = [
   { code: 'SK', name: 'Slovensko', flag: '🇸🇰', prefix: '+421' },
@@ -117,18 +118,8 @@ const colors = {
   }
 };
 
-// Definícia stavov obchodného prípadu
-const caseStatuses = {
-  CALLED: { label: 'Dovolaný', color: 'success' as const },
-  NOT_CALLED: { label: 'Nedovolaný', color: 'error' as const },
-  EMAIL_SENT: { label: 'Poslaný email', color: 'info' as const },
-  IN_PROGRESS: { label: 'V štádiu riešenia', color: 'warning' as const },
-  CALL_LATER: { label: 'Volať neskôr', color: 'secondary' as const },
-  MEETING: { label: 'Stretnutie', color: 'primary' as const },
-  CALL: { label: 'Telefonát', color: 'info' as const },
-  INTERESTED: { label: 'Záujem', color: 'success' as const },
-  NOT_INTERESTED: { label: 'Nezáujem', color: 'error' as const }
-};
+// Typ pre status možnosti
+type CaseStatusKey = 'CALLED' | 'NOT_CALLED' | 'EMAIL_SENT' | 'IN_PROGRESS' | 'CALL_LATER' | 'MEETING' | 'CALL' | 'INTERESTED' | 'NOT_INTERESTED';
 
 interface BusinessCase {
   id?: string;
@@ -142,7 +133,7 @@ interface BusinessCase {
     email: string;
   };
   internalNote: string;
-  status: keyof typeof caseStatuses;
+  status: CaseStatusKey;
   reminderDateTime: Date | null;
   reminderNote: string;
   createdAt: Timestamp;
@@ -158,6 +149,7 @@ interface Phase {
   id: string;
   name: string;
   createdAt: Date;
+  translationKey?: string;
 }
 
 const MobileBusinessCard = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
@@ -416,7 +408,7 @@ export default function BusinessCases() {
   const [formData, setFormData] = useState({
     companyName: '', vatNumber: '', companyAddress: '',
     contactPerson: { firstName: '', lastName: '', phone: '', email: '' },
-    internalNote: '', status: 'NOT_CALLED' as keyof typeof caseStatuses,
+    internalNote: '', status: 'NOT_CALLED' as CaseStatusKey,
     reminderDateTime: null as Date | null, reminderNote: '',
   });
   const [selectedCountry, setSelectedCountry] = useState(euCountries[0]);
@@ -427,6 +419,20 @@ export default function BusinessCases() {
   const [, setPhases] = useState<Phase[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const { t } = useTranslation(); // Hook pre preklady
+
+  // Definícia stavov obchodného prípadu - definované vo vnútri komponentu
+  const caseStatuses = {
+    CALLED: { label: t('business.status.called'), color: 'success' as const },
+    NOT_CALLED: { label: t('business.status.notCalled'), color: 'error' as const },
+    EMAIL_SENT: { label: t('business.status.emailSent'), color: 'info' as const },
+    IN_PROGRESS: { label: t('business.status.inProgress'), color: 'warning' as const },
+    CALL_LATER: { label: t('business.status.callLater'), color: 'secondary' as const },
+    MEETING: { label: t('business.status.meeting'), color: 'primary' as const },
+    CALL: { label: t('business.status.call'), color: 'info' as const },
+    INTERESTED: { label: t('business.status.interested'), color: 'success' as const },
+    NOT_INTERESTED: { label: t('business.status.notInterested'), color: 'error' as const }
+  };
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
@@ -688,12 +694,12 @@ export default function BusinessCases() {
         </MobileInfoRow>
         <MobileInfoRow isDarkMode={isDarkMode}>
           <PersonIcon />
-          Vytvoril: {businessCase.createdBy?.firstName} {businessCase.createdBy?.lastName}
+          {t('business.createdBy')}: {businessCase.createdBy?.firstName} {businessCase.createdBy?.lastName}
         </MobileInfoRow>
         {businessCase.reminderDateTime && (
           <MobileInfoRow isDarkMode={isDarkMode}>
             <AccessTimeIcon />
-            Pripomienka: {format(businessCase.reminderDateTime, 'dd.MM.yyyy HH:mm')}
+            {t('business.reminder')}: {format(businessCase.reminderDateTime, 'dd.MM.yyyy HH:mm')}
           </MobileInfoRow>
         )}
         {businessCase.internalNote && (
@@ -709,7 +715,7 @@ export default function BusinessCases() {
               color: colors.accent.main,
               marginBottom: '4px'
             }}>
-              Interná poznámka:
+              {t('common.internalNote')}:
             </Typography>
             <Typography sx={{ fontSize: '0.9rem' }}>
               {businessCase.internalNote}
@@ -729,7 +735,7 @@ export default function BusinessCases() {
               color: colors.accent.main,
               marginBottom: '4px'
             }}>
-              Poznámka k pripomienke:
+              {t('business.reminderNote')}:
             </Typography>
             <Typography sx={{ fontSize: '0.9rem' }}>
               {businessCase.reminderNote}
@@ -766,7 +772,7 @@ export default function BusinessCases() {
         </IconButton>
       </MobileCardActions>
     </MobileBusinessCard>
-  ), [isDarkMode, handleEdit, handleDelete]);
+  ), [isDarkMode, handleEdit, handleDelete, t]);
 
   const fetchPhases = useCallback(async () => {
     try {
@@ -788,11 +794,54 @@ export default function BusinessCases() {
     }
   }, []);
 
+  // Funkcia pre získanie prekladového kľúča na základe hodnoty fázy
+  const getPhaseKey = useCallback((phaseValue: string) => {
+    // Mapa kľúčov na hodnoty
+    const phaseKeys: Record<string, string> = {
+      [t('business.phaseTypes.meeting')]: 'business.phaseTypes.meeting',
+      [t('business.phaseTypes.call')]: 'business.phaseTypes.call',
+      [t('business.phaseTypes.email')]: 'business.phaseTypes.email',
+      [t('business.phaseTypes.videoCall')]: 'business.phaseTypes.videoCall'
+    };
+    
+    // Ak je to jedna z preddefinovaných hodnôt, vrátime prekladový kľúč
+    return phaseKeys[phaseValue] || '';
+  }, [t]);
+
+  // Funkcia pre preklady fáz - pokúsi sa preložiť, ak je to možné
+  const translatePhase = useCallback((phaseName: string) => {
+    // Mapa názvov fáz na prekladové kľúče (pre spätné mapovanie)
+    const knownPhases: Record<string, string> = {
+      'Stretnutie': 'business.phaseTypes.meeting',
+      'Meeting': 'business.phaseTypes.meeting',
+      'Hovor': 'business.phaseTypes.call',
+      'Call': 'business.phaseTypes.call',
+      'Mail': 'business.phaseTypes.email',
+      'Email': 'business.phaseTypes.email',
+      'Videohovor': 'business.phaseTypes.videoCall',
+      'Video Call': 'business.phaseTypes.videoCall'
+    };
+
+    // Ak máme pre názov fázy prekladový kľúč, použijeme ho
+    const key = knownPhases[phaseName];
+    if (key) {
+      return t(key);
+    }
+    
+    // Inak vrátime originálny text
+    return phaseName;
+  }, [t]);
+
   const handleAddPhase = useCallback(async (phase: string, businessCaseId: string) => {
     const timestamp = Timestamp.now();
+    // Získame prekladový kľúč, ak existuje
+    const translationKey = getPhaseKey(phase);
+    
     const newPhase: Phase = { 
       id: crypto.randomUUID(),
-      name: phase, 
+      name: phase,
+      // Uložíme aj prekladový kľúč, ak existuje
+      translationKey: translationKey || undefined,
       createdAt: timestamp.toDate()
     };
     
@@ -816,7 +865,7 @@ export default function BusinessCases() {
         
         setSnackbar({
           open: true,
-          message: `Fáza obchodu '${phase}' bola pridaná`,
+          message: t('business.phaseAdded', { phase: phase }),
           severity: 'success'
         });
       }
@@ -824,12 +873,12 @@ export default function BusinessCases() {
       console.error('Error adding phase:', error);
       setSnackbar({
         open: true,
-        message: 'Nastala chyba pri pridávaní fázy',
+        message: t('business.phaseAddError'),
         severity: 'error'
       });
     }
     setPhaseDialogOpen(false);
-  }, []);
+  }, [getPhaseKey, t]);
 
   const handleDeletePhase = useCallback(async (businessCaseId: string, phaseId: string) => {
     try {
@@ -854,7 +903,7 @@ export default function BusinessCases() {
         
         setSnackbar({
           open: true,
-          message: 'Fáza bola úspešne vymazaná',
+          message: t('business.phaseDeleted'),
           severity: 'success'
         });
       }
@@ -862,11 +911,11 @@ export default function BusinessCases() {
       console.error('Error deleting phase:', error);
       setSnackbar({
         open: true,
-        message: 'Nastala chyba pri mazaní fázy',
+        message: t('business.phaseDeleteError'),
         severity: 'error'
       });
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchPhases();
@@ -878,7 +927,7 @@ export default function BusinessCases() {
   return (
     <PageWrapper>
       <PageHeader>
-        <PageTitle isDarkMode={isDarkMode}>Obchodné prípady</PageTitle>
+        <PageTitle isDarkMode={isDarkMode}>{t('business.cases')}</PageTitle>
         <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
           <Button
             startIcon={<AddIcon />}
@@ -915,7 +964,7 @@ export default function BusinessCases() {
               }
             }}
           >
-            Pridať prípad
+            {t('business.addCase')}
           </Button>
         </Box>
       </PageHeader>
@@ -972,7 +1021,7 @@ export default function BusinessCases() {
             width: '100%'
           }}>
             <AddIcon sx={{ fontSize: '1.2rem' }} />
-            Pridať prípad
+            {t('business.addCase')}
           </Box>
         </AddButton>
       </Box>
@@ -981,15 +1030,15 @@ export default function BusinessCases() {
         <SearchField
           value={searchTerm}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-          label="Vyhľadať prípad (Firma, Kontakt, Poznámka)"
+          label={t('business.searchCase')}
         />
       </SearchWrapper>
 
       <Box sx={{ display: 'flex', gap: 2, marginBottom: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Typography variant="body1" fontWeight="medium">Filtrovať podľa dátumu:</Typography>
+          <Typography variant="body1" fontWeight="medium">{t('common.filterByDate')}:</Typography>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
               <DatePicker
-                  label="Od"
+                  label={t('common.from')}
                   value={filterStartDate}
                   onChange={(newValue: Date | null) => setFilterStartDate(newValue)}
                   slotProps={{ 
@@ -1005,7 +1054,7 @@ export default function BusinessCases() {
                   }}
               />
               <DatePicker
-                  label="Do"
+                  label={t('common.to')}
                   value={filterEndDate}
                   onChange={(newValue: Date | null) => setFilterEndDate(newValue)}
                   slotProps={{ 
@@ -1026,7 +1075,7 @@ export default function BusinessCases() {
               size="small"
               sx={{ ml: 1, color: isDarkMode ? colors.text.secondary : 'inherit' }}
             >
-              Vymazať filter
+              {t('common.clearFilter')}
             </Button>
       </Box>
 
@@ -1078,13 +1127,13 @@ export default function BusinessCases() {
               <Table>
                   <TableHead>
                       <TableRow>
-                          <TableCell>Dátum vytvorenia</TableCell>
-                          <TableCell>Status</TableCell>
-                          <TableCell>Firma</TableCell>
-                          <TableCell>Kontaktná osoba</TableCell>
-                          <TableCell>Telefón</TableCell>
-                          <TableCell>Email</TableCell>
-                          <TableCell>Vytvoril</TableCell>
+                          <TableCell>{t('business.creationDate')}</TableCell>
+                          <TableCell>{t('common.status')}</TableCell>
+                          <TableCell>{t('business.company')}</TableCell>
+                          <TableCell>{t('business.contactPerson')}</TableCell>
+                          <TableCell>{t('business.phone')}</TableCell>
+                          <TableCell>{t('business.email')}</TableCell>
+                          <TableCell>{t('business.createdBy')}</TableCell>
                       </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1109,34 +1158,34 @@ export default function BusinessCases() {
                                       <Collapse in={expandedCaseId === businessCase.id} timeout="auto" unmountOnExit>
                                           <Box sx={{ margin: 1, padding: 2, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)', borderRadius: '8px' }}>
                                               <Typography variant="h6" gutterBottom component="div" sx={{ fontSize: '1.2rem' }}>
-                                                  Detail obchodného prípadu
+                                                  {t('business.caseDetails')}
                                               </Typography>
                                               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 2 }}>
                                                   <Box>
-                                                       <Typography variant="body2"><strong>Dátum vytvorenia:</strong> {(businessCase.createdAt as Timestamp)?.toDate().toLocaleString('sk-SK') ?? '-'}</Typography>
-                                                       <Typography variant="body2"><strong>Status:</strong> {caseStatuses[businessCase.status]?.label ?? businessCase.status}</Typography>
-                                                       <Typography variant="body2"><strong>Firma:</strong> {businessCase.companyName}</Typography>
-                                                       <Typography variant="body2"><strong>IČ DPH:</strong> {businessCase.vatNumber || '-'}</Typography>
-                                                       {businessCase.internalNote && <Typography variant="body2" sx={{ mt: 1 }}><strong>Interná poznámka:</strong> {businessCase.internalNote}</Typography>}
+                                                       <Typography variant="body2"><strong>{t('business.creationDate')}:</strong> {(businessCase.createdAt as Timestamp)?.toDate().toLocaleString('sk-SK') ?? '-'}</Typography>
+                                                       <Typography variant="body2"><strong>{t('common.status')}:</strong> {caseStatuses[businessCase.status]?.label ?? businessCase.status}</Typography>
+                                                       <Typography variant="body2"><strong>{t('business.company')}:</strong> {businessCase.companyName}</Typography>
+                                                       <Typography variant="body2"><strong>{t('company.vatNumber')}:</strong> {businessCase.vatNumber || '-'}</Typography>
+                                                       {businessCase.internalNote && <Typography variant="body2" sx={{ mt: 1 }}><strong>{t('common.internalNote')}:</strong> {businessCase.internalNote}</Typography>}
                                                   </Box>
                                                   <Box>
-                                                       <Typography variant="body2"><strong>Kontaktná osoba:</strong> {`${businessCase.contactPerson.firstName} ${businessCase.contactPerson.lastName}`}</Typography>
-                                                       <Typography variant="body2"><strong>Telefón:</strong> {businessCase.contactPerson.phone}</Typography>
-                                                       <Typography variant="body2"><strong>Email:</strong> {businessCase.contactPerson.email}</Typography>
-                                                       {businessCase.reminderDateTime && <Typography variant="body2"><strong>Pripomienka:</strong> {format(businessCase.reminderDateTime, 'dd.MM.yyyy HH:mm')}</Typography>}
-                                                       {businessCase.reminderNote && <Typography variant="body2" sx={{ mt: 1 }}><strong>Poznámka k pripomienke:</strong> {businessCase.reminderNote}</Typography>}
+                                                       <Typography variant="body2"><strong>{t('business.contactPerson')}:</strong> {`${businessCase.contactPerson.firstName} ${businessCase.contactPerson.lastName}`}</Typography>
+                                                       <Typography variant="body2"><strong>{t('business.phone')}:</strong> {businessCase.contactPerson.phone}</Typography>
+                                                       <Typography variant="body2"><strong>{t('business.email')}:</strong> {businessCase.contactPerson.email}</Typography>
+                                                       {businessCase.reminderDateTime && <Typography variant="body2"><strong>{t('business.reminder')}:</strong> {format(businessCase.reminderDateTime, 'dd.MM.yyyy HH:mm')}</Typography>}
+                                                       {businessCase.reminderNote && <Typography variant="body2" sx={{ mt: 1 }}><strong>{t('business.reminderNote')}:</strong> {businessCase.reminderNote}</Typography>}
                                                   </Box>
                                               </Box>
                                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 1, borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` }}>
-                                                  <Typography variant="body2"><strong>Vytvoril:</strong> {`${businessCase.createdBy?.firstName ?? ''} ${businessCase.createdBy?.lastName ?? ''}`}</Typography>
+                                                  <Typography variant="body2"><strong>{t('business.createdBy')}:</strong> {`${businessCase.createdBy?.firstName ?? ''} ${businessCase.createdBy?.lastName ?? ''}`}</Typography>
                                                   <Box sx={{ display: 'flex', gap: 1 }}>
-                                                      <Tooltip title="Upraviť"><IconButton onClick={() => handleEdit(businessCase)} sx={{ color: colors.accent.main, '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.1)' } }}><EditIcon /></IconButton></Tooltip>
-                                                      <Tooltip title="Vymazať"><IconButton onClick={() => handleDelete(businessCase.id!)} sx={{ color: colors.secondary.main, '&:hover': { backgroundColor: 'rgba(255, 107, 107, 0.1)' } }}><DeleteIcon /></IconButton></Tooltip>
+                                                      <Tooltip title={t('common.edit')}><IconButton onClick={() => handleEdit(businessCase)} sx={{ color: colors.accent.main, '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.1)' } }}><EditIcon /></IconButton></Tooltip>
+                                                      <Tooltip title={t('common.delete')}><IconButton onClick={() => handleDelete(businessCase.id!)} sx={{ color: colors.secondary.main, '&:hover': { backgroundColor: 'rgba(255, 107, 107, 0.1)' } }}><DeleteIcon /></IconButton></Tooltip>
                                                   </Box>
                                               </Box>
                                               <Box sx={{ marginTop: 2 }}>
                                                   <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1.1rem' }}>
-                                                      Fázy obchodu
+                                                      {t('business.phases')}
                                                       <IconButton 
                                                           onClick={() => { 
                                                               if (businessCase.id) {
@@ -1157,7 +1206,7 @@ export default function BusinessCases() {
                                                               label={
                                                                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                                                                       <Typography sx={{ fontSize: '0.8rem', whiteSpace: 'normal', overflow: 'visible', paddingRight: '5px' }}>
-                                                                          {`${phase.name} - ${phase.createdAt && phase.createdAt instanceof Date && !isNaN(phase.createdAt.getTime()) ? format(phase.createdAt, 'dd.MM.yyyy HH:mm') : 'Neznámy dátum'}`}
+                                                                          {`${phase.translationKey ? t(phase.translationKey) : translatePhase(phase.name)} - ${phase.createdAt && phase.createdAt instanceof Date && !isNaN(phase.createdAt.getTime()) ? format(phase.createdAt, 'dd.MM.yyyy HH:mm') : t('business.unknownDate')}`}
                                                                       </Typography>
                                                                       <IconButton 
                                                                           size="small" 
@@ -1196,14 +1245,14 @@ export default function BusinessCases() {
                 component="div"
                 count={filteredCases.length}
                 page={page}
-                onPageChange={(e, newPage) => setPage(newPage)}
+                onPageChange={(e: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => setPage(newPage)}
                 rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={e => {
+                onRowsPerPageChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                   setRowsPerPage(parseInt(e.target.value, 10));
                   setPage(0);
                 }}
                 rowsPerPageOptions={[10, 25, 50, 100]}
-                labelRowsPerPage="Záznamov na stránku:"
+                labelRowsPerPage={t('business.rowsPerPage')}
               />
           </TableContainer>
       )}
@@ -1250,7 +1299,7 @@ export default function BusinessCases() {
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
           <DialogTitle>
-            {editCase ? 'Upraviť obchodný prípad' : 'Pridať nový obchodný prípad'}
+            {editCase ? t('business.editCase') : t('business.addNewCase')}
           </DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 2 }}>
@@ -1258,7 +1307,7 @@ export default function BusinessCases() {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Názov firmy"
+                    label={t('company.companyName')}
                     value={formData.companyName}
                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     required
@@ -1267,7 +1316,7 @@ export default function BusinessCases() {
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="IČ DPH"
+                    label={t('company.vatNumber')}
                     value={formData.vatNumber}
                     onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value })}
                   />
@@ -1275,7 +1324,7 @@ export default function BusinessCases() {
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Adresa spoločnosti"
+                    label={t('company.companyAddress')}
                     value={formData.companyAddress}
                     onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
                   />
@@ -1283,7 +1332,7 @@ export default function BusinessCases() {
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Meno"
+                    label={t('common.firstName')}
                     value={formData.contactPerson.firstName}
                     onChange={(e) => setFormData({
                       ...formData,
@@ -1295,7 +1344,7 @@ export default function BusinessCases() {
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Priezvisko"
+                    label={t('common.lastName')}
                     value={formData.contactPerson.lastName}
                     onChange={(e) => setFormData({
                       ...formData,
@@ -1353,14 +1402,14 @@ export default function BusinessCases() {
                     </FormControl>
                     <TextField
                       fullWidth
-                      label="Telefónne číslo"
+                      label={t('business.phoneNumber')}
                       value={formData.contactPerson.phone?.replace(selectedCountry.prefix, '') || ''}
                       onChange={(e) => setFormData({
                         ...formData,
                         contactPerson: { ...formData.contactPerson, phone: selectedCountry.prefix + e.target.value }
                       })}
                       placeholder="9XX XXX XXX"
-                      helperText="Zadajte telefónne číslo"
+                      helperText={t('business.enterPhoneNumber')}
                       required
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -1394,7 +1443,7 @@ export default function BusinessCases() {
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Email"
+                    label={t('auth.email')}
                     type="email"
                     value={formData.contactPerson.email}
                     onChange={(e) => setFormData({
@@ -1407,7 +1456,7 @@ export default function BusinessCases() {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Interná poznámka"
+                    label={t('common.internalNote')}
                     multiline
                     rows={4}
                     value={formData.internalNote}
@@ -1416,11 +1465,11 @@ export default function BusinessCases() {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Status</InputLabel>
+                    <InputLabel>{t('common.status')}</InputLabel>
                     <Select
                       value={formData.status}
-                      label="Status"
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as keyof typeof caseStatuses })}
+                      label={t('common.status')}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as CaseStatusKey })}
                     >
                       {Object.entries(caseStatuses).map(([key, value]) => (
                         <MenuItem key={key} value={key}>
@@ -1433,7 +1482,7 @@ export default function BusinessCases() {
                 <Grid item xs={12} md={6}>
                   <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
                     <DateTimePicker
-                      label="Dátum a čas pripomienky"
+                      label={t('business.reminderDateTime')}
                       value={formData.reminderDateTime}
                       onChange={(newValue) => setFormData({ ...formData, reminderDateTime: newValue })}
                       sx={{
@@ -1503,13 +1552,13 @@ export default function BusinessCases() {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Poznámka k pripomienke"
+                    label={t('business.reminderNote')}
                     multiline
                     rows={2}
                     value={formData.reminderNote}
                     onChange={(e) => setFormData({ ...formData, reminderNote: e.target.value })}
-                    placeholder="Zadajte text pripomienky, ktorý vám príde emailom"
-                    helperText="Tento text vám príde emailom v čase pripomienky"
+                    placeholder={t('business.enterReminderText')}
+                    helperText={t('business.reminderEmailText')}
                   />
                 </Grid>
               </Grid>
@@ -1528,7 +1577,7 @@ export default function BusinessCases() {
                 },
               }}
             >
-              Zrušiť
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -1541,7 +1590,7 @@ export default function BusinessCases() {
                 },
               }}
             >
-              {loading ? <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 'Uložiť'}
+              {loading ? <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : t('common.save')}
             </Button>
           </DialogActions>
         </StyledDialogContent>
@@ -1569,11 +1618,11 @@ export default function BusinessCases() {
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
           <DialogTitle>
-            Potvrdiť vymazanie
+            {t('common.confirmDelete')}
           </DialogTitle>
           <DialogContent>
             <Typography>
-              Naozaj chcete vymazať tento obchodný prípad? Táto akcia je nenávratná.
+              {t('business.deleteConfirmation')}
             </Typography>
           </DialogContent>
           <DialogActions>
@@ -1586,7 +1635,7 @@ export default function BusinessCases() {
                 },
               }}
             >
-              Zrušiť
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={confirmDelete}
@@ -1599,7 +1648,7 @@ export default function BusinessCases() {
                 },
               }}
             >
-              Vymazať
+              {t('common.delete')}
             </Button>
           </DialogActions>
         </StyledDialogContent>
@@ -1640,48 +1689,48 @@ export default function BusinessCases() {
         }}
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
-          <DialogTitle>Pridať fázu obchodu</DialogTitle>
+          <DialogTitle>{t('business.addPhase')}</DialogTitle>
           <DialogContent>
             <Box sx={{ pt: 2 }}>
-              <Typography variant="body2">Vyberte alebo pridajte vlastný krok. Nová fáza sa pridá na koniec časovej osi.</Typography>
+              <Typography variant="body2">{t('business.selectOrAddPhase')}</Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, mb: 1 }}>
-                  <Chip label="Stretnutie" onClick={() => handleAddPhase('Stretnutie', expandedCaseId!)} sx={{ bgcolor: phaseColors[0], color: '#fff' }} />
-                  <Chip label="Hovor" onClick={() => handleAddPhase('Hovor', expandedCaseId!)} sx={{ bgcolor: phaseColors[1], color: '#fff' }} />
-                  <Chip label="Mail" onClick={() => handleAddPhase('Mail', expandedCaseId!)} sx={{ bgcolor: phaseColors[2], color: '#fff' }} />
-                  <Chip label="Videohovor" onClick={() => handleAddPhase('Videohovor', expandedCaseId!)} sx={{ bgcolor: phaseColors[3], color: '#fff' }} />
+                <Chip label={t('business.phaseTypes.meeting')} onClick={() => handleAddPhase(t('business.phaseTypes.meeting'), expandedCaseId!)} sx={{ bgcolor: phaseColors[0], color: '#fff' }} />
+                <Chip label={t('business.phaseTypes.call')} onClick={() => handleAddPhase(t('business.phaseTypes.call'), expandedCaseId!)} sx={{ bgcolor: phaseColors[1], color: '#fff' }} />
+                <Chip label={t('business.phaseTypes.email')} onClick={() => handleAddPhase(t('business.phaseTypes.email'), expandedCaseId!)} sx={{ bgcolor: phaseColors[2], color: '#fff' }} />
+                <Chip label={t('business.phaseTypes.videoCall')} onClick={() => handleAddPhase(t('business.phaseTypes.videoCall'), expandedCaseId!)} sx={{ bgcolor: phaseColors[3], color: '#fff' }} />
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                 <TextField
-                   placeholder="Pridať vlastný krok"
-                   variant="outlined"
-                   size="small"
-                   fullWidth
-                   sx={{ marginTop: 1 }}
-                   onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => { // Správny typ eventu
-                       if (e.key === 'Enter' && expandedCaseId) {
-                           const inputElement = e.target as HTMLInputElement;
-                           if (inputElement.value) handleAddPhase(inputElement.value, expandedCaseId);
-                           inputElement.value = ''; 
-                       }
-                   }}
-                 />
-                 <IconButton 
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => { // Správny typ eventu
-                        const inputElement = e.currentTarget.previousElementSibling?.querySelector('input');
-                        if (inputElement && inputElement.value && expandedCaseId) {
-                            handleAddPhase(inputElement.value, expandedCaseId);
-                            inputElement.value = ''; 
-                        }
-                    }}
-                    sx={{ /* marginTop odobratý, ak bol tu */ backgroundColor: colors.accent.main, color: '#fff', '&:hover': { backgroundColor: colors.accent.light } }}
-                 >
-                     <AddIcon />
-                 </IconButton>
+                <TextField
+                  placeholder={t('business.addCustomPhase')}
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  sx={{ marginTop: 1 }}
+                  onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter' && expandedCaseId) {
+                      const inputElement = e.target as HTMLInputElement;
+                      if (inputElement.value) handleAddPhase(inputElement.value, expandedCaseId);
+                      inputElement.value = ''; 
+                    }
+                  }}
+                />
+                <IconButton 
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    const inputElement = e.currentTarget.previousElementSibling?.querySelector('input');
+                    if (inputElement && inputElement.value && expandedCaseId) {
+                      handleAddPhase(inputElement.value, expandedCaseId);
+                      inputElement.value = ''; 
+                    }
+                  }}
+                  sx={{ backgroundColor: colors.accent.main, color: '#fff', '&:hover': { backgroundColor: colors.accent.light } }}
+                >
+                  <AddIcon />
+                </IconButton>
               </Box>
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPhaseDialogOpen(false)}>Zrušiť</Button>
+            <Button onClick={() => setPhaseDialogOpen(false)}>{t('common.cancel')}</Button>
           </DialogActions>
         </StyledDialogContent>
       </Dialog>

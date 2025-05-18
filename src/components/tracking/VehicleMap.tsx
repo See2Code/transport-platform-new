@@ -844,7 +844,7 @@ const VehicleMap: React.FC = () => {
                             <ListItem><ListItemText primary={<Typography variant="h6">Aktívni vodiči ({vehicles.length})</Typography>} /></ListItem><Divider />
                             {vehicles.length === 0 ? <ListItem><ListItemText primary="Žiadni aktívni vodiči" secondary="Momentálne nie sú k dispozícii žiadne aktívne vozidlá" /></ListItem> : vehicles.map((vehicle: VehicleLocation) => (
                                     <React.Fragment key={vehicle.id}>
-                                    <ListItem button onClick={() => handleListItemClick(vehicle)} selected={selectedVehicle?.id === vehicle.id} secondaryAction={<IconButton edge="end" aria-label="história" onClick={(e) => handleVehicleMenuOpen(e, vehicle.id)}><HistoryIcon /></IconButton>}>
+                                    <ListItem button onClick={() => handleListItemClick(vehicle)} selected={selectedVehicle?.id === vehicle.id} secondaryAction={<IconButton edge="end" aria-label="história" onClick={(e: React.MouseEvent<HTMLButtonElement>) => handleVehicleMenuOpen(e, vehicle.id)}><HistoryIcon /></IconButton>}>
                                         <ListItemAvatar><Avatar><CarIcon /></Avatar></ListItemAvatar>
                                             <ListItemText
                                                 primary={vehicle.driverName}

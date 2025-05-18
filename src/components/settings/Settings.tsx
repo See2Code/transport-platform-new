@@ -1341,7 +1341,7 @@ function Settings() {
                   <IconButtonStyled
                     isDarkMode={isDarkMode}
                     size="small"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                       e.stopPropagation();
                       handleDeleteProfile();
                     }}
@@ -1390,7 +1390,7 @@ function Settings() {
                   <IconButtonStyled
                     isDarkMode={isDarkMode}
                     size="small"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                       e.stopPropagation();
                       handleDeleteLogo();
                     }}

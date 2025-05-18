@@ -970,18 +970,18 @@ const TrackedTransports: React.FC = () => {
 
       <MobileTransportActions onClick={() => console.log('Clicked on Actions wrapper!')}>
          <Tooltip title="Upraviť">
-           <IconButton onClick={(e) => { e.stopPropagation(); handleOpenEditTransportDialog(transport); }} sx={{ color: colors.accent.main }}>
+           <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleOpenEditTransportDialog(transport); }} sx={{ color: colors.accent.main }}>
              <EditIcon />
            </IconButton>
          </Tooltip>
          <Tooltip title="Vymazať">
-           <IconButton onClick={(e) => { e.stopPropagation(); setTransportToDelete(transport); setDeleteConfirmOpen(true); }} sx={{ color: colors.secondary.main }}>
+           <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setTransportToDelete(transport); setDeleteConfirmOpen(true); }} sx={{ color: colors.secondary.main }}>
              <DeleteIcon />
            </IconButton>
          </Tooltip>
          <Tooltip title="Zobraziť na mape (fullscreen)">
             <IconButton 
-              onClick={(e) => { 
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { 
                 console.log('Map IconButton onClick triggered!'); 
                 handleShowMap(transport); 
               }} 

@@ -1595,10 +1595,10 @@ const OrdersList: React.FC = () => {
                             <TableCell>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy') : 'N/A'}</TableCell>
                             <TableCell> {/* Akcie */} 
                               <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                <Tooltip title="Upraviť"><IconButton onClick={(e) => { e.stopPropagation(); handleEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></Tooltip>
-                                <Tooltip title="Náhľad PDF"><IconButton onClick={(e) => { e.stopPropagation(); handlePreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></Tooltip>
-                                <Tooltip title="Stiahnuť PDF"><IconButton onClick={(e) => { e.stopPropagation(); handleDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></Tooltip>
-                                <Tooltip title="Vymazať"><IconButton onClick={(e) => { e.stopPropagation(); openDeleteConfirmation(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></Tooltip>
+                                <Tooltip title="Upraviť"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></Tooltip>
+                                <Tooltip title="Náhľad PDF"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handlePreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></Tooltip>
+                                <Tooltip title="Stiahnuť PDF"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></Tooltip>
+                                <Tooltip title="Vymazať"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openDeleteConfirmation(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></Tooltip>
                                                       </Box>
                                           </TableCell>
                         </TableRow>

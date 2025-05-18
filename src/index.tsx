@@ -1,9 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import '@fontsource/inter';
+import './i18n/i18n';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-import '@fontsource/inter';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 const root = ReactDOM.createRoot(

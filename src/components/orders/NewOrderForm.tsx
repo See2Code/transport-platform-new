@@ -731,7 +731,7 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                                                 {isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}
                                                 <IconButton
                                                     size="small"
-                                                    onClick={(e) => {
+                                                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                                                         e.stopPropagation();
                                                         handleAddNewCustomer();
                                                     }}
@@ -1038,7 +1038,7 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                                                 {isCarrierLoading ? <CircularProgress color="inherit" size={20} /> : null}
                                                 <IconButton
                                                     size="small"
-                                                    onClick={(e) => {
+                                                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                                                         e.stopPropagation();
                                                         handleAddNewCarrier();
                                                     }}
