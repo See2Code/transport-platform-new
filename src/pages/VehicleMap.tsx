@@ -5,7 +5,7 @@ import { Box, Typography, CircularProgress, Alert, Paper, IconButton } from '@mu
 import { styled } from '@mui/material/styles';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 
-const MapContainer = styled(Box)(({ theme }) => ({
+const MapContainer = styled(Box)(({ _theme }) => ({
   width: '100%',
   height: 'calc(100vh - 64px)',
   position: 'relative',
@@ -39,7 +39,7 @@ const VehicleMap: React.FC = () => {
   const { vehicles, loading, error } = useVehicleTracking();
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [hiddenVehicles, setHiddenVehicles] = useState<Set<string>>(new Set());
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [_map, setMap] = useState<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',

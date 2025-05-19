@@ -15,7 +15,6 @@ import {
   Chat as ChatIcon,
   AccessTime as AccessTimeIcon,
   Business as BusinessIcon,
-  Delete as DeleteIcon,
   Refresh as RefreshIcon,
   MarkEmailRead as MarkEmailReadIcon
 } from '@mui/icons-material';

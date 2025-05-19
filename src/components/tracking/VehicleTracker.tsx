@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useTheme } from '@mui/material/styles';
 import { Box, Typography, GlobalStyles } from '@mui/material';
 import { Vehicle } from '../../types/vehicle';

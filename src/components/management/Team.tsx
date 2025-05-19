@@ -198,7 +198,7 @@ const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) =
   }
 }));
 
-const AddButton = styled('button')({
+const _AddButton = styled('button')({
   backgroundColor: colors.accent.main,
   color: '#ffffff',
   padding: '12px 28px',
@@ -221,7 +221,7 @@ const AddButton = styled('button')({
   }
 });
 
-const TeamCard = styled(Card)({
+const _TeamCard = styled(Card)({
   backgroundColor: colors.background.main,
   backdropFilter: 'blur(20px)',
   borderRadius: '16px',
@@ -238,46 +238,46 @@ const TeamCard = styled(Card)({
   }
 });
 
-const TeamInfo = styled(Box)({
+const _TeamInfo = styled(Box)({
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
   gap: '24px',
   marginBottom: '24px',
 });
 
-const InfoSection = styled(Box)({
+const _InfoSection = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
   gap: '16px',
 });
 
-const InfoLabel = styled(Typography)({
+const _InfoLabel = styled(Typography)({
   fontSize: '0.85rem',
   color: 'rgba(255, 255, 255, 0.5)',
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
 });
 
-const InfoValue = styled(Typography)({
+const _InfoValue = styled(Typography)({
   fontSize: '1rem',
   color: '#ffffff',
 });
 
-const CardHeader = styled(Box)({
+const _CardHeader = styled(Box)({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
   marginBottom: '16px',
 });
 
-const MemberName = styled(Typography)({
+const _MemberName = styled(Typography)({
   fontSize: '1.1rem',
   fontWeight: 600,
   color: colors.accent.main,
   lineHeight: 1.3,
 });
 
-const RoleChip = styled('span')({
+const _RoleChip = styled('span')({
   backgroundColor: `${colors.accent.main}33`,
   color: colors.accent.main,
   padding: '4px 12px',
@@ -288,13 +288,13 @@ const RoleChip = styled('span')({
   alignItems: 'center',
 });
 
-const AnimatedTableRow = styled(motion.tr)({
+const _AnimatedTableRow = styled(motion.tr)({
   '&:hover': {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
 });
 
-const fadeOut = {
+const _fadeOut = {
   initial: { opacity: 1, height: 'auto' },
   exit: { 
     opacity: 0,
@@ -343,7 +343,7 @@ const MobileTeamInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => 
   }
 }));
 
-const MobileTeamMember = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamMember = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -374,20 +374,20 @@ const MobileTeamActions = styled(Box)({
   marginTop: '12px',
 });
 
-const MobileInfoItem = styled(Box)({
+const _MobileInfoItem = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
   gap: '4px',
 });
 
-const MobileInfoLabel = styled(Typography)({
+const _MobileInfoLabel = styled(Typography)({
   fontSize: '0.8rem',
   color: 'rgba(255, 255, 255, 0.5)',
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
 });
 
-const MobileInfoValue = styled(Typography)({
+const _MobileInfoValue = styled(Typography)({
   fontSize: '0.95rem',
   color: '#ffffff',
   display: 'flex',
@@ -395,21 +395,21 @@ const MobileInfoValue = styled(Typography)({
   gap: '8px',
 });
 
-const MobileActions = styled(Box)({
+const _MobileActions = styled(Box)({
   display: 'flex',
   gap: '8px',
   marginTop: '16px',
   justifyContent: 'flex-end',
 });
 
-const ActionButton = styled(IconButton)({
+const _ActionButton = styled(IconButton)({
   padding: '8px',
   '&:hover': {
     backgroundColor: 'rgba(255, 159, 67, 0.1)'
   }
 });
 
-const StatusChip = styled(Chip)(({ status }: { status: string }) => ({
+const _StatusChip = styled(Chip)(({ status }: { status: string }) => ({
   backgroundColor: status === 'active' ? 'rgba(46, 213, 115, 0.15)' : 
                   status === 'pending' ? 'rgba(255, 159, 67, 0.15)' : 
                   'rgba(255, 107, 107, 0.15)',
@@ -422,7 +422,7 @@ const StatusChip = styled(Chip)(({ status }: { status: string }) => ({
   height: '24px'
 }));
 
-const StyledTableWrapper = styled(Paper)({
+const _StyledTableWrapper = styled(Paper)({
   backgroundColor: 'rgba(28, 28, 45, 0.95)',
   backdropFilter: 'blur(20px)',
   borderRadius: '16px',
@@ -445,7 +445,7 @@ const StyledTableWrapper = styled(Paper)({
   }
 });
 
-const StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   '&.MuiTableCell-head': {
@@ -573,7 +573,7 @@ const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme, isDarkMo
   },
 }));
 
-const LoadingText = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _LoadingText = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   textAlign: 'center',
   marginBottom: '20px',
@@ -794,7 +794,7 @@ const BareTooltip: React.FC<BareTooltipProps> = ({
   );
 };
 
-const TransparentTooltip = muiStyled(({ className, ...props }: TooltipProps) => (
+const _TransparentTooltip = muiStyled(({ className, ...props }: TooltipProps) => (
   <Tooltip {...props} classes={{ popper: className }} />
 ))(() => ({
   '& .MuiTooltip-tooltip': {
@@ -838,11 +838,11 @@ function Team() {
   const [countryCode, setCountryCode] = useState('sk');
   const [role, setRole] = useState('user');
   const { userData } = useAuth();
-  const [deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
-  const theme = useTheme();
+  const [_deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
+  const _theme = useTheme();
   const { isDarkMode } = useThemeMode();
   const [isResending, setIsResending] = useState(false);
-  const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
+  const [_resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
@@ -853,7 +853,7 @@ function Team() {
     severity: 'info'
   });
   const [isCreating, setIsCreating] = useState(false);
-  const [isInitializingLastLogin, setIsInitializingLastLogin] = useState(false);
+  const [_isInitializingLastLogin, setIsInitializingLastLogin] = useState(false);
 
   const fetchData = useCallback(async () => {
     const user = auth.currentUser;
@@ -1138,34 +1138,6 @@ function Team() {
     }
   };
 
-  const handleVerifyStatus = async (member: TeamMember) => {
-    try {
-      setLoading(true);
-      setError('');
-      setSuccess('');
-
-      await updateDoc(doc(db, 'users', member.id), {
-        status: 'active',
-        updatedAt: new Date()
-      });
-
-      setSuccess('Status člena tímu bol úspešne overený.');
-      fetchData();
-
-      setTimeout(() => {
-        setSuccess('');
-      }, 5000);
-    } catch (err: any) {
-      console.error('Chyba pri overovaní statusu:', err);
-      setError(err.message || 'Nastala chyba pri overovaní statusu.');
-      setTimeout(() => {
-        setError('');
-      }, 5000);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCountryChange = (e: SelectChangeEvent) => {
     const value = e.target.value;
     const country = countries.find(c => c.code === value);
@@ -1228,7 +1200,7 @@ function Team() {
       }
     };
 
-  const handleInitializeLastLogin = async () => {
+  const _handleInitializeLastLogin = async () => {
     try {
       setIsInitializingLastLogin(true);
       const initializeLastLoginFn = httpsCallable(functions, 'initializeLastLogin');

@@ -5,7 +5,7 @@ import { Vehicle } from '../types/vehicle';
 import { debounce } from 'lodash';
 import { useAuth } from '../contexts/AuthContext';
 
-const LOCATION_UPDATE_INTERVAL = 60000; // Zvýšené na 60 sekúnd
+const _LOCATION_UPDATE_INTERVAL = 60000; // Zvýšené na 60 sekúnd
 const LOCATION_ACCURACY_THRESHOLD = 100; // Zvýšené na 100 metrov
 const MINIMUM_DISTANCE_CHANGE = 50; // Zvýšené na 50 metrov
 const MAX_UPDATE_FREQUENCY = 5 * 60 * 1000; // Maximálne 5 minút medzi aktualizáciami

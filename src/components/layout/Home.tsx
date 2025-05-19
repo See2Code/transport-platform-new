@@ -176,7 +176,7 @@ const HeroSection = styled(Box)(() => ({
 }));
 
 // Carousel styled components
-const CarouselContainer = styled(Box)(({ theme }) => ({
+const CarouselContainer = styled(Box)(({ _theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -199,7 +199,7 @@ const CarouselNavButton = styled(IconButton)(({ theme }) => ({
 }));
 
 // App screenshot box
-const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme }) => ({
+const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, _theme }) => ({
   position: 'relative',
   overflow: 'hidden',
   borderRadius: '20px',
@@ -261,7 +261,7 @@ const FeatureCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   }
 }));
 
-const FeatureIcon = styled(Avatar)(({ theme }) => ({
+const FeatureIcon = styled(Avatar)(({ _theme }) => ({
   backgroundColor: '#ff9f43',
   width: 56,
   height: 56,
@@ -305,7 +305,7 @@ const SectionSubtitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMod
 }));
 
 // CTA buttons
-const GradientButton = styled(Button)(({ theme }) => ({
+const GradientButton = styled(Button)(({ _theme }) => ({
   padding: '12px 35px',
   fontSize: '1.1rem',
   borderRadius: '12px',

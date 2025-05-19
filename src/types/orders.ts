@@ -1,6 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
 import { Customer } from './customers';
-import { Carrier } from './carriers';
 
 export interface GoodsItem {
   id: string;

@@ -75,8 +75,8 @@ const ENFlagIcon = () => (
   </span>
 );
 
-const drawerWidth = 240;
-const miniDrawerWidth = 64;
+const _drawerWidth = 240;
+const _miniDrawerWidth = 64;
 
 // Definícia farebnej palety
 const colors = {
@@ -97,7 +97,7 @@ const colors = {
   }
 };
 
-const Logo = styled(Typography)(({ theme }) => ({
+const _Logo = styled(Typography)(({ theme }) => ({
   fontWeight: 800,
   color: colors.primary.main,
   fontSize: '1.5rem',
@@ -109,7 +109,7 @@ const Logo = styled(Typography)(({ theme }) => ({
   }
 }));
 
-const AesaLogoDrawer = styled('img')({
+const _AesaLogoDrawer = styled('img')({
   height: '32px',
   width: 'auto',
   transition: 'all 0.3s ease-in-out',
@@ -119,7 +119,7 @@ const AesaLogoDrawer = styled('img')({
   }
 });
 
-const AesaLogoMini = styled('img')({
+const _AesaLogoMini = styled('img')({
   height: '28px',
   width: 'auto',
   transition: 'all 0.3s ease-in-out',
@@ -129,11 +129,11 @@ const AesaLogoMini = styled('img')({
   }
 });
 
-const DrawerHeader = styled('div')({
+const _DrawerHeader = styled('div')({
   display: 'none'
 });
 
-const ToggleButton = styled(IconButton)(({ theme }) => ({
+const _ToggleButton = styled(IconButton)(({ _theme }) => ({
   position: 'fixed',
   right: '24px',
   bottom: '24px',
@@ -190,9 +190,9 @@ const ListItemIconStyled = styled(ListItemIcon)({
   }
 });
 
-const NavListItem = styled(ListItem, {
+const _NavListItem = styled(ListItem, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode?: boolean }>(({ theme, isDarkMode = true }) => ({
+})<{ isDarkMode?: boolean }>(({ _theme, isDarkMode = true }) => ({
   position: 'relative',
   padding: '4px',
   '& .MuiListItemButton-root': {
@@ -235,7 +235,7 @@ const NavListItem = styled(ListItem, {
   }
 }));
 
-interface UserData {
+interface _U__serData {
   firstName: string;
   lastName: string;
   email: string;
@@ -252,7 +252,7 @@ interface MenuItem {
   access?: string[];
 }
 
-const MinimizedMenuItem = styled(MenuItem)(({ theme }) => ({
+const _MinimizedMenuItem = styled(MenuItem)(({ _theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -269,7 +269,7 @@ const MinimizedMenuItem = styled(MenuItem)(({ theme }) => ({
   }
 }));
 
-const MinimizedMenuList = styled(MenuList)({
+const _MinimizedMenuList = styled(MenuList)({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -283,17 +283,17 @@ const MinimizedMenuList = styled(MenuList)({
   }
 });
 
-const LogoImage = styled('img')<{ isDarkMode: boolean }>({
+const _LogoImage = styled('img')<{ isDarkMode: boolean }>({
   transition: 'filter 0.3s ease',
 });
 
-const BrandContainer = styled(Box)({
+const _BrandContainer = styled(Box)({
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
 });
 
-const MenuContainer = styled(Box)({
+const _MenuContainer = styled(Box)({
   display: 'flex',
   alignItems: 'center',
   gap: '16px',
@@ -301,7 +301,7 @@ const MenuContainer = styled(Box)({
   justifyContent: 'flex-end'
 });
 
-const StyledMenuList = styled(List)({
+const _StyledMenuList = styled(List)({
   display: 'flex',
   flexDirection: 'row',
   alignItems: 'center',
@@ -310,7 +310,7 @@ const StyledMenuList = styled(List)({
   margin: 0
 });
 
-const StyledMenuItem = styled(MenuItem)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
+const _StyledMenuItem = styled(MenuItem)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   padding: '12px 16px',
   margin: '4px 8px',
   borderRadius: '8px',
@@ -341,13 +341,13 @@ const StyledMenuItem = styled(MenuItem)<{ isDarkMode?: boolean }>(({ isDarkMode 
   },
 }));
 
-const StyledMenuItemIcon = styled(ListItemIcon)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
+const _StyledMenuItemIcon = styled(ListItemIcon)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   minWidth: 0,
   marginRight: 1,
   color: isDarkMode ? colors.text.primary : '#000000'
 }));
 
-const StyledMenuItemText = styled(ListItemText)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
+const _StyledMenuItemText = styled(ListItemText)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   '& .MuiTypography-root': {
     fontSize: '0.9rem',
     fontWeight: 500,
@@ -355,7 +355,7 @@ const StyledMenuItemText = styled(ListItemText)<{ isDarkMode?: boolean }>(({ isD
   }
 }));
 
-const LogoutButton = styled(IconButton)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
+const _LogoutButton = styled(IconButton)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? colors.text.primary : '#000000',
   '&:hover': {
     color: colors.primary.main,
@@ -363,11 +363,11 @@ const LogoutButton = styled(IconButton)<{ isDarkMode?: boolean }>(({ isDarkMode 
   }
 }));
 
-interface AuthContextType {
+interface _A__uthContextType {
   logout: () => Promise<void>;
 }
 
-const SideNav = styled('nav')(({ theme }) => ({
+const _SideNav = styled('nav')(({ _theme }) => ({
   width: '100%',
   backgroundColor: colors.background.main,
   backdropFilter: 'blur(20px)',
@@ -389,7 +389,7 @@ const SideNav = styled('nav')(({ theme }) => ({
   }
 }));
 
-const MainWrapper = styled('main')({
+const _MainWrapper = styled('main')({
   width: '100%',
   marginBottom: '64px',
   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -398,7 +398,7 @@ const MainWrapper = styled('main')({
   }
 });
 
-const ContentWrapper = styled('div')({
+const _ContentWrapper = styled('div')({
   padding: '24px',
   position: 'relative',
   zIndex: 1,
@@ -407,7 +407,7 @@ const ContentWrapper = styled('div')({
   }
 });
 
-const AppWrapper = styled('div')({
+const _AppWrapper = styled('div')({
   display: 'flex',
   minHeight: '100vh',
   backgroundColor: colors.background.light,
@@ -416,7 +416,7 @@ const AppWrapper = styled('div')({
   overflow: 'hidden',
 });
 
-const Overlay = styled('div')({
+const _Overlay = styled('div')({
   position: 'fixed',
   top: 0,
   left: 0,
@@ -438,19 +438,23 @@ const Overlay = styled('div')({
   }
 });
 
-const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+const StyledAppBar = styled(AppBar, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode' && prop !== 'chatOpen'
+})<{ isDarkMode?: boolean; chatOpen?: boolean }>(({ _theme, isDarkMode = false, chatOpen = false }) => ({
+  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+  color: isDarkMode ? '#ffffff' : '#000000',
+  boxShadow: '0 1px 8px 0 rgba(0,0,0,0.1)',
   backdropFilter: 'blur(10px)',
-  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
   position: 'fixed',
   top: 0,
-  left: 0,
   right: 0,
+  left: 0,
   width: '100%',
-  zIndex: theme.zIndex.appBar
+  zIndex: 1200,
+  transition: 'all 0.3s ease-in-out',
 }));
 
-const StyledToolbar = styled(Toolbar)(({ theme }) => ({
+const StyledToolbar = styled(Toolbar)(({ _theme }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   padding: '0 24px',
@@ -461,7 +465,7 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   }
 }));
 
-const MenuButton = styled(IconButton)(({ theme }) => ({
+const _MenuButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.text.primary,
 }));
 
@@ -483,14 +487,14 @@ const MobileDrawer = styled(Drawer, {
   }
 }));
 
-const BottomActions = styled(Box)({
+const _BottomActions = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
   gap: '4px',
   marginTop: '4px'
 });
 
-const ActionItem = styled(MenuItem)<{ isDarkMode?: boolean; isLogout?: boolean }>(({ isDarkMode, isLogout }) => ({
+const _ActionItem = styled(MenuItem)<{ isDarkMode?: boolean; isLogout?: boolean }>(({ isDarkMode, isLogout }) => ({
   padding: '12px 16px',
   display: 'flex',
   alignItems: 'center',
@@ -506,7 +510,7 @@ const ActionItem = styled(MenuItem)<{ isDarkMode?: boolean; isLogout?: boolean }
   },
 }));
 
-const MenuItemWrapper = styled(ListItemButton)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
+const _MenuItemWrapper = styled(ListItemButton)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   alignItems: 'center',
   padding: '12px 16px',
@@ -522,7 +526,7 @@ const MenuItemWrapper = styled(ListItemButton)<{ isDarkMode?: boolean }>(({ isDa
   },
 }));
 
-const MenuItemIcon = styled(ListItemIconStyled)({
+const _MenuItemIcon = styled(ListItemIconStyled)({
   minWidth: '24px',
   width: '24px',
   margin: 0,
@@ -534,13 +538,13 @@ const MenuItemIcon = styled(ListItemIconStyled)({
   }
 });
 
-const MenuItemContent = styled(Box)({
+const _MenuItemContent = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
   gap: '2px'
 });
 
-const PageWrapper = styled('div', {
+const _PageWrapper = styled('div', {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
 })<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
@@ -550,12 +554,12 @@ const PageWrapper = styled('div', {
   backgroundColor: isDarkMode ? colors.background.dark : '#FFFFFF',
 }));
 
-const MainContent = styled('main')({
+const _MainContent = styled('main')({
   flexGrow: 1,
   width: '100%',
 });
 
-const StyledListItem = styled(ListItem)<{ button?: boolean; isDarkMode?: boolean }>(({ isDarkMode = true }) => ({
+const _StyledListItem = styled(ListItem)<{ button?: boolean; isDarkMode?: boolean }>(({ isDarkMode = true }) => ({
   minWidth: 'auto',
   padding: '12px 16px',
   borderRadius: 0,
@@ -580,13 +584,13 @@ const StyledListItem = styled(ListItem)<{ button?: boolean; isDarkMode?: boolean
   },
 }));
 
-const StyledDivider = styled(Divider)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
+const _StyledDivider = styled(Divider)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   margin: '8px 16px',
   backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
   height: '1px',
 }));
 
-const StyledDialog = styled(Dialog, {
+const _StyledDialog = styled(Dialog, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
 })<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   '& .MuiDialog-paper': {
@@ -606,7 +610,7 @@ const StyledDialog = styled(Dialog, {
   },
 }));
 
-const StyledButton = styled(Button, {
+const _StyledButton = styled(Button, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
 })<{ isDarkMode: boolean; variant: 'text' | 'contained' }>(({ isDarkMode, variant }) => ({
   borderRadius: 0,
@@ -630,11 +634,11 @@ const StyledButton = styled(Button, {
 // --- Konštanty pre cesty k logám v public adresári ---
 const logoLightPath = "/AESA black.svg"; // Alebo /logo.png ak existuje
 const logoDarkPath = "/AESA white.svg";  // Alebo /logo-dark.png ak existuje
-const logoMiniLightPath = "/favicon.png"; // Nahraďte správnou cestou k mini logu
-const logoMiniDarkPath = "/AESA white favicon.png"; // Nahraďte správnou cestou k mini tmavému logu
+const _logoMiniLightPath = "/favicon.png"; // Nahraďte správnou cestou k mini logu
+const _logoMiniDarkPath = "/AESA white favicon.png"; // Nahraďte správnou cestou k mini tmavému logu
 
 // Nové komponenty pre notifikácie
-const NotificationPopover = styled(Popover)(({ theme }) => ({
+const _NotificationPopover = styled(Popover)(({ _theme }) => ({
   '& .MuiPopover-paper': {
     width: '360px',
     maxHeight: '500px',
@@ -645,7 +649,7 @@ const NotificationPopover = styled(Popover)(({ theme }) => ({
   },
 }));
 
-const NotificationHeader = styled(Box, {
+const _NotificationHeader = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
 })<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '12px 16px',
@@ -655,7 +659,7 @@ const NotificationHeader = styled(Box, {
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
 }));
 
-const NotificationContainer = styled(Box)({
+const _NotificationContainer = styled(Box)({
   maxHeight: '360px',
   overflowY: 'auto',
   '&::-webkit-scrollbar': {
@@ -670,7 +674,7 @@ const NotificationContainer = styled(Box)({
   },
 });
 
-const NotificationItem = styled(Box, {
+const _NotificationItem = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode' && prop !== 'isRead'
 })<{ isDarkMode: boolean; isRead: boolean }>(({ isDarkMode, isRead }) => ({
   padding: '12px 16px',
@@ -682,7 +686,7 @@ const NotificationItem = styled(Box, {
   },
 }));
 
-const NotificationFooter = styled(Box, {
+const _NotificationFooter = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
 })<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '12px 16px',
@@ -691,7 +695,7 @@ const NotificationFooter = styled(Box, {
   borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
 }));
 
-const StyledMenu = styled((props: MenuProps) => (
+const _StyledMenu = styled((props: MenuProps) => (
   <Menu
     elevation={0}
     anchorOrigin={{
@@ -728,7 +732,7 @@ const StyledMenu = styled((props: MenuProps) => (
   },
 }));
 
-const SolidDialogPaper = styled(Paper)(({ theme }) => ({
+const _SolidDialogPaper = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === 'dark' ? '#232342' : '#fff',
   boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
   borderRadius: 16,
@@ -740,7 +744,7 @@ const SolidDialogPaper = styled(Paper)(({ theme }) => ({
 }));
 
 // Pridáme klučové animácie do globálnych štýlov
-const globalStyles = {
+const _globalStyles = {
   '@keyframes fadeInTooltip': {
     '0%': { 
       opacity: 0, 
@@ -777,7 +781,7 @@ const BareTooltip: FC<BareTooltipProps> = ({
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isHoveringRef = useRef(false);
   
-  const theme = useTheme();
+  const _theme = useTheme();
   const { isDarkMode } = useThemeMode();
 
   // Prida globálne štýly
@@ -948,14 +952,14 @@ const BareTooltip: FC<BareTooltipProps> = ({
 const Navbar: FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
+  const _location = useLocation();
   const { userData, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
-  const { toggleChat } = useChatUI();
+  const { toggleChat, chatOpen } = useChatUI();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [_notifications, _setNotifications] = useState<any[]>([]);
+  const [unreadCount, _setUnreadCount] = useState(0);
+  const [_anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { t, i18n } = useTranslation();
@@ -965,7 +969,7 @@ const Navbar: FC = () => {
     navigate('/notifications');
   };
 
-  const handleNotificationClick = (notification: any) => {
+  const _handleNotificationClick = (_notification: any) => {
     setAnchorEl(null);
     // Handle notification click
   };
@@ -998,7 +1002,7 @@ const Navbar: FC = () => {
 
   return (
     <>
-      <StyledAppBar position="fixed">
+      <StyledAppBar position="fixed" isDarkMode={isDarkMode} chatOpen={chatOpen}>
         <StyledToolbar>
           {isMobile ? (
             <IconButton

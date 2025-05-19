@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc, getDoc, Timestamp, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, onSnapshot, updateDoc, doc, getDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Chat, ChatMessage } from '../types/chat';
 

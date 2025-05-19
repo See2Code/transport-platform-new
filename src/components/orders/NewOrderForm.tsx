@@ -276,7 +276,7 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                 : { ...prev, unloadingPlaces: [...(prev.unloadingPlaces || []), newPlace] };
         });
     };
-     const removePlace = (type: 'loading' | 'unloading', index: number) => {
+     const _removePlace = (type: 'loading' | 'unloading', index: number) => {
         setFormData(prev => {
             const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
             if (places.length > 1) { // Prevent removing the last place
@@ -1115,13 +1115,13 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
 };
 
 // Pridáme nové rozhrania
-interface CustomerDialogProps {
+interface _C__ustomerDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (customerData: Customer) => void;
 }
 
-interface CarrierDialogProps {
+interface _C__arrierDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (carrierData: Carrier) => void;

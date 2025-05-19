@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline, GlobalStyles, Theme } from '@mui/material';
 import Box from '@mui/material/Box';
@@ -23,6 +23,9 @@ import ChatDrawer from './components/chat/ChatDrawer';
 import { useChat } from './contexts/ChatContext';
 import styled from '@emotion/styled';
 import { Typography } from '@mui/material';
+
+// Konštanta pre šírku chat drawera
+const DRAWER_WIDTH = 320;
 
 // Vytvoríme kontext pre chat UI
 type ChatUIContextType = {
@@ -54,7 +57,7 @@ type _PageContentProps = {
   sx?: Record<string, any>;
 };
 
-const AppContainer = styled(Box)({
+const AppContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   minHeight: '100vh',
@@ -62,9 +65,18 @@ const AppContainer = styled(Box)({
   background: 'transparent',
   position: 'relative',
   overflow: 'hidden',
-});
+  transition: 'margin-right 0.3s ease-in-out',
+}));
 
-const PageContent = styled(Box)({
+const ContentWrapper = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'chatOpen'
+})<{ chatOpen: boolean }>(({ chatOpen }) => ({
+  width: '100%',
+  transition: 'margin-right 0.3s ease-in-out',
+  marginRight: chatOpen ? `${DRAWER_WIDTH}px` : 0,
+}));
+
+const PageContent = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   marginTop: '48px',
   padding: '24px 16px',
@@ -72,12 +84,13 @@ const PageContent = styled(Box)({
   zIndex: 1,
   minHeight: 'calc(100vh - 48px)',
   overflowX: 'hidden',
+  transition: 'all 0.3s ease-in-out',
   '@media (max-width: 600px)': {
-    marginTop: '40px',
+    marginTop: '48px',
     padding: '16px',
-    minHeight: 'calc(100vh - 40px)',
+    minHeight: 'calc(100vh - 48px)',
   }
-});
+}));
 
 const _PageTitle = styled(Typography)(({ theme }: { theme: Theme }) => ({
   fontSize: '1.75rem',
@@ -104,6 +117,20 @@ const AppContent: React.FC = () => {
   const closeChat = () => setChatOpen(false);
 
   const { unreadConversationsCount, hasNewMessages } = useChat();
+
+  // Tento useEffect pridáme na zvládanie ESC klávesu pre zatvorenie chatu
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && chatOpen) {
+        closeChat();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [chatOpen, closeChat]);
 
   const chatUIValue = {
     chatOpen,
@@ -234,115 +261,117 @@ const AppContent: React.FC = () => {
           />
         )}
         <AppContainer>
-          <Routes>
-            {/* Verejné cesty */}
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/register-user" element={<RegisterUser />} />
-            <Route path="/accept-invitation/:invitationId" element={<RegisterUser />} />
-            
-            {/* Chránené cesty */}
-            <Route path="/dashboard" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <Dashboard />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/team" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <Team />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/contacts" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <Contacts />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/settings" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <Settings />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/tracked-transports" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <TrackedTransports />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/tracked-shipments" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <TrackedTransports />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/business-cases" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <BusinessCases />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/orders" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <OrdersForm />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/nova-objednavka" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <NewOrderForm />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/vehicle-map" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <VehicleMap />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-            <Route path="/notifications" element={
-              <PrivateRoute>
-                <PageContent sx={{ marginRight: chatOpen ? '320px' : 0, transition: 'margin-right 0.3s ease-in-out' }}>
-                  <Navbar />
-                  <Notifications />
-                </PageContent>
-                <ChatDrawer open={chatOpen} onClose={closeChat} />
-              </PrivateRoute>
-            } />
-          </Routes>
+          <ContentWrapper chatOpen={chatOpen}>
+            <Routes>
+              {/* Verejné cesty */}
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/register-user" element={<RegisterUser />} />
+              <Route path="/accept-invitation/:invitationId" element={<RegisterUser />} />
+              
+              {/* Chránené cesty */}
+              <Route path="/dashboard" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <Dashboard />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/team" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <Team />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/contacts" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <Contacts />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/settings" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <Settings />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/tracked-transports" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <TrackedTransports />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/tracked-shipments" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <TrackedTransports />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/business-cases" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <BusinessCases />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/orders" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <OrdersForm />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/nova-objednavka" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <NewOrderForm />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/vehicle-map" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <VehicleMap />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+              <Route path="/notifications" element={
+                <PrivateRoute>
+                  <PageContent>
+                    <Navbar />
+                    <Notifications />
+                  </PageContent>
+                  <ChatDrawer open={chatOpen} onClose={closeChat} />
+                </PrivateRoute>
+              } />
+            </Routes>
+          </ContentWrapper>
         </AppContainer>
       </ChatUIContext.Provider>
     </MuiThemeProvider>

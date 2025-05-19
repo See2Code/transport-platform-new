@@ -192,7 +192,7 @@ const MobileCardHeader = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMo
   width: '100%',
 }));
 
-const MobileCompanyName = styled(Typography)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+const MobileCompanyName = styled(Typography)<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
   fontWeight: 600,
   color: isDarkMode ? '#ffffff' : '#000000',
   fontSize: '1.1rem',
@@ -206,7 +206,7 @@ const MobileCardContent = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkM
   width: '100%',
 }));
 
-const MobileInfoRow = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+const MobileInfoRow = styled(Box)<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -458,7 +458,7 @@ export default function BusinessCases() {
         const phasesWithDates: Phase[] = (data.phases || []).map((phase: any): Phase => {
             let createdAtDate: Date;
             if (phase.createdAt instanceof Timestamp) { createdAtDate = phase.createdAt.toDate(); }
-            else if (phase.createdAt) { try { const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); createdAtDate = !isNaN(d.getTime()) ? d : new Date(); } catch (e) { createdAtDate = new Date(); } }
+            else if (phase.createdAt) { try { const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); createdAtDate = !isNaN(d.getTime()) ? d : new Date(); } catch (_e_) { createdAtDate = new Date(); } }
             else { createdAtDate = new Date(); }
             return { id: phase.id || crypto.randomUUID(), name: phase.name || 'Neznáma fáza', createdAt: createdAtDate };
         });

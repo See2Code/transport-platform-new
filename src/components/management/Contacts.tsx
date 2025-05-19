@@ -75,7 +75,7 @@ const colors = {
   }
 };
 
-const ContactCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _ContactCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
   borderRadius: '16px',
   padding: '16px',
@@ -86,32 +86,32 @@ const ContactCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   width: '100%'
 }));
 
-const ContactInfo = styled(Box)({
+const _ContactInfo = styled(Box)({
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
   gap: '24px',
   marginBottom: '16px',
 });
 
-const InfoSection = styled(Box)({
+const _InfoSection = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
   gap: '16px',
 });
 
-const InfoLabel = styled(Typography)({
+const _InfoLabel = styled(Typography)({
   fontSize: '0.85rem',
   color: 'rgba(255, 255, 255, 0.5)',
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
 });
 
-const InfoValue = styled(Typography)({
+const _InfoValue = styled(Typography)({
   fontSize: '1rem',
   color: '#ffffff',
 });
 
-const ContactName = styled(Typography)({
+const _ContactName = styled(Typography)({
   fontSize: '1.1rem',
   fontWeight: 600,
   color: colors.accent.main,
@@ -185,7 +185,7 @@ const MobileContactActions = styled(Box)({
   marginTop: '12px',
 });
 
-const StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   '&.MuiTableCell-head': {
@@ -339,7 +339,7 @@ const Contacts = () => {
     updatedAt: Timestamp.now()
   });
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [_users, setUsers] = useState<User[]>([]);
 
   const fetchContacts = async () => {
     try {

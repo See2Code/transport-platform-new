@@ -181,7 +181,7 @@ const AddButton = styled(Button)({
   }
 });
 
-const TransportCard = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+const TransportCard = styled(Box)<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
   borderRadius: '16px',
   padding: '16px',
@@ -216,7 +216,7 @@ const CreatorInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   }
 }));
 
-const InfoChip = styled(Box)<{ variant?: 'status' | 'distance' }>(({ variant, theme }) => ({
+const InfoChip = styled(Box)<{ variant?: 'status' | 'distance' }>(({ variant, _theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '6px',
@@ -446,7 +446,7 @@ const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
 }));
 
 // Hook pre zobrazovanie pripomienok
-type ReminderType = 'loading' | 'unloading';
+type _R__eminderType = 'loading' | 'unloading';
 
 // Jednoduchý hook pre notifikácie
 function useNotifications() {
@@ -623,11 +623,11 @@ const TrackedTransports: React.FC = () => {
   }, [userData?.companyID, showNotification]);
 
   // Funkcia pre logovanie
-  const logToStorage = (message: string, data?: any) => {
+  const _logToStorage = (message: string, data?: any) => {
     console.log(message, data);
   };
 
-  const handleOpenDialog = (transport?: Transport) => {
+  const _handleOpenDialog = (transport?: Transport) => {
     if (transport) {
       setTransportToDelete(transport);
       setDeleteConfirmOpen(true);
@@ -954,7 +954,7 @@ const TrackedTransports: React.FC = () => {
                   origin={transport.loadingAddress}
                   destination={transport.unloadingAddress}
                   isThumbnail={false}
-                  onDirectionsChange={(directions, distance, duration) => {
+                  onDirectionsChange={(directions, distance, _uration) => {
                       if (distance && !transport.distance) {
                           const updates = { distance: distance };
                           updateDoc(firestoreDoc(db, 'transports', transport.id), updates);
@@ -979,7 +979,7 @@ const TrackedTransports: React.FC = () => {
          </Tooltip>
          <Tooltip title="Zobraziť na mape (fullscreen)">
             <IconButton 
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { 
+              onClick={(_: React.MouseEvent<HTMLButtonElement>) => { 
                 console.log('Map IconButton onClick triggered!'); 
                 handleShowMap(transport); 
               }} 

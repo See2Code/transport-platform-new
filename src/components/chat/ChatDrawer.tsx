@@ -14,7 +14,6 @@ import {
   Paper,
   CircularProgress,
   Badge,
-  useTheme,
   Drawer
 } from '@mui/material';
 import {
@@ -34,13 +33,19 @@ import { db } from '../../firebase';
 
 const DRAWER_WIDTH = 320;
 
+// Definujeme konštantu pre dobu trvania animácie
+const TRANSITION_DURATION = '0.3s';
+
 // Štýlované komponenty
-const ChatContainer = styled(Box)(({ _theme }) => ({
+const ChatContainer = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
+  width: '100%',
   height: '100%',
+  position: 'relative',
   overflow: 'hidden',
-}));
+  transition: `all ${TRANSITION_DURATION} ease-in-out`,
+});
 
 const ConversationHeader = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode',
@@ -49,34 +54,72 @@ const ConversationHeader = styled(Box, {
   display: 'flex',
   alignItems: 'center',
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+  transition: `all ${TRANSITION_DURATION} ease-in-out`,
 }));
 
 const SearchContainer = styled(Box)(({ _theme }) => ({
   padding: '16px',
+  transition: `all ${TRANSITION_DURATION} ease-in-out`,
 }));
 
 const ConversationList = styled(List)(({ _theme }) => ({
   flexGrow: 1,
   overflow: 'auto',
+  overflowY: 'auto',
   padding: 0,
   margin: 0,
+  '&::-webkit-scrollbar': {
+    width: '6px',
+    backgroundColor: 'transparent',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'transparent',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: 'rgba(255, 159, 67, 0.3)',
+    borderRadius: '3px',
+  },
+  '&::-webkit-scrollbar-thumb:hover': {
+    background: 'rgba(255, 159, 67, 0.5)',
+  }
 }));
 
 const ChatHeader = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode',
 })<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  padding: '16px',
+  padding: '12px 16px',
+  paddingTop: '20px',
   display: 'flex',
   alignItems: 'center',
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+  margin: 0,
+  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.98)' : 'rgba(255, 255, 255, 0.98)',
 }));
 
 const MessageContainer = styled(Box)(({ _theme }) => ({
   flexGrow: 1,
   overflow: 'auto',
+  overflowY: 'auto',
   padding: '16px',
   display: 'flex',
   flexDirection: 'column',
+  position: 'relative',
+  height: 'calc(100% - 112px)', // odpočítame výšku header-u a input-u
+  minHeight: '300px', // minimálna výška
+  '&::-webkit-scrollbar': {
+    width: '6px',
+    backgroundColor: 'transparent',
+  },
+  '&::-webkit-scrollbar-track': {
+    background: 'transparent',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: 'rgba(255, 159, 67, 0.3)',
+    borderRadius: '3px',
+  },
+  '&::-webkit-scrollbar-thumb:hover': {
+    background: 'rgba(255, 159, 67, 0.5)',
+  }
 }));
 
 const MessageBubble = styled(Box, {
@@ -105,6 +148,11 @@ const InputContainer = styled(Box, {
   borderTop: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
   display: 'flex',
   alignItems: 'center',
+  position: 'sticky',
+  bottom: 0,
+  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+  zIndex: 1,
+  width: '100%'
 }));
 
 const EmptyStateContainer = styled(Box)(({ _theme }) => ({
@@ -117,66 +165,6 @@ const EmptyStateContainer = styled(Box)(({ _theme }) => ({
   textAlign: 'center',
 }));
 
-const _StyledBadge = styled(Badge)(({ theme }) => ({
-  '& .MuiBadge-badge': {
-    backgroundColor: '#44b700',
-    color: '#44b700',
-    boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
-    '&::after': {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      borderRadius: '50%',
-      animation: 'ripple 1.2s infinite ease-in-out',
-      border: '1px solid currentColor',
-      content: '""',
-    },
-  },
-  '@keyframes ripple': {
-    '0%': {
-      transform: 'scale(.8)',
-      opacity: 1,
-    },
-    '100%': {
-      transform: 'scale(2.4)',
-      opacity: 0,
-    },
-  },
-}));
-
-const _TabPanel = (props: {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-  style?: React.CSSProperties;
-  [key: string]: any;
-}) => {
-  const { children, value, index, style, ...other } = props;
-
-  const mergedStyle: React.CSSProperties = {
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    flexGrow: 1,
-    ...(style || {}),
-  };
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`chat-tabpanel-${index}`}
-      aria-labelledby={`chat-tab-${index}`}
-      {...other}
-      style={mergedStyle}
-    >
-      {value === index && <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, padding: 0, margin: 0 }}>{children}</Box>}
-    </div>
-  );
-};
-
 interface ChatDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -185,32 +173,60 @@ interface ChatDrawerProps {
 const ChatDrawer = styled(Drawer)(({ theme }) => ({
   width: DRAWER_WIDTH,
   flexShrink: 0,
+  zIndex: 1300,
   '& .MuiDrawer-paper': {
     width: DRAWER_WIDTH,
     backgroundColor: theme.palette.mode === 'dark' ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
     position: 'fixed',
-    top: '64px', // výška navbaru
-    height: 'calc(100% - 64px)',
+    top: 0,
+    left: 'auto',
+    right: 0,
+    bottom: 0,
+    height: '100vh',
     borderLeft: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-    zIndex: theme.zIndex.drawer,
     boxSizing: 'border-box',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    transform: 'none !important',
+    margin: 0,
+    padding: 0,
+    transition: `all ${TRANSITION_DURATION} ease-in-out`,
+    visibility: 'visible',
+    boxShadow: theme.palette.mode === 'dark' 
+      ? '0px 0px 15px rgba(0, 0, 0, 0.3)' 
+      : '0px 0px 15px rgba(0, 0, 0, 0.1)',
+    '@media (max-width: 600px)': {
+      top: 0,
+      left: 0,
+      right: 0,
+      width: '100%',
+      height: '100vh',
+    }
   },
   '&.MuiDrawer-root': {
     position: 'fixed',
+    top: 0,
+    left: 'auto',
     right: 0,
-    top: '64px',
-    height: 'calc(100% - 64px)',
+    bottom: 0,
+    height: '100vh',
     width: DRAWER_WIDTH,
+    margin: 0,
+    padding: 0,
     pointerEvents: 'none',
+    transition: `all ${TRANSITION_DURATION} ease-in-out`,
     '& > *': {
       pointerEvents: 'auto'
+    },
+    '@media (max-width: 600px)': {
+      top: 0,
+      width: '100%',
+      left: 0,
+      height: '100vh',
     }
   }
 }));
 
 const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
-  const _theme = useTheme();
   const { isDarkMode } = useThemeMode();
   const { userData } = useAuth();
   const {
@@ -232,6 +248,16 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Reset search term when drawer is closed
+  useEffect(() => {
+    if (!open) {
+      // Vynulujeme vyhľadávacie pole pri zatvorení chatu
+      setTimeout(() => {
+        setSearchTerm('');
+      }, 300); // Po dokončení animácie
+    }
+  }, [open]);
 
   // Scroll down when new messages arrive
   useEffect(() => {
@@ -351,6 +377,19 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
       open={open}
       onClose={onClose}
       variant="persistent"
+      sx={{
+        '& .MuiDrawer-paper': {
+          transition: `all ${TRANSITION_DURATION} ease-in-out`,
+          opacity: open ? 1 : 0,
+          visibility: open ? 'visible' : 'hidden',
+          display: open ? 'block' : 'none',
+          animation: open ? `fadeIn ${TRANSITION_DURATION} ease-in-out` : 'none'
+        },
+        '@keyframes fadeIn': {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 }
+        }
+      }}
     >
       <ChatContainer>
         {currentConversation ? (
@@ -487,12 +526,13 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 size="small"
-                focused={!searchTerm}
+                focused={!searchTerm && open}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderWidth: 2,
                     borderColor: 'primary.main',
-                    boxShadow: '0 0 5px rgba(99, 102, 241, 0.3)'
+                    boxShadow: '0 0 5px rgba(99, 102, 241, 0.3)',
+                    transition: 'all 0.2s ease-in-out'
                   }
                 }}
                 InputProps={{
@@ -517,7 +557,12 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                     mt: 1, 
                     maxHeight: '300px', 
                     overflow: 'auto',
-                    bgcolor: isDarkMode ? 'rgba(45, 45, 60, 0.95)' : 'white' 
+                    bgcolor: isDarkMode ? 'rgba(45, 45, 60, 0.95)' : 'white',
+                    transition: `all ${TRANSITION_DURATION} ease-in-out`,
+                    visibility: open ? 'visible' : 'hidden',
+                    opacity: open ? 1 : 0,
+                    position: 'relative',
+                    zIndex: 10
                   }}
                 >
                   {searchedUsers.length > 0 ? (

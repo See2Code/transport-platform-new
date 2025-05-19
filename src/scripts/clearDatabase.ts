@@ -1,5 +1,4 @@
 import * as admin from 'firebase-admin';
-import * as path from 'path';
 import { DocumentData } from '@google-cloud/firestore';
 
 // Inicializácia Firebase Admin SDK

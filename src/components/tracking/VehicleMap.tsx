@@ -553,7 +553,7 @@ const VehicleMap: React.FC = () => {
     const [, setTimeUpdate] = useState(0);
     const { isDarkMode } = useThemeMode();
     const [showTrail, setShowTrail] = useState(false);
-    const [filterOptions, setFilterOptions] = useState({ showOfflineVehicles: true, showOnlineOnly: false });
+    const [filterOptions, _setFilterOptions] = useState({ showOfflineVehicles: true, showOnlineOnly: false });
     const [routeHistory, setRouteHistory] = useState<RouteHistoryEntry[]>([]);
     const [selectedHistoryRoute, setSelectedHistoryRoute] = useState<RouteHistoryEntry | null>(null);
     const [historyDialogOpen, setHistoryDialogOpen] = useState(false);

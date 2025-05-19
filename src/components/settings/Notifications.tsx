@@ -50,7 +50,7 @@ const Notifications = () => {
         message: 'Notifikácia bola označená ako prečítaná',
         severity: 'success'
       });
-    } catch (error) {
+    } catch (_e_rror) {
       setSnackbar({
         open: true,
         message: 'Nepodarilo sa označiť notifikáciu ako prečítanú',
@@ -67,7 +67,7 @@ const Notifications = () => {
         message: 'Všetky notifikácie boli označené ako prečítané',
         severity: 'success'
       });
-    } catch (error) {
+    } catch (_e_rror) {
       setSnackbar({
         open: true,
         message: 'Nepodarilo sa označiť všetky notifikácie ako prečítané',
@@ -84,7 +84,7 @@ const Notifications = () => {
         message: 'Notifikácie boli obnovené',
         severity: 'success'
       });
-    } catch (error) {
+    } catch (_e_rror) {
       setSnackbar({
         open: true,
         message: 'Nepodarilo sa obnoviť notifikácie',

@@ -1,5 +1,4 @@
 import React from 'react';
-import { AlertProps, DialogProps, TextFieldProps, OutlinedTextFieldProps, FilledTextFieldProps, StandardTextFieldProps, TablePaginationProps } from '@mui/material';
 
 // Rozšírenie Alert komponentu o podporu children
 declare module '@mui/material/Alert' {

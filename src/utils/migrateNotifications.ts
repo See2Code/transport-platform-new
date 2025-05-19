@@ -1,7 +1,7 @@
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 
-export const migrateNotifications = async (companyID: string) => {
+export const migrateNotifications = async (_companyID: string) => {
   try {
     // Načítame všetky staré notifikácie
     const oldNotificationsRef = collection(db, 'reminders');

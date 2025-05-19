@@ -278,7 +278,7 @@ export default function Dashboard() {
   const [activeVehicles, setActiveVehicles] = useState<VehicleLocation[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [statusGraphLoading, setStatusGraphLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
 
   // Fetch jednorazových dát - použitie useCallback, aby sme mali stabilnú referenciu na funkciu
   const fetchStaticData = useCallback(async () => {
@@ -300,9 +300,9 @@ export default function Dashboard() {
         totalTeamMembers: usersSnap.size,
         totalDrivers: driversSnap.size
       }));
-    } catch (err) {
-      console.error('Chyba pri načítaní statických dát:', err);
-      setError('Nepodarilo sa načítať všetky dáta');
+    } catch (_error) {
+      setError('Chyba pri načítaní údajov');
+      console.error('Error fetching static data:', _error);
     }
   }, [userData]);
 

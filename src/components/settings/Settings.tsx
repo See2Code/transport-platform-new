@@ -141,7 +141,7 @@ const colors = {
   }
 };
 
-const PageWrapper = styled(Box)(({ theme }) => ({
+const PageWrapper = styled(Box)(({ _theme }) => ({
   padding: '24px',
   '@media (max-width: 600px)': {
     padding: '16px',
@@ -152,7 +152,7 @@ const PageWrapper = styled(Box)(({ theme }) => ({
   }
 }));
 
-const PageHeader = styled(Box)(({ theme }) => ({
+const PageHeader = styled(Box)(({ _theme }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -268,7 +268,7 @@ const SectionTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }
   }
 })) as unknown as React.FC<TypographyProps & { isDarkMode: boolean }>;
 
-const SettingsInfo = styled(Box)({
+const _SettingsInfo = styled(Box)({
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
   gap: '24px',
@@ -280,7 +280,7 @@ const SettingsInfo = styled(Box)({
   }
 });
 
-const InfoSection = styled(Box)({
+const _InfoSection = styled(Box)({
   display: 'flex',
   flexDirection: 'column',
   gap: '16px',
@@ -289,7 +289,7 @@ const InfoSection = styled(Box)({
   }
 });
 
-const InfoLabel = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _InfoLabel = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '0.85rem',
   color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
   textTransform: 'uppercase',
@@ -299,7 +299,7 @@ const InfoLabel = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) =
   }
 }));
 
-const InfoValue = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _InfoValue = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1rem',
   color: isDarkMode ? '#ffffff' : '#000000',
   '@media (max-width: 600px)': {
@@ -355,7 +355,7 @@ const StyledSelect = styled(Select)<{ isDarkMode: boolean }>(({ isDarkMode }) =>
   }
 })) as unknown as React.FC<SelectProps & { isDarkMode: boolean }>;
 
-const ActionButton = styled(Button)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const ActionButton = styled(Button)<{ isDarkMode: boolean }>(({ _sDarkMode }) => ({
   borderRadius: '12px',
   padding: '8px 24px',
   textTransform: 'none',
@@ -401,7 +401,7 @@ const IconButtonStyled = styled(IconButton)<{ isDarkMode: boolean }>(({ isDarkMo
   }
 }));
 
-const SettingsContainer = styled(Paper)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _SettingsContainer = styled(Paper)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '24px',
   backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.95)' : 'rgba(255, 255, 255, 0.95)',
   borderRadius: '12px',
@@ -409,7 +409,7 @@ const SettingsContainer = styled(Paper)<{ isDarkMode: boolean }>(({ isDarkMode }
   backdropFilter: 'blur(10px)',
 }));
 
-const UploadContainer = styled(Box)(({ theme }) => ({
+const _UploadContainer = styled(Box)(({ _theme }) => ({
   width: '100%',
   aspectRatio: '1',
   borderRadius: '16px',
@@ -444,7 +444,7 @@ const ProfileImage = styled(StyledImage)({
   borderRadius: '50%',
 });
 
-const UploadSection = styled(Box)(({ theme }) => ({
+const UploadSection = styled(Box)(({ _theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -454,7 +454,7 @@ const UploadSection = styled(Box)(({ theme }) => ({
   cursor: 'pointer',
 }));
 
-const LargeAvatar = styled(Avatar)(({ theme }) => ({
+const _LargeAvatar = styled(Avatar)(({ _theme }) => ({
   width: 120,
   height: 120,
   border: '4px solid rgba(255, 159, 67, 0.3)',
@@ -474,7 +474,7 @@ const LargeAvatar = styled(Avatar)(({ theme }) => ({
   },
 }));
 
-const CompanyLogo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _CompanyLogo = styled(Box)<{ isDarkMode: boolean }>(({ _sDarkMode }) => ({
   width: '100%',
   display: 'flex',
   alignItems: 'center',
@@ -486,7 +486,7 @@ const CompanyLogo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   },
 }));
 
-const LogoImage = styled('img')({
+const _LogoImage = styled('img')({
   width: '100%',
   height: 'auto',
   objectFit: 'unset',
@@ -520,7 +520,7 @@ const SnackbarStyled = styled(Snackbar)({
   zIndex: 99999
 });
 
-const ImageWrapper = styled(Box)({
+const _ImageWrapper = styled(Box)({
   width: '100%',
   display: 'flex',
   alignItems: 'center',
@@ -530,18 +530,18 @@ const ImageWrapper = styled(Box)({
 });
 
 function Settings() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { userData, setUserData } = useAuth();
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [_isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [localUserData, setLocalUserData] = useState<LocalUserData | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingCompany, setIsEditingCompany] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState(euCountries.find(c => c.code === 'SK') || euCountries[0]);
+  const [selectedCountry, _setSelectedCountry] = useState(euCountries.find(c => c.code === 'SK') || euCountries[0]);
   const { isDarkMode } = useThemeMode();
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -550,8 +550,8 @@ function Settings() {
   const [logoCropperOpen, setLogoCropperOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
-  const [isCompanyLogo, setIsCompanyLogo] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [_isCompanyLogo, _setIsCompanyLogo] = useState(false);
+  const [_isSaving, _setIsSaving] = useState(false);
   
   const profileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -563,7 +563,7 @@ function Settings() {
   });
 
   // Konverzia z LocalUserData späť na UserData
-  const convertToUserData = (data: LocalUserData): UserData => ({
+  const _convertToUserData = (data: LocalUserData): UserData => ({
     ...data,
     phone: data.phone || undefined
   });
