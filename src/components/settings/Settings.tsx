@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   
   Paper,
@@ -21,7 +21,6 @@ import {
   CardProps,
   SelectProps
 } from '@mui/material';
-import { TypographyProps } from '@mui/material/Typography';
 import { TextFieldProps } from '@mui/material/TextField';
 import { useNavigate } from 'react-router-dom';
 import { auth, db, storage } from '../../firebase';
@@ -42,6 +41,7 @@ import { useThemeMode } from '../../contexts/ThemeContext';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import ImageCropper from '../common/ImageCropper';
 import { UserData } from '../../contexts/AuthContext';
+import { onAuthStateChanged } from 'firebase/auth';
 
 interface CompanyData {
   id: string;
@@ -266,7 +266,7 @@ const SectionTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }
   '@media (max-width: 600px)': {
     fontSize: '1.1rem',
   }
-})) as unknown as React.FC<TypographyProps & { isDarkMode: boolean }>;
+}));
 
 const _SettingsInfo = styled(Box)({
   display: 'grid',
@@ -539,7 +539,7 @@ function Settings() {
   const [_isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [localUserData, setLocalUserData] = useState<LocalUserData | null>(null);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [_isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [selectedCountry, _setSelectedCountry] = useState(euCountries.find(c => c.code === 'SK') || euCountries[0]);
   const { isDarkMode } = useThemeMode();
@@ -557,65 +557,20 @@ function Settings() {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Konverzia z UserData na LocalUserData
-  const convertToLocalData = (data: UserData): LocalUserData => ({
+  const convertToLocalData = useCallback((data: UserData): LocalUserData => ({
     ...data,
     phone: data.phone || ""
-  });
-
-  // Konverzia z LocalUserData späť na UserData
-  const _convertToUserData = (data: LocalUserData): UserData => ({
-    ...data,
-    phone: data.phone || undefined
-  });
+  }), []);
 
   useEffect(() => {
     if (userData) {
       setLocalUserData(convertToLocalData(userData));
       setProfileImage(userData.photoURL || '');
     }
-  }, [userData]);
+  }, [userData, convertToLocalData]);
 
-  useEffect(() => {
-    if (!userData?.uid) return;
-
-    // Vytvorenie real-time listenera na zmeny v user dokumente
-    const unsubscribe = onSnapshot(doc(db, 'users', userData.uid), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const updatedUserData: UserData = {
-          uid: data.uid || userData.uid,
-          email: data.email || userData.email,
-          firstName: data.firstName || userData.firstName,
-          lastName: data.lastName || userData.lastName,
-          phone: data.phone || userData.phone,
-          companyID: data.companyID || userData.companyID,
-          role: data.role || userData.role,
-          photoURL: data.photoURL || userData.photoURL
-        };
-        setLocalUserData(convertToLocalData(updatedUserData));
-        if (data.photoURL) {
-          setProfileImage(data.photoURL);
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, [userData?.uid]);
-
-  useEffect(() => {
-    if (userData) {
-      setIsAdmin(userData.role === 'admin' || userData.role === 'super-admin');
-      fetchCompanyData();
-    }
-  }, [userData]);
-
-  useEffect(() => {
-    if (companyData?.logoURL) {
-      setCompanyLogo(companyData.logoURL);
-    }
-  }, [companyData?.logoURL]);
-
-  const fetchCompanyData = async () => {
+  // Presuniem definíciu fetchCompanyData pred useEffect, ktorý ju používa
+  const fetchCompanyData = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -646,7 +601,44 @@ function Settings() {
       setError('Nastala chyba pri načítaní údajov o firme');
       setLoading(false);
     }
-  };
+  }, [userData?.companyID, setLoading, setError, setCompanyData, setCompanyLogo]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && userData) {
+        const updatedUserData: UserData = {
+          ...userData,
+          uid: user.uid,
+          email: user.email || userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          phone: userData.phone,
+          companyID: userData.companyID,
+          role: userData.role,
+          photoURL: userData.photoURL
+        };
+        setLocalUserData(convertToLocalData(updatedUserData));
+        if (userData.photoURL) {
+          setProfileImage(userData.photoURL);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [userData, convertToLocalData]);
+
+  useEffect(() => {
+    if (userData) {
+      setIsAdmin(userData.role === 'admin' || userData.role === 'super-admin');
+      fetchCompanyData();
+    }
+  }, [userData, fetchCompanyData]);
+
+  useEffect(() => {
+    if (companyData?.logoURL) {
+      setCompanyLogo(companyData.logoURL);
+    }
+  }, [companyData?.logoURL]);
 
   const handleProfileChange = (field: keyof LocalUserData) => (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!localUserData) return;
@@ -1004,7 +996,7 @@ function Settings() {
                 <PersonIcon />
                 Profil používateľa
               </SectionTitle>
-              {!isEditingProfile ? (
+              {!_isEditingProfile ? (
                 <IconButtonStyled isDarkMode={isDarkMode} onClick={() => setIsEditingProfile(true)}>
                   <EditIcon />
                 </IconButtonStyled>
@@ -1027,7 +1019,7 @@ function Settings() {
                     label="Meno"
                     value={localUserData?.firstName || ''}
                     onChange={handleProfileChange('firstName')}
-                    disabled={!isEditingProfile}
+                    disabled={!_isEditingProfile}
                     isDarkMode={isDarkMode}
                   />
                 </Grid>
@@ -1037,7 +1029,7 @@ function Settings() {
                     label="Priezvisko"
                     value={localUserData?.lastName || ''}
                     onChange={handleProfileChange('lastName')}
-                    disabled={!isEditingProfile}
+                    disabled={!_isEditingProfile}
                     isDarkMode={isDarkMode}
                   />
                 </Grid>
@@ -1056,7 +1048,7 @@ function Settings() {
                     label="Telefón"
                     value={localUserData?.phone || ''}
                     onChange={handleProfileChange('phone')}
-                    disabled={!isEditingProfile}
+                    disabled={!_isEditingProfile}
                     isDarkMode={isDarkMode}
                   />
                 </Grid>

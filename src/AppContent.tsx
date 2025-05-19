@@ -1,23 +1,28 @@
 import React, { useState, createContext, useContext, useEffect, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline, GlobalStyles } from '@mui/material';
+import { createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import GlobalStyles from '@mui/material/GlobalStyles';
 import Box from '@mui/material/Box';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import Navbar from './components/layout/Navbar';
-import Dashboard from './components/layout/Dashboard';
-import Team from './components/management/Team';
+import { 
+  LazyDashboard as Dashboard,
+  LazyTeam as Team,
+  LazySettings as Settings,
+  LazyVehicleMap as VehicleMap,
+  LazyTrackedTransports as TrackedTransports,
+  LazyBusinessCases as BusinessCases, 
+  LazyOrdersForm as OrdersForm,
+  LazyNewOrderForm as NewOrderForm,
+  LazyNotifications as Notifications
+} from './lazyComponents';
 import Contacts from './components/management/Contacts';
-import Settings from './components/settings/Settings';
-import TrackedTransports from './components/orders/TrackedTransports';
-import BusinessCases from './components/management/BusinessCases';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Home from './components/layout/Home';
 import PrivateRoute from './components/auth/PrivateRoute';
 import RegisterUser from './components/auth/RegisterUser';
-import OrdersForm from './components/orders/Orders';
-import NewOrderForm from './components/orders/NewOrderForm';
-import VehicleMap from './components/tracking/VehicleMap';
-import Notifications from './components/settings/Notifications';
 import { useThemeMode } from './contexts/ThemeContext';
 import ChatDrawer from './components/chat/ChatDrawer';
 import { useChat } from './contexts/ChatContext';
