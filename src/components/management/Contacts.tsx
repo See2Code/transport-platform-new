@@ -18,7 +18,6 @@ import {
   DialogActions,
   Select,
   MenuItem,
-  SelectChangeEvent,
   Alert,
   Snackbar,
   FormControl,
@@ -26,7 +25,7 @@ import {
   Grid,
   DialogContentText,
   InputAdornment,
-  CircularProgress,
+  SelectChangeEvent
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -44,11 +43,9 @@ import {
   PageHeader,
   PageTitle,
   AddButton,
-  SearchWrapper,
-  StyledCard
+  SearchWrapper
 } from '../styled';
 import { Contact, User, ContactFormData, SnackbarState } from '../../types/contact';
-import type { GridColDef } from '@mui/x-data-grid';
 
 const colors = {
   primary: {

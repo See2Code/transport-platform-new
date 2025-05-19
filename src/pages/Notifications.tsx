@@ -19,7 +19,7 @@ import {
   Refresh as RefreshIcon,
   MarkEmailRead as MarkEmailReadIcon
 } from '@mui/icons-material';
-import { useNotifications, NotificationData } from '../contexts/NotificationsContext';
+import { useNotifications} from '../contexts/NotificationsContext';
 import { useThemeMode } from '../contexts/ThemeContext';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';

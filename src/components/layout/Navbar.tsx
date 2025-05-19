@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, FC, useCallback } from 'react';
-import CssBaseline from '@mui/material/CssBaseline';
+
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
@@ -8,7 +8,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
-import Avatar from '@mui/material/Avatar';
+
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
@@ -26,48 +26,39 @@ import Drawer from '@mui/material/Drawer';
 import Badge from '@mui/material/Badge';
 import Popover from '@mui/material/Popover';
 import Paper from '@mui/material/Paper';
-import Chip from '@mui/material/Chip';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
+
 import DialogContentText from '@mui/material/DialogContentText';
-import HomeIcon from '@mui/icons-material/Home';
-import GroupIcon from '@mui/icons-material/Group';
+
 import SettingsIcon from '@mui/icons-material/Settings';
-import AccountIcon from '@mui/icons-material/AccountCircle';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import ContactsIcon from '@mui/icons-material/Contacts';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+
 import CloseIcon from '@mui/icons-material/Close';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import EuroIcon from '@mui/icons-material/Euro';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
+
 import BusinessIcon from '@mui/icons-material/Business';
 import ChatIcon from '@mui/icons-material/Chat';
-import PersonIcon from '@mui/icons-material/Person';
+
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
+
 import PeopleIcon from '@mui/icons-material/People';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { useNavigate, useLocation } from 'react-router-dom';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { MenuProps } from '@mui/material/Menu';
 import { useThemeMode } from '../../contexts/ThemeContext';
-import { useNotifications, NotificationData } from '../../contexts/NotificationsContext';
-import { format } from 'date-fns';
-import { Timestamp } from 'firebase/firestore';
+
+
 import { useChatUI } from '../../AppContent';
 import { alpha } from '@mui/material/styles';
-import Tooltip from '@mui/material/Tooltip';
-import { TooltipProps } from '@mui/material/Tooltip';
+
+
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -1158,6 +1149,27 @@ const Navbar: FC = () => {
                     },
                   }}
                   aria-label={t('navigation.team')}
+                />
+              </BareTooltip>
+              <BareTooltip
+                title={t('navigation.settings')}
+                placement="bottom"
+                enterDelay={300}
+                leaveDelay={200}
+              >
+                <Button
+                  color="inherit"
+                  startIcon={<SettingsIcon />}
+                  onClick={() => navigate('/settings')}
+                  sx={{
+                    mr: 2,
+                    transition: 'transform 0.2s ease, background-color 0.2s ease',
+                    '&:hover, &.Mui-focusVisible': {
+                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
+                      transform: 'translateY(-2px)'
+                    },
+                  }}
+                  aria-label={t('navigation.settings')}
                 />
               </BareTooltip>
             </Box>

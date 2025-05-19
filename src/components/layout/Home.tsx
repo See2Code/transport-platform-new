@@ -7,7 +7,6 @@ import {
   Grid,
   useTheme,
   styled,
-  Card,
   CardContent,
   List,
   ListItem,
@@ -17,11 +16,12 @@ import {
   Avatar,
   useMediaQuery,
   Fade,
-  AppBar,
   Toolbar,
   IconButton,
   Drawer,
   ListItemButton,
+  AppBar,
+  Card
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -104,7 +104,7 @@ const ScrollToTopButton = styled(IconButton)(({ theme }) => ({
 }));
 
 // Logo container
-const LogoContainer = styled(Box)(({ theme }) => ({
+const LogoContainer = styled(Box)(() => ({
   display: 'flex',
   justifyContent: 'center',
   marginBottom: '20px',
@@ -125,7 +125,7 @@ const LogoImage = styled('img')<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
 }));
 
 // Section styling
-const Section = styled(Box)(({ theme }) => ({
+const Section = styled(Box)(() => ({
   padding: '100px 0',
   position: 'relative',
   '@media (max-width: 900px)': {
@@ -144,7 +144,7 @@ const Section = styled(Box)(({ theme }) => ({
 }));
 
 // Hero section styling
-const HeroSection = styled(Box)(({ theme }) => ({
+const HeroSection = styled(Box)(() => ({
   minHeight: '100vh',
   height: '100vh',
   display: 'flex',

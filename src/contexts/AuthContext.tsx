@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User as FirebaseUser } from 'firebase/auth';
-import { auth, db, functions } from '../firebase';
+import { auth, db } from '../firebase';
 import { CircularProgress, Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@mui/material';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, deleteDoc, updateDoc, Timestamp, getFirestore, arrayUnion, getDocs } from 'firebase/firestore';
-import { signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { signOut, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { useThemeMode } from './ThemeContext';
-import { httpsCallable } from 'firebase/functions';
 
 export interface UserData {
   uid: string;
@@ -84,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const manageSession = async (user: FirebaseUser) => {
+  const manageSession = useCallback(async (user: FirebaseUser) => {
     if (!user) return;
 
     const deviceId = localStorage.getItem('deviceId') || generateDeviceId();
@@ -139,9 +138,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  };
+  }, []);
 
-  const updateLastActive = async () => {
+  const updateLastActive = useCallback(async () => {
     if (!currentSession) return;
 
     try {
@@ -174,14 +173,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Chyba pri aktualizácii lastActive:', error);
     }
-  };
+  }, [currentSession, currentUser]);
 
   useEffect(() => {
     if (!currentSession) return;
 
     const interval = setInterval(updateLastActive, 60000);
     return () => clearInterval(interval);
-  }, [currentSession]);
+  }, [currentSession, updateLastActive]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -233,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [manageSession]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -285,7 +284,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (email: string, password: string, firstName: string, lastName: string) => {
+  const register = async (_email: string, _password: string, _firstName: string, _lastName: string) => {
     // Implementation of register function
   };
 

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Grid,
   Typography,
   styled,
-  Card,
   CardContent,
   Table,
   TableBody,
@@ -16,9 +15,8 @@ import {
   Chip,
   Avatar,
   CircularProgress,
-  Fade,
-  Grow,
   Skeleton,
+  Card,
 } from '@mui/material';
 import {
   Business as BusinessIcon,
@@ -27,12 +25,12 @@ import {
   DriveEta as DriveEtaIcon,
   AccessTime as AccessTimeIcon,
 } from '@mui/icons-material';
-import { collection, query, getDocs, where, Timestamp, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, getDocs, where, Timestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import CountUp from 'react-countup';
 import { useThemeMode } from '../../contexts/ThemeContext';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { sk } from 'date-fns/locale';
 
 interface BusinessCase {
@@ -60,7 +58,7 @@ interface VehicleLocation {
   lastOnline?: Timestamp | any;
 }
 
-const PageWrapper = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme }) => ({
+const PageWrapper = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, _theme }) => ({
   padding: '24px',
   minHeight: '100vh',
   background: 'transparent',
@@ -79,7 +77,7 @@ const PageWrapper = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, theme })
   }
 }));
 
-const PageHeader = styled(Box)(({ theme }) => ({
+const PageHeader = styled(Box)(({ _theme }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -225,7 +223,7 @@ const AnimatedBox = styled(Box)<{ delay?: string; duration?: string; animation?:
 );
 
 // Vytvoríme animovaný kontajner pre celý graf - nový prístup s maska efektom
-const AnimatedGraphContainer = styled(Box)(({ theme }) => ({
+const AnimatedGraphContainer = styled(Box)(({ _theme }) => ({
   width: '100%',
   height: '100%',
   position: 'relative',
@@ -282,8 +280,8 @@ export default function Dashboard() {
   const [statusGraphLoading, setStatusGraphLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch jednorazových dát
-  const fetchStaticData = async () => {
+  // Fetch jednorazových dát - použitie useCallback, aby sme mali stabilnú referenciu na funkciu
+  const fetchStaticData = useCallback(async () => {
     if (!userData?.companyID) return;
 
     try {
@@ -306,7 +304,7 @@ export default function Dashboard() {
       console.error('Chyba pri načítaní statických dát:', err);
       setError('Nepodarilo sa načítať všetky dáta');
     }
-  };
+  }, [userData]);
 
   useEffect(() => {
     let unsubscribeVehicles: (() => void) | undefined;
@@ -317,6 +315,9 @@ export default function Dashboard() {
       if (!userData?.companyID) return;
 
       try {
+        // Najprv vykonáme fetchStaticData
+        await fetchStaticData();
+        
         // Nastavenie poslucháča pre vozidlá s retry logikou
         const setupVehiclesListener = async (retryCount = 0) => {
           try {
@@ -432,11 +433,10 @@ export default function Dashboard() {
           }
         };
 
-        // Spustenie listenerov
+        // Spustenie listenerov - fetchStaticData sme už vyvolali, netreba ho tu volať znova
         await Promise.all([
           setupVehiclesListener(),
           setupBusinessCasesListener(),
-          fetchStaticData()
         ]);
 
       } catch (error) {
@@ -465,7 +465,7 @@ export default function Dashboard() {
         }
       }
     };
-  }, [userData?.companyID]);
+  }, [userData, fetchStaticData]); // pridaný fetchStaticData ako závislosť
 
   // Helper function to format time ago
   const formatTimeAgo = (timestamp: Timestamp | any) => {

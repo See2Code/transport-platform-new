@@ -22,7 +22,7 @@ interface ImageCropperProps {
   circular?: boolean;
 }
 
-const StyledDialog = styled(Dialog)(({ theme }) => ({
+const StyledDialog = styled(Dialog)(() => ({
   '& .MuiDialog-paper': {
     borderRadius: '16px',
     backgroundColor: 'rgba(35, 35, 66, 0.95)',
@@ -36,7 +36,7 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   }
 }));
 
-const DialogHeader = styled(Box)(({ theme }) => ({
+const DialogHeader = styled(Box)(() => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -45,7 +45,7 @@ const DialogHeader = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(180deg, rgba(255, 159, 67, 0.1) 0%, rgba(255, 159, 67, 0.05) 100%)'
 }));
 
-const CropContainer = styled(Box)(({ theme }) => ({
+const CropContainer = styled(Box)(() => ({
   padding: '24px',
   display: 'flex',
   flexDirection: 'column',
@@ -76,7 +76,7 @@ const CropContainer = styled(Box)(({ theme }) => ({
   }
 }));
 
-const StyledButton = styled(Button)(({ theme }) => ({
+const StyledButton = styled(Button)(() => ({
   borderRadius: '12px',
   padding: '8px 24px',
   textTransform: 'none',

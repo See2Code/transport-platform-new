@@ -26,7 +26,7 @@ function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const theme = useTheme();
+  const _theme = useTheme();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +39,7 @@ function Login() {
       await login(email, password);
       
       await navigationPromise;
-    } catch (err) {
+    } catch (_err) {
       setError('Nesprávne prihlasovacie údaje');
       setLoading(false);
     }

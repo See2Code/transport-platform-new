@@ -1,12 +1,11 @@
-import { Paper } from '@mui/material';
+import { Card } from '@mui/material';
 import styled from '@emotion/styled';
-import { colors } from '../../theme/colors';
 
 interface StyledCardProps {
   isDarkMode: boolean;
 }
 
-export const StyledCard = styled(Paper)<StyledCardProps>(({ isDarkMode }) => ({
+export const StyledCard = styled(Card)<StyledCardProps>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
   backdropFilter: 'blur(10px)',
   borderRadius: '20px',

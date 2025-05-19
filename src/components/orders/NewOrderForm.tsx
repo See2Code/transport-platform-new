@@ -6,10 +6,10 @@ import { countries } from '../../constants/countries';
 import { normalizeVatId } from '../../utils/helpers';
 import {
   Box, Typography, TextField, Button, Grid, FormControl, InputLabel,
-  Select, MenuItem, SelectChangeEvent, useTheme, Checkbox, FormControlLabel,
-  Autocomplete, IconButton, Divider, CircularProgress
+  Select, MenuItem, useTheme, Checkbox, FormControlLabel,
+  Autocomplete, IconButton, Divider, CircularProgress, SelectChangeEvent
 } from '@mui/material';
-import { useThemeMode } from '../../contexts/ThemeContext';
+
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';

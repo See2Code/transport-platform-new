@@ -26,33 +26,28 @@ import {
   CircularProgress,
   DialogContentText,
   Grid,
-  Card,
-  Avatar,
-  styled,
   useMediaQuery,
   useTheme,
-  Snackbar
+  Snackbar,
+  SelectChangeEvent,
+  Card
 } from '@mui/material';
 import { 
   Add as AddIcon, 
   Mail as MailIcon, 
-  ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  CheckCircle as CheckCircleIcon,
-  Send as SendIcon,
   Refresh as RefreshIcon,
   Phone as PhoneIcon,
   AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
-import { collection, query, where, getDocs, addDoc, doc, getDoc, onSnapshot, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
 import { auth, db, functions } from '../../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { httpsCallable } from 'firebase/functions';
-import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import { SelectChangeEvent } from '@mui/material';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeMode } from '../../contexts/ThemeContext';
@@ -63,6 +58,7 @@ import { sk } from 'date-fns/locale';
 import { styled as muiStyled } from '@mui/material/styles';
 import Tooltip, { TooltipProps } from '@mui/material/Tooltip';
 import { createPortal } from 'react-dom';
+import styled from '@emotion/styled';
 
 interface Country {
   code: string;
@@ -161,6 +157,7 @@ const colors = {
   }
 };
 
+// Definície styled komponentov s korektným typovaním
 const PageWrapper = styled('div')({
   padding: '24px',
   '@media (max-width: 600px)': {
@@ -205,44 +202,22 @@ const AddButton = styled('button')({
   backgroundColor: colors.accent.main,
   color: '#ffffff',
   padding: '12px 28px',
+  fontSize: '0.95rem',
   borderRadius: '12px',
-  fontSize: '1rem',
-  fontWeight: 600,
   border: 'none',
   cursor: 'pointer',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  boxShadow: `0 4px 12px ${colors.accent.main}4D`,
+  fontWeight: 600,
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  position: 'relative',
-  overflow: 'hidden',
-  '&:before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    background: 'linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
-    transform: 'translateX(-100%)',
-  },
+  transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: colors.accent.light,
+    backgroundColor: colors.accent.dark,
     transform: 'translateY(-2px)',
-    boxShadow: `0 6px 16px ${colors.accent.main}66`,
-    '&:before': {
-      transform: 'translateX(100%)',
-      transition: 'transform 0.8s',
-    }
+    boxShadow: '0 4px 10px rgba(255, 159, 67, 0.25)',
   },
-  '&:active': {
-    transform: 'translateY(0)',
-    boxShadow: `0 2px 8px ${colors.accent.main}4D`,
-  },
-  '@media (max-width: 600px)': {
-    width: '100%',
-    justifyContent: 'center',
+  '& .MuiSvgIcon-root': {
+    fontSize: '1.25rem',
   }
 });
 
@@ -252,16 +227,14 @@ const TeamCard = styled(Card)({
   borderRadius: '16px',
   padding: '24px',
   color: '#ffffff',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
-  marginBottom: '16px',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  overflow: 'visible',
+  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.2)',
-  },
-  '@media (max-width: 600px)': {
-    padding: '16px',
+    transform: 'translateY(-5px)',
+    boxShadow: '0 15px 35px rgba(0, 0, 0, 0.25)',
+    border: '1px solid rgba(255, 159, 67, 0.3)',
   }
 });
 
@@ -269,11 +242,7 @@ const TeamInfo = styled(Box)({
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
   gap: '24px',
-  marginBottom: '16px',
-  '@media (max-width: 600px)': {
-    gridTemplateColumns: '1fr',
-    gap: '16px',
-  }
+  marginBottom: '24px',
 });
 
 const InfoSection = styled(Box)({
@@ -298,28 +267,25 @@ const CardHeader = styled(Box)({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  marginBottom: '24px',
+  marginBottom: '16px',
 });
 
 const MemberName = styled(Typography)({
   fontSize: '1.1rem',
   fontWeight: 600,
   color: colors.accent.main,
-  '@media (max-width: 600px)': {
-    fontSize: '1rem',
-  }
+  lineHeight: 1.3,
 });
 
 const RoleChip = styled('span')({
   backgroundColor: `${colors.accent.main}33`,
   color: colors.accent.main,
   padding: '4px 12px',
-  borderRadius: '8px',
-  fontSize: '0.85rem',
+  borderRadius: '12px',
+  fontSize: '0.8rem',
   fontWeight: 500,
-  '@media (max-width: 600px)': {
-    fontSize: '0.75rem',
-  }
+  display: 'inline-flex',
+  alignItems: 'center',
 });
 
 const AnimatedTableRow = styled(motion.tr)({

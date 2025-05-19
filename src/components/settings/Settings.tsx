@@ -1,35 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Container,
+  
   Paper,
   Typography,
   Grid,
   TextField,
   Button,
   Box,
-  Divider,
   Alert,
   CircularProgress,
   IconButton,
-  Tooltip,
-  Card,
-  Select,
   MenuItem,
   FormControl,
   InputLabel,
   Snackbar,
-  Avatar
+  Card,
+  Avatar,
+  Select,
+  SelectChangeEvent,
+  CardProps,
+  SelectProps
 } from '@mui/material';
 import { TypographyProps } from '@mui/material/Typography';
-import { CardProps } from '@mui/material/Card';
 import { TextFieldProps } from '@mui/material/TextField';
-import { SelectProps } from '@mui/material/Select';
 import { useNavigate } from 'react-router-dom';
 import { auth, db, storage } from '../../firebase';
-import { doc, getDoc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { onAuthStateChanged, updateProfile } from 'firebase/auth';
+import { doc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
 import { 
-  ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
@@ -41,7 +39,6 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import styled from '@emotion/styled';
 import { useThemeMode } from '../../contexts/ThemeContext';
-import { SelectChangeEvent } from '@mui/material/Select';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import ImageCropper from '../common/ImageCropper';
 import { UserData } from '../../contexts/AuthContext';
@@ -160,16 +157,6 @@ const PageHeader = styled(Box)(({ theme }) => ({
   justifyContent: 'space-between',
   alignItems: 'center',
   marginBottom: '32px',
-  position: 'relative',
-  '&:after': {
-    content: '""',
-    position: 'absolute',
-    bottom: '-8px',
-    left: 0,
-    width: '100%',
-    height: '2px',
-    background: 'linear-gradient(90deg, #ff9f43 0%, rgba(255, 159, 67, 0.1) 100%)',
-  },
   '@media (max-width: 600px)': {
     flexDirection: 'column',
     alignItems: 'flex-start',
@@ -178,7 +165,7 @@ const PageHeader = styled(Box)(({ theme }) => ({
 }));
 
 const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  fontSize: '2rem',
+  fontSize: '1.75rem',
   fontWeight: 700,
   color: isDarkMode ? '#ffffff' : '#000000',
   position: 'relative',
@@ -192,7 +179,6 @@ const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) =
     height: '4px',
     backgroundColor: '#ff9f43',
     borderRadius: '2px',
-    transition: 'width 0.3s ease',
   },
   '&:hover::after': {
     width: '100px',
@@ -671,103 +657,6 @@ function Settings() {
             [field]: event.target.value
         };
     });
-  };
-
-  const handleSaveProfile = async () => {
-    if (!localUserData) return;
-
-    try {
-      setIsSaving(true);
-      const userRef = doc(db, 'users', localUserData.uid);
-      
-      // Vytvoríme objekt len s poliami, ktoré chceme aktualizovať
-      const updateData = {
-        firstName: localUserData.firstName,
-        lastName: localUserData.lastName,
-        phone: localUserData.phone || null,
-        updatedAt: serverTimestamp()
-      };
-
-      await updateDoc(userRef, updateData);
-      
-      // Aktualizujeme lokálny stav s kompletným userData objektom
-      const updatedUserData: UserData = {
-        ...userData!,
-        firstName: localUserData.firstName,
-        lastName: localUserData.lastName,
-        phone: localUserData.phone || undefined
-      };
-      setUserData(updatedUserData);
-      
-      setSnackbar({
-        open: true,
-        message: 'Profil bol úspešne aktualizovaný',
-        severity: 'success'
-      });
-      setIsEditingProfile(false);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setSnackbar({
-        open: true,
-        message: 'Chyba pri aktualizácii profilu',
-        severity: 'error'
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleUserUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userData || !isAdmin) return;
-
-    try {
-      setLoading(true);
-      setError('');
-      setSuccess('');
-
-      await updateDoc(doc(db, 'users', userData.uid), {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        phone: userData.phone
-      });
-
-      setSuccess('Údaje boli úspešne aktualizované.');
-    } catch (err: any) {
-      console.error('Chyba pri aktualizácii údajov:', err);
-      setError(err.message || 'Nastala chyba pri aktualizácii údajov.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCompanyUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!companyData || !isAdmin) return;
-
-    try {
-      setLoading(true);
-      setError('');
-      setSuccess('');
-
-      await updateDoc(doc(db, 'companies', companyData.id), {
-        companyName: companyData.companyName,
-        ico: companyData.ico,
-        dic: companyData.dic,
-        icDph: companyData.icDph,
-        street: companyData.street,
-        city: companyData.city,
-        zipCode: companyData.zipCode,
-        country: companyData.country
-      });
-
-      setSuccess('Údaje firmy boli úspešne aktualizované.');
-    } catch (err: any) {
-      console.error('Chyba pri aktualizácii údajov firmy:', err);
-      setError(err.message || 'Nastala chyba pri aktualizácii údajov firmy.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSave = async () => {

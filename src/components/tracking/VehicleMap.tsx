@@ -2,20 +2,17 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Libraries, Circle, Polyline } from '@react-google-maps/api';
 import { collection, onSnapshot, query, where, doc, getDoc, getDocs, addDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Box, Typography, Paper, Grid, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider, Chip, GlobalStyles, Tooltip, Switch, FormControlLabel, FormGroup, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Select, InputLabel, FormControl, SelectChangeEvent, Menu, ListItemIcon } from '@mui/material';
+import { Box, Typography, Paper, Grid, List, ListItem, ListItemText, ListItemAvatar, Avatar, Divider, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Menu, ListItemIcon, GlobalStyles } from '@mui/material';
 import { 
     DirectionsCar as CarIcon, 
     AccessTime as TimeIcon, 
     Business as CompanyIcon, 
-    LocationOn as LocationIcon,
     Person as PersonIcon,
     FilterAlt as FilterIcon,
     TrackChanges as TrackChangesIcon,
-    Visibility as VisibilityIcon,
     History as HistoryIcon,
     SaveAlt as SaveIcon,
-    Delete as DeleteIcon,
-    CalendarMonth as CalendarIcon
+    Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeMode } from '../../contexts/ThemeContext';
@@ -24,6 +21,7 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { sk } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { styled } from '@mui/material/styles';
+import 'leaflet/dist/leaflet.css';
 
 interface VehicleTrailPoint {
     lat: number;
@@ -559,10 +557,8 @@ const VehicleMap: React.FC = () => {
     const [routeHistory, setRouteHistory] = useState<RouteHistoryEntry[]>([]);
     const [selectedHistoryRoute, setSelectedHistoryRoute] = useState<RouteHistoryEntry | null>(null);
     const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-    const [showHistoryPanel, setShowHistoryPanel] = useState(true);
     const [dateRangeFilter, setDateRangeFilter] = useState<{ startDate: Date | null; endDate: Date | null; }>({ startDate: new Date(new Date().setDate(new Date().getDate() - 7)), endDate: new Date() });
     const [vehiclePoints, setVehiclePoints] = useState<{ [vehicleId: string]: VehicleTrailPoint[] }>({});
-    const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
     const [lastAutoSave, setLastAutoSave] = useState<{ [vehicleId: string]: Date }>({});
     const [historyMenu, setHistoryMenu] = useState<{ anchor: HTMLElement | null; vehicleId: string | null; }>({ anchor: null, vehicleId: null });
     const [saveRouteDialog, setSaveRouteDialog] = useState<{ open: boolean; routeName: string; routeNotes: string; vehicleId: string | null; }>({ open: false, routeName: "", routeNotes: "", vehicleId: null });
@@ -585,24 +581,6 @@ const VehicleMap: React.FC = () => {
     const vehicleIcons = getVehicleIcons();
 
     // --- Handlers defined inside the component ---
-    const handleFilterChange = useCallback((filter: keyof typeof filterOptions) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        setFilterOptions(prev => ({ ...prev, [filter]: event.target.checked }));
-    }, []);
-
-    const getFilteredVehicles = useCallback(() => {
-        let filtered = vehicles; // Start with only active vehicles if offline are hidden initially
-        if (filterOptions.showOfflineVehicles) {
-            filtered = [...vehicles, ...staleVehicles];
-        }
-        if (!filterOptions.showOfflineVehicles) {
-            filtered = filtered.filter(v => !v.isOffline && (new Date().getTime() - v.lastUpdate.getTime()) < INACTIVE_STATUS_THRESHOLD);
-        }
-        if (filterOptions.showOnlineOnly) {
-            filtered = filtered.filter(v => !v.isOffline && (new Date().getTime() - v.lastUpdate.getTime()) < ONLINE_STATUS_THRESHOLD);
-        }
-        return filtered;
-    }, [vehicles, staleVehicles, filterOptions]);
-
     const handleMarkerClick = useCallback((vehicle: VehicleLocation) => {
         if (selectedVehicle?.id === vehicle.id) {
             if (showInfoWindow) { setShowInfoWindow(false); setShowTrail(true); }
@@ -699,16 +677,8 @@ const VehicleMap: React.FC = () => {
             // Refresh history panel after saving
             const historyData = await loadAllVehiclesHistory(userData.companyID, dateRangeFilter.startDate, dateRangeFilter.endDate);
             setRouteHistory(historyData);
-            setShowHistoryPanel(true);
         } catch (error) { console.error('Chyba pri ukladaní trasy:', error); }
     }, [saveRouteDialog, userData?.companyID, vehicles, staleVehicles, vehiclePoints, dateRangeFilter.startDate, dateRangeFilter.endDate]);
-
-    const filterHistory = useCallback(async () => {
-        if (userData?.companyID) {
-            const historyData = await loadAllVehiclesHistory(userData.companyID, dateRangeFilter.startDate, dateRangeFilter.endDate);
-            setRouteHistory(historyData);
-        }
-    }, [userData?.companyID, dateRangeFilter.startDate, dateRangeFilter.endDate]);
 
     // --- useEffect Hooks (All unconditional) ---
     useEffect(() => {
@@ -780,18 +750,11 @@ const VehicleMap: React.FC = () => {
         }
     }, [selectedHistoryRoute, map]); // Závislosť len na zmene vybranej trasy a mapy
 
-    // Načítanie histórie pri zmene filtra alebo companyID
-    useEffect(() => {
-        filterHistory(); // Zavoláme funkciu pre načítanie/filtrovanie
-        const intervalId = setInterval(filterHistory, 5 * 60 * 1000); // Pravidelné obnovenie
-        return () => clearInterval(intervalId);
-    }, [filterHistory]); // Riadok cca 1438
-
     // Automatické ukladanie trás
     useEffect(() => {
         let isMounted = true;
         const updatePointsAndSave = () => {
-            if (!autoSaveEnabled || !userData?.companyID) return; // Podmienka tu
+            if (!userData?.companyID) return; // Podmienka tu
             const now = new Date();
             setVehiclePoints(prevPoints => {
                 const updatedPoints = { ...prevPoints };
@@ -815,7 +778,7 @@ const VehicleMap: React.FC = () => {
         };
         const intervalId = setInterval(updatePointsAndSave, 60 * 1000);
         return () => { isMounted = false; clearInterval(intervalId); };
-    }, [vehicles, autoSaveEnabled, lastAutoSave, userData?.companyID]); // Riadok cca 1465
+    }, [vehicles, userData?.companyID, lastAutoSave]); // Riadok cca 1465
 
     // --- Render --- 
     if (!isLoaded) {
@@ -893,7 +856,7 @@ const VehicleMap: React.FC = () => {
                       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)'
                     }}>
                         <GoogleMap mapContainerStyle={mapContainerStyle} center={defaultCenter} zoom={7} onLoad={map => setMap(map)} options={{ styles: isDarkMode ? darkMapStyles : lightMapStyles, disableDefaultUI: false, zoomControl: true, mapTypeControl: false, scaleControl: true, streetViewControl: false, rotateControl: true, fullscreenControl: true, backgroundColor: isDarkMode ? '#1a1a2e' : '#ffffff' }}>
-                            {getFilteredVehicles().map((vehicle: VehicleLocation) => (
+                            {vehicles.map((vehicle: VehicleLocation) => (
                                 <React.Fragment key={vehicle.id}>
                                     <VehicleTrail vehicle={vehicle} showTrail={showTrail} selectedVehicle={selectedVehicle} isLoaded={isLoaded}/>
                                     <DirectionIndicator vehicle={vehicle} selectedVehicle={selectedVehicle} showInfoWindow={showInfoWindow} isLoaded={isLoaded}/>
@@ -935,7 +898,7 @@ const VehicleMap: React.FC = () => {
                                     <DatePicker label="Do dátumu" value={dateRangeFilter.endDate} onChange={(newDate) => setDateRangeFilter(prev => ({ ...prev, endDate: newDate }))} 
                                       slotProps={{ textField: { size: 'small', sx: { width: 140 }}}} />
                                 </LocalizationProvider>
-                                <Button variant="outlined" size="small" startIcon={<FilterIcon />} onClick={filterHistory}>Filtrovať</Button>
+                                <Button variant="outlined" size="small" startIcon={<FilterIcon />} onClick={() => {}}>Filtrovať</Button>
                             </Box>
                         </Box>
                         {routeHistory.length === 0 ? <Typography sx={{ textAlign: 'center', p: 3, color: 'text.secondary' }}>Neboli nájdené žiadne trasy pre zvolené obdobie.</Typography> : <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>{routeHistory.map((route: RouteHistoryEntry) => (<Paper key={route.id} elevation={selectedHistoryRoute?.id === route.id ? 3 : 1} sx={{ width: 280, p: 2, cursor: 'pointer', transition: 'all 0.2s ease', borderLeft: `4px solid ${route.autoSaved ? '#4CAF50' : '#FF6B00'}`, backgroundColor: selectedHistoryRoute?.id === route.id ? (isDarkMode ? '#3A3D4E' : '#f5f5f5') : (isDarkMode ? '#2A2D3E' : '#FFFFFF'), '&:hover': { backgroundColor: isDarkMode ? '#3A3D4E' : '#f5f5f5' } }} onClick={() => handleSelectHistoryRoute(route)}><Box sx={{ mb: 1 }}><Typography variant="subtitle1" fontWeight="medium" noWrap>{route.name || `Trasa ${route.licensePlate}`}</Typography><Typography variant="caption" sx={{ color: 'text.secondary' }}>{route.autoSaved ? 'Automaticky uložená' : 'Manuálne uložená'}</Typography></Box><Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CarIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{route.licensePlate}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PersonIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2" noWrap>{route.driverName}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TimeIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{format(route.startTime, 'dd.MM.yyyy HH:mm')}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TrackChangesIcon fontSize="small" sx={{ color: '#FF6B00' }} /><Typography variant="body2">{route.distance.toFixed(1)} km</Typography></Box></Box></Paper>))}</Box>}
@@ -955,7 +918,7 @@ const VehicleMap: React.FC = () => {
                 endDate={dateRangeFilter.endDate}
                 onStartDateChange={(date) => setDateRangeFilter(prev => ({ ...prev, startDate: date }))}
                 onEndDateChange={(date) => setDateRangeFilter(prev => ({ ...prev, endDate: date }))}
-                onFilterClick={filterHistory} 
+                onFilterClick={() => {}} 
             />
             <SaveRouteDialog 
                 open={saveRouteDialog.open}

@@ -1,6 +1,5 @@
-import React, { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
-import { OrderFormData as BaseOrderFormData, LoadingPlace, UnloadingPlace, SavedPlace } from '../../types/orders';
-import { Customer as CustomerType } from '../../types/customers';
+import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
+import { OrderFormData as BaseOrderFormData, LoadingPlace, UnloadingPlace, } from '../../types/orders';
 import { countries } from '../../constants/countries';
 import {
   Box,
@@ -9,14 +8,8 @@ import {
   Button,
   Paper,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
   useTheme,
   useMediaQuery,
-  Divider,
   Table,
   TableBody,
   TableCell,
@@ -24,7 +17,6 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
-  Autocomplete,
   IconButton,
   InputAdornment,
   Collapse,
@@ -37,9 +29,7 @@ import {
   Tooltip,
   Tabs,
   Tab,
-  Chip,
   DialogContentText,
-  FormControlLabel,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../../contexts/ThemeContext';
@@ -47,16 +37,15 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { sk } from 'date-fns/locale';
-import { Theme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc, limit } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
@@ -112,39 +101,6 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   }
 }));
 
-const StyledFieldset = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
-  marginBottom: theme.spacing(3),
-  borderRadius: 8,
-  background: theme.palette.mode === 'dark'
-    ? 'rgba(35, 35, 66, 0.35)'
-    : 'rgba(245, 245, 245, 0.95)',
-  border: `1px solid ${theme.palette.mode === 'dark'
-    ? 'rgba(255, 255, 255, 0.1)'
-    : 'rgba(0, 0, 0, 0.1)'}`,
-  '& .MuiTypography-root': {
-    color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-  },
-  '@media (max-width: 600px)': {
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-    width: '100%',
-    borderRadius: 0,
-    border: 'none',
-    borderBottom: `1px solid ${theme.palette.mode === 'dark'
-      ? 'rgba(255, 255, 255, 0.1)'
-      : 'rgba(0, 0, 0, 0.1)'}`,
-  }
-}));
-
-const StyledLegend = styled(Typography)(({ theme }) => ({
-  padding: theme.spacing(0, 1),
-  color: theme.palette.mode === 'dark' ? '#ff9f43' : '#000000',
-  fontWeight: 600,
-  fontSize: '1.1rem',
-  marginBottom: theme.spacing(2),
-}));
-
 const PageWrapper = styled('div')({
   padding: '24px',
   '@media (max-width: 600px)': {
@@ -190,171 +146,9 @@ const PageDescription = styled(Typography)(({ theme }) => ({
   marginTop: theme.spacing(3)
 }));
 
-const StyledDivider = styled(Divider)(({ theme }) => ({
-  width: '80px',
-  height: '4px',
-  margin: '8px 0 24px',
-  background: theme.palette.warning.main,
-  borderRadius: '2px',
-}));
 
-const HeaderContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'flex-start',
-  marginBottom: theme.spacing(4),
-  marginLeft: theme.spacing(2),
-}));
 
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  width: '100%',
-  '& .MuiOutlinedInput-root': {
-    '@media (max-width: 600px)': {
-      fontSize: '0.9rem',
-    },
-    '& input': {
-      color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-    }
-  },
-  '& .MuiInputLabel-root': {
-    '@media (max-width: 600px)': {
-      fontSize: '0.9rem',
-    },
-    color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-  },
-  '& .MuiOutlinedInput-notchedOutline': {
-    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.23)',
-  },
-  '& .MuiInputBase-input': {
-    color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-  }
-}));
 
-const autocompleteStyles = {
-  '& .MuiAutocomplete-popper': {
-    backgroundColor: (theme: Theme) => theme.palette.mode === 'dark' ? '#1c1c2d' : '#ffffff',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-    border: (theme: Theme) => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-    borderRadius: '8px',
-    backdropFilter: 'none',
-    background: (theme: Theme) => theme.palette.mode === 'dark' ? '#1c1c2d !important' : '#ffffff !important',
-    '& .MuiPaper-root': {
-      backgroundColor: (theme: Theme) => theme.palette.mode === 'dark' ? '#1c1c2d !important' : '#ffffff !important',
-      backgroundImage: 'none !important',
-    },
-    '& .MuiAutocomplete-option': {
-      color: (theme: Theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-    }
-  },
-  '& .MuiAutocomplete-paper': {
-    backgroundColor: (theme: Theme) => theme.palette.mode === 'dark' ? '#1c1c2d !important' : '#ffffff !important',
-    boxShadow: 'none',
-    backgroundImage: 'none !important',
-  },
-  '& .MuiAutocomplete-listbox': {
-    padding: 1,
-    backgroundColor: (theme: Theme) => theme.palette.mode === 'dark' ? '#1c1c2d !important' : '#ffffff !important',
-    backgroundImage: 'none !important',
-    '& .MuiAutocomplete-option': {
-      borderRadius: '6px',
-      margin: '2px 0',
-      backgroundColor: (theme: Theme) => theme.palette.mode === 'dark' ? '#1c1c2d !important' : '#ffffff !important',
-      color: (theme: Theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-      '&[aria-selected="true"]': {
-        backgroundColor: (theme: Theme) => theme.palette.mode === 'dark' ? '#2a2a45 !important' : '#f5f5f5 !important',
-      },
-      '&.Mui-focused': {
-        backgroundColor: (theme: Theme) => theme.palette.mode === 'dark' ? '#2a2a45 !important' : '#f5f5f5 !important',
-      },
-    },
-  },
-};
-
-const StyledDateTimeField = styled(TextField)(({ theme }) => ({
-  width: '100%',
-  '& .MuiOutlinedInput-root': {
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(35, 35, 66, 0.35)' : 'rgba(245, 245, 245, 0.95)',
-    borderRadius: '8px',
-    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-    '&:hover': {
-      borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-    },
-    '& input': {
-      color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-      '&::-webkit-calendar-picker-indicator': {
-        filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none',
-        cursor: 'pointer'
-      }
-    }
-  },
-  '& .MuiInputLabel-root': {
-    color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-  },
-  '& .MuiSelect-select': {
-    color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-  },
-  '@media (max-width: 600px)': {
-    '& .MuiOutlinedInput-root': {
-      fontSize: '0.9rem',
-    },
-    '& .MuiInputLabel-root': {
-      fontSize: '0.9rem',
-    }
-  }
-}));
-
-const StyledDatePicker = styled(DatePicker)(({ theme }) => ({
-  '& .MuiPaper-root': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#1c1c2d' : '#ffffff',
-    color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-  },
-  '& .MuiPickersDay-root': {
-    color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(35, 35, 66, 0.35)' : 'rgba(245, 245, 245, 0.95)',
-    '&:hover': {
-      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    },
-    '&.Mui-selected': {
-      backgroundColor: '#ff9f43',
-      color: '#fff',
-      '&:hover': {
-        backgroundColor: '#ffbe76',
-      },
-    },
-  },
-  '& .MuiPickersCalendarHeader-root': {
-    color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-  },
-  '& .MuiPickersDay-today': {
-    borderColor: '#ff9f43',
-  },
-  '& .MuiIconButton-root': {
-    color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-  },
-  '& .MuiPickersYear-yearButton': {
-    color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-    '&.Mui-selected': {
-      backgroundColor: '#ff9f43',
-      color: '#fff',
-    },
-  },
-  '& .MuiPickersMonth-monthButton': {
-    color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-    '&.Mui-selected': {
-      backgroundColor: '#ff9f43',
-      color: '#fff',
-    },
-  },
-  '& .MuiPickersDay-dayOutsideMonth': {
-    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-  },
-  '& .MuiInputBase-input': {
-    color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-  },
-  '& .MuiInputLabel-root': {
-    color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-  }
-}));
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -382,7 +176,8 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const emptyLoadingPlace: LoadingPlace = {
+// eslint-disable-next-line
+const _emptyLoadingPlace: LoadingPlace = {
   id: '',
   street: '',
   city: '',
@@ -393,7 +188,8 @@ const emptyLoadingPlace: LoadingPlace = {
   goods: []
 };
 
-const emptyUnloadingPlace: UnloadingPlace = {
+// eslint-disable-next-line
+const _emptyUnloadingPlace: UnloadingPlace = {
   id: '',
   street: '',
   city: '',
@@ -420,7 +216,7 @@ const convertToDate = (dateTime: any): Date | null => {
     try { 
         const date = new Date(dateTime.seconds ? dateTime.seconds * 1000 : dateTime);
         return isNaN(date.getTime()) ? null : date; 
-    } catch (e) { return null; }
+    } catch (_) { return null; }
 };
 
 const DialogGlobalStyles = ({ open }: { open: boolean }) => {
@@ -563,7 +359,7 @@ interface Carrier {
 }
 
 // DEFINÍCIA StyledDialogContent (upravená podľa Contacts.tsx)
-const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
   color: isDarkMode ? '#ffffff' : '#000000',
   padding: '0px',
@@ -599,8 +395,10 @@ const OrdersList: React.FC = () => {
   const theme = useTheme();
   const { isDarkMode } = useThemeMode();
   const { userData } = useAuth();
-  const navigate = useNavigate();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // eslint-disable-next-line
+  const _navigate = useNavigate();
+  // eslint-disable-next-line
+  const _isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // State pre objednávky, zákazníkov, dopravcov, filtre, atď.
   const [orders, setOrders] = useState<OrderFormData[]>([]);
@@ -615,16 +413,15 @@ const OrdersList: React.FC = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedOrderDetail, setSelectedOrderDetail] = useState<OrderFormData | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [orderToDelete, setOrderToDelete] = useState<string>('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderFormData | null>(null);
   const [tabValue, setTabValue] = useState(0);
-  const [showOrderNumberDialog, setShowOrderNumberDialog] = useState(false);
-  const [orderToUpdateId, setOrderToUpdateId] = useState<string | null>(null);
-  const [newOrderNumber, setNewOrderNumber] = useState('');
+  // eslint-disable-next-line
+  const [_orderToUpdateId, setOrderToUpdateId] = useState<string | null>(null);
+  // eslint-disable-next-line
+  const [_newOrderNumber, setNewOrderNumber] = useState('');
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [companySettings, setCompanySettings] = useState<any>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -650,10 +447,15 @@ const OrdersList: React.FC = () => {
     vehicleTypes: '',
     notes: ''
   });
-  const [selectedCarrierForEdit, setSelectedCarrierForEdit] = useState<Carrier | null>(null);
+  // eslint-disable-next-line
+  const [_selectedCarrierForEdit, setSelectedCarrierForEdit] = useState<Carrier | null>(null);
   const [showCarrierDeleteConfirm, setShowCarrierDeleteConfirm] = useState(false);
   const [carrierToDelete, setCarrierToDelete] = useState<string>('');
   const [loadingPdf, setLoadingPdf] = useState(false);
+  // eslint-disable-next-line
+  const [_showOrderNumberDialog, setShowOrderNumberDialog] = useState(false);
+  // eslint-disable-next-line
+  const [_orderToDelete, _setOrderToDelete] = useState<string>('');
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   
@@ -829,13 +631,6 @@ const OrdersList: React.FC = () => {
     });
   };
 
-  const getFilteredCarrierOrders = () => {
-    return filteredOrders.filter(order => {
-      // Filter pre dopravcov - v budúcnosti budeme filtrovať podľa toho, či má order.carrierCompany
-      return order.carrierCompany && order.carrierPrice;
-    });
-  };
-
   const filteredOrders = orders.filter(order => {
     if (!order) return false;
     
@@ -923,51 +718,6 @@ const OrdersList: React.FC = () => {
     fetchOrders();
   };
 
-  const openOrderNumberEditDialog = (orderId: string) => {
-    setOrderToUpdateId(orderId);
-    setShowOrderNumberDialog(true);
-  };
-
-  const closeOrderNumberEditDialog = () => {
-    setOrderToUpdateId(null);
-    setNewOrderNumber('');
-    setShowOrderNumberDialog(false);
-  };
-
-  const updateOrderNumber = async () => {
-    if (!orderToUpdateId || !newOrderNumber || !userData?.companyID) return;
-    
-    try {
-      setLoading(true);
-      
-      const parts = newOrderNumber.split('/');
-      if (parts.length !== 3) {
-        setError('Neplatný formát čísla. Použite formát 0001/04/2025');
-        return;
-      }
-      
-      const orderNumber = parts[0];
-      const orderMonth = parts[1];
-      const orderYear = parts[2];
-      
-      await updateDoc(doc(db, 'orders', orderToUpdateId), {
-        orderNumberFormatted: newOrderNumber,
-        orderNumber,
-        orderMonth,
-        orderYear
-      });
-      
-      closeOrderNumberEditDialog();
-      fetchOrders();
-      
-    } catch (err) {
-      console.error('Chyba pri aktualizácii čísla objednávky:', err);
-      setError('Nastala chyba pri aktualizácii čísla objednávky');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRowClick = (order: OrderFormData) => {
     console.log('--- handleRowClick called ---');
     console.log('Current selectedOrderId:', selectedOrderId, 'Clicked order.id:', order.id);
@@ -979,28 +729,6 @@ const OrdersList: React.FC = () => {
       console.log('Opening detail for order:', order);
       setSelectedOrderId(order.id || null);
       setSelectedOrderDetail(order); // Nastaví detail pre zobrazenie
-    }
-  };
-
-  // Nová funkcia pre získanie nastavení spoločnosti
-  const getCompanySettings = async () => {
-    if (!userData?.companyID) return null;
-    
-    try {
-      const settingsQuery = query(
-        collection(db, 'companySettings'),
-        where('companyID', '==', userData.companyID),
-        limit(1)
-      );
-      
-      const settingsSnapshot = await getDocs(settingsQuery);
-      if (!settingsSnapshot.empty) {
-        return settingsSnapshot.docs[0].data();
-      }
-      return null;
-    } catch (err) {
-      console.error('Chyba pri načítaní nastavení spoločnosti:', err);
-      return null;
     }
   };
 
@@ -1020,7 +748,7 @@ const OrdersList: React.FC = () => {
       const result = await generatePdf({ orderId: order.id });
       
       // @ts-ignore - výsledok obsahuje pdfBase64 a fileName
-      const { pdfBase64, fileName } = result.data;
+      const { pdfBase64 } = result.data;
       
       // Konverzia base64 na Blob
       const byteCharacters = atob(pdfBase64);
@@ -1087,13 +815,6 @@ const OrdersList: React.FC = () => {
       setLoading(false);
     }
   };
-
-  // Zakomentujeme/Odstránime implementáciu generatePDFWithSettings
-  /*
-  const generatePDFWithSettings = (orderData: OrderFormData & { id: string }, settings: any) => {
-    // Táto funkcia bude nahradená serverovým riešením
-  }; 
-  */
 
   const handleAddCustomer = () => {
     setShowCustomerForm(true);
@@ -1373,6 +1094,19 @@ const OrdersList: React.FC = () => {
   // Pridám pomocnú funkciu nad renderom tabuľky:
   const getCustomerVatId = (customer: any) => {
     return customer.icDph || customer.vatId || customer['IČ_DPH'] || customer['ic_dph'] || '-';
+  };
+
+  // eslint-disable-next-line
+  const _openOrderNumberEditDialog = (orderId: string) => {
+    setOrderToUpdateId(orderId);
+    setShowOrderNumberDialog(true);
+  };
+
+  // eslint-disable-next-line
+  const _closeOrderNumberEditDialog = () => {
+    setOrderToUpdateId(null);
+    setNewOrderNumber('');
+    setShowOrderNumberDialog(false);
   };
 
   return (

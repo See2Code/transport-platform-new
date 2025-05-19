@@ -23,7 +23,6 @@ import ChatDrawer from './components/chat/ChatDrawer';
 import { useChat } from './contexts/ChatContext';
 import styled from '@emotion/styled';
 import { Typography } from '@mui/material';
-import type { CSSObject } from '@emotion/styled';
 
 // Vytvoríme kontext pre chat UI
 type ChatUIContextType = {
@@ -44,12 +43,12 @@ export const useChatUI = () => {
   return context;
 };
 
-type AppContainerProps = {
+type _AppContainerProps = {
   isDarkMode: boolean;
   children: React.ReactNode;
 };
 
-type PageContentProps = {
+type _PageContentProps = {
   isDarkMode: boolean;
   children: React.ReactNode;
   sx?: Record<string, any>;
@@ -80,7 +79,7 @@ const PageContent = styled(Box)({
   }
 });
 
-const PageTitle = styled(Typography)(({ theme }: { theme: Theme }) => ({
+const _PageTitle = styled(Typography)(({ theme }: { theme: Theme }) => ({
   fontSize: '1.75rem',
   fontWeight: 700,
   color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',

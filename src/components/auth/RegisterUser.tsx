@@ -15,7 +15,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, updateDoc, setDoc, collection, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
 
 function RegisterUser() {

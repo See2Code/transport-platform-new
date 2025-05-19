@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   IconButton,
-  Drawer,
   styled,
   List,
   ListItem,
@@ -15,9 +14,8 @@ import {
   Paper,
   CircularProgress,
   Badge,
-  Tabs,
-  Tab,
   useTheme,
+  Drawer
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -26,16 +24,18 @@ import {
   KeyboardBackspace as BackIcon,
   ArrowForward as ArrowIcon,
 } from '@mui/icons-material';
-import { useChat, Message, Conversation, ChatUser } from '../../contexts/ChatContext';
+import { useChat, Conversation, ChatUser } from '../../contexts/ChatContext';
 import { formatDistanceToNow } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeMode } from '../../contexts/ThemeContext';
+import { getDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 const DRAWER_WIDTH = 320;
 
 // Štýlované komponenty
-const ChatContainer = styled(Box)(({ theme }) => ({
+const ChatContainer = styled(Box)(({ _theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   height: '100%',
@@ -51,11 +51,11 @@ const ConversationHeader = styled(Box, {
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
 }));
 
-const SearchContainer = styled(Box)(({ theme }) => ({
+const SearchContainer = styled(Box)(({ _theme }) => ({
   padding: '16px',
 }));
 
-const ConversationList = styled(List)(({ theme }) => ({
+const ConversationList = styled(List)(({ _theme }) => ({
   flexGrow: 1,
   overflow: 'auto',
   padding: 0,
@@ -71,7 +71,7 @@ const ChatHeader = styled(Box, {
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
 }));
 
-const MessageContainer = styled(Box)(({ theme }) => ({
+const MessageContainer = styled(Box)(({ _theme }) => ({
   flexGrow: 1,
   overflow: 'auto',
   padding: '16px',
@@ -107,7 +107,7 @@ const InputContainer = styled(Box, {
   alignItems: 'center',
 }));
 
-const EmptyStateContainer = styled(Box)(({ theme }) => ({
+const EmptyStateContainer = styled(Box)(({ _theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -117,7 +117,7 @@ const EmptyStateContainer = styled(Box)(({ theme }) => ({
   textAlign: 'center',
 }));
 
-const StyledBadge = styled(Badge)(({ theme }) => ({
+const _StyledBadge = styled(Badge)(({ theme }) => ({
   '& .MuiBadge-badge': {
     backgroundColor: '#44b700',
     color: '#44b700',
@@ -146,7 +146,7 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
   },
 }));
 
-const TabPanel = (props: {
+const _TabPanel = (props: {
   children?: React.ReactNode;
   index: number;
   value: number;
@@ -210,7 +210,7 @@ const ChatDrawer = styled(Drawer)(({ theme }) => ({
 }));
 
 const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
-  const theme = useTheme();
+  const _theme = useTheme();
   const { isDarkMode } = useThemeMode();
   const { userData } = useAuth();
   const {
@@ -226,6 +226,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
     sendMessage,
     selectConversation,
     closeConversation,
+    markConversationAsRead,
   } = useChat();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -300,10 +301,47 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
     if (!otherUserId) return { name: 'Unknown', photoURL: '', companyName: '' };
     
     const userInfo = conversation.participantsInfo[otherUserId];
+    
+    // Ak má používateľ nastavenú firmu v konverzácii (nie je prázdna ani "Nezadaná firma")
+    if (userInfo?.companyName && userInfo.companyName !== 'Nezadaná firma') {
+      return {
+        name: userInfo.name || 'Unknown',
+        photoURL: userInfo.photoURL || '',
+        companyName: userInfo.companyName
+      };
+    }
+    
+    // Ak používateľ nemá nastavenú firmu v konverzácii, skúsime získať názov firmy cez companyID
+    // Najprv vrátime to čo máme - kvôli optimalizácii UI, a potom nastavíme aktualizáciu
+    setTimeout(async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', otherUserId));
+        if (userDoc.exists()) {
+          const userDataFromDb = userDoc.data();
+          if (userDataFromDb.companyID) {
+            const companyDoc = await getDoc(doc(db, 'companies', userDataFromDb.companyID));
+            if (companyDoc.exists()) {
+              const companyData = companyDoc.data();
+              if (companyData.companyName) {
+                // Aktualizujeme konverzáciu s názvom firmy
+                if (conversation.id) {
+                  await updateDoc(doc(db, 'conversations', conversation.id), {
+                    [`participantsInfo.${otherUserId}.companyName`]: companyData.companyName
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Chyba pri aktualizácii názvu firmy:', error);
+      }
+    }, 100);
+    
     return {
       name: userInfo?.name || 'Unknown',
       photoURL: userInfo?.photoURL || '',
-      companyName: userInfo?.companyName || 'Nezadaná firma'
+      companyName: userInfo?.companyName || ''
     };
   };
 
@@ -334,7 +372,10 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                   {getOtherUserInfo(currentConversation).name}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" noWrap>
-                  {getOtherUserInfo(currentConversation).companyName}
+                  {getOtherUserInfo(currentConversation).companyName && 
+                   getOtherUserInfo(currentConversation).companyName !== 'Nezadaná firma' 
+                    ? getOtherUserInfo(currentConversation).companyName 
+                    : ''}
                 </Typography>
               </Box>
               <IconButton edge="end" onClick={onClose}>
@@ -544,7 +585,12 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                     <ListItem
                       button
                       key={conversation.id}
-                      onClick={() => selectConversation(conversation.id)}
+                      onClick={() => {
+                        selectConversation(conversation.id);
+                        if (conversation.unreadCount && conversation.unreadCount > 0) {
+                          markConversationAsRead(conversation.id);
+                        }
+                      }}
                       sx={{
                         bgcolor: hasUnread 
                           ? (isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)')
@@ -583,7 +629,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                               color="textSecondary" 
                               sx={{ display: 'block', mb: 0.5 }}
                             >
-                              {companyName}
+                              {companyName && companyName !== 'Nezadaná firma' ? companyName : ''}
                             </Typography>
                             {conversation.lastMessage ? (
                               <Box sx={{ display: 'flex', alignItems: 'center' }}>

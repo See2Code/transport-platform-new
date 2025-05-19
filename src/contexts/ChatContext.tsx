@@ -160,6 +160,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setHasNewMessages(hasUnread);
       setConversations(conversationsData);
       setLoadingConversations(false);
+      
+      // Aktualizujeme firmy užívateľov v konverzáciách
+      loadUserCompanyInfo(conversationsData);
     });
 
     return () => unsubscribe();
@@ -296,6 +299,52 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     const otherUserData = otherUserDoc.data();
+
+    // Získame názov spoločnosti pre aktuálneho používateľa
+    let currentUserCompanyName = userData.companyName || '';
+    if (userData.companyID) {
+      try {
+        const companyDoc = await getDoc(doc(db, 'companies', userData.companyID));
+        if (companyDoc.exists()) {
+          const companyData = companyDoc.data();
+          if (companyData.companyName) {
+            currentUserCompanyName = companyData.companyName;
+          }
+        }
+      } catch (error) {
+        console.error('Chyba pri získavaní názvu spoločnosti aktuálneho používateľa:', error);
+      }
+    }
+
+    // Získame názov spoločnosti pre druhého používateľa
+    let otherUserCompanyName = otherUserData.companyName || '';
+    if (otherUserData.companyID) {
+      try {
+        const companyDoc = await getDoc(doc(db, 'companies', otherUserData.companyID));
+        if (companyDoc.exists()) {
+          const companyData = companyDoc.data();
+          if (companyData.companyName) {
+            otherUserCompanyName = companyData.companyName;
+          }
+        }
+      } catch (error) {
+        console.error('Chyba pri získavaní názvu spoločnosti druhého používateľa:', error);
+      }
+    }
+    // Ak sme nenašli spoločnosť pomocou companyID, skúsime companyId (malé 'd')
+    if (otherUserCompanyName === '' && otherUserData.companyId && otherUserData.companyId !== otherUserData.companyID) {
+      try {
+        const companyDoc = await getDoc(doc(db, 'companies', otherUserData.companyId));
+        if (companyDoc.exists()) {
+          const companyData = companyDoc.data();
+          if (companyData.companyName) {
+            otherUserCompanyName = companyData.companyName;
+          }
+        }
+      } catch (error) {
+        console.error('Chyba pri získavaní názvu spoločnosti druhého používateľa cez companyId:', error);
+      }
+    }
     
     // Vytvoríme novú konverzáciu
     const timestamp = serverTimestamp();
@@ -304,13 +353,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
         email: userData.email || '',
         photoURL: userData.photoURL || '',
-        companyName: userData.companyName || ''
+        companyName: currentUserCompanyName
       },
       [userId]: {
         name: `${otherUserData.firstName || ''} ${otherUserData.lastName || ''}`.trim(),
         email: otherUserData.email || '',
         photoURL: otherUserData.photoURL || '',
-        companyName: otherUserData.companyName || ''
+        companyName: otherUserCompanyName
       }
     };
     
@@ -382,6 +431,55 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ) {
         markConversationAsRead(conversationId).catch(console.error);
       }
+      
+      // Aktualizujeme údaje o používateľoch v konverzácii (najmä názov firmy)
+      updateConversationUsersInfo(conversationId, conversation).catch(error => 
+        console.error('Chyba pri aktualizovaní informácií používateľov v konverzácii:', error)
+      );
+    }
+  };
+  
+  // Funkcia na aktualizáciu informácií o používateľoch v konverzácii
+  const updateConversationUsersInfo = async (conversationId: string, conversation: Conversation): Promise<void> => {
+    if (!userData?.uid) return;
+    
+    try {
+      // Aktualizujeme len informácie o aktuálnom používateľovi
+      const updatedParticipantsInfo = {
+        ...conversation.participantsInfo,
+        [userData.uid]: {
+          ...conversation.participantsInfo[userData.uid],
+          name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+          email: userData.email || '',
+          photoURL: userData.photoURL || '',
+          companyName: userData.companyName || ''
+        }
+      };
+      
+      // Aktualizujeme databázu
+      await updateDoc(doc(db, 'conversations', conversationId), {
+        participantsInfo: updatedParticipantsInfo
+      });
+      
+      // Aktualizujeme lokálny stav
+      setConversations(prevConversations => 
+        prevConversations.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, participantsInfo: updatedParticipantsInfo } 
+            : conv
+        )
+      );
+      
+      // Aktualizujeme aj aktuálnu konverzáciu, ak je to tá istá
+      if (currentConversation?.id === conversationId) {
+        setCurrentConversation(prev => 
+          prev 
+            ? { ...prev, participantsInfo: updatedParticipantsInfo } 
+            : null
+        );
+      }
+    } catch (error) {
+      console.error('Chyba pri aktualizovaní informácií používateľov v konverzácii:', error);
     }
   };
 
@@ -390,6 +488,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!userData?.uid) return;
     
     try {
+      // Okamžite aktualizujeme lokálne pre rýchlu spätnú väzbu používateľovi
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, unreadCount: 0 } 
+            : conv
+        )
+      );
+      
+      if (currentConversation && currentConversation.id === conversationId) {
+        setCurrentConversation(prev => prev ? { ...prev, unreadCount: 0 } : null);
+      }
+      
+      // Aktualizujeme Firestore
       await updateDoc(doc(db, 'conversations', conversationId), {
         unreadCount: 0
       });
@@ -418,16 +530,110 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages([]);
   };
 
-  const formatTime = (timestamp: any) => {
+  const _formatTime = (timestamp: any) => {
     if (!timestamp) return '';
     
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      const _date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
       // Odstránim zobrazenie času v zozname
       return '';
     } catch (error) {
       console.error('Error formatting time:', error);
       return '';
+    }
+  };
+
+  // Nová funkcia na načítanie aktuálnych údajov o firmách používateľov a aktualizáciu v databáze
+  const loadUserCompanyInfo = async (conversationsData: Conversation[]) => {
+    if (!userData?.uid || conversationsData.length === 0) return;
+    
+    try {
+      // Pre každú konverzáciu skontrolujeme všetkých účastníkov
+      for (const conversation of conversationsData) {
+        const updates: Record<string, any> = {};
+        let needsUpdate = false;
+        
+        // Získame informácie o aktuálnom používateľovi (ak ešte nie sú aktuálne)
+        const currentUserInfo = conversation.participantsInfo[userData.uid];
+        if (
+          currentUserInfo &&
+          (currentUserInfo.companyName === 'Nezadaná firma' || !currentUserInfo.companyName) &&
+          userData.companyName
+        ) {
+          updates[`participantsInfo.${userData.uid}.companyName`] = userData.companyName;
+          needsUpdate = true;
+        }
+        
+        // Skontrolujeme ostatných účastníkov
+        for (const participantId of conversation.participants) {
+          if (participantId === userData.uid) continue; // Preskočíme seba
+          
+          const participantInfo = conversation.participantsInfo[participantId];
+          if (
+            participantInfo && 
+            (participantInfo.companyName === 'Nezadaná firma' || !participantInfo.companyName)
+          ) {
+            // Získame aktuálne informácie o užívateľovi z Firestore
+            try {
+              const userDoc = await getDoc(doc(db, 'users', participantId));
+              if (userDoc.exists()) {
+                const userDataFromDb = userDoc.data();
+                // Skúsime získať názov firmy z kolekcie companies
+                if (userDataFromDb.companyID) {
+                  try {
+                    const companyDoc = await getDoc(doc(db, 'companies', userDataFromDb.companyID));
+                    if (companyDoc.exists()) {
+                      const companyData = companyDoc.data();
+                      if (companyData.companyName) {
+                        updates[`participantsInfo.${participantId}.companyName`] = companyData.companyName;
+                        needsUpdate = true;
+                        continue; // Pokračujeme ďalším používateľom
+                      }
+                    }
+                  } catch (companyError) {
+                    console.error(`Chyba pri získavaní údajov o firme pre užívateľa ${participantId}:`, companyError);
+                  }
+                }
+                // Ak sme nenašli firmu cez companyID, skúsime použiť companyId (malé 'd')
+                if (userDataFromDb.companyId && userDataFromDb.companyId !== userDataFromDb.companyID) {
+                  try {
+                    const companyDoc = await getDoc(doc(db, 'companies', userDataFromDb.companyId));
+                    if (companyDoc.exists()) {
+                      const companyData = companyDoc.data();
+                      if (companyData.companyName) {
+                        updates[`participantsInfo.${participantId}.companyName`] = companyData.companyName;
+                        needsUpdate = true;
+                        continue; // Pokračujeme ďalším používateľom
+                      }
+                    }
+                  } catch (companyError) {
+                    console.error(`Chyba pri získavaní údajov o firme pre užívateľa ${participantId}:`, companyError);
+                  }
+                }
+                // Ak máme názov firmy priamo v údajoch používateľa
+                if (userDataFromDb.companyName) {
+                  updates[`participantsInfo.${participantId}.companyName`] = userDataFromDb.companyName;
+                  needsUpdate = true;
+                }
+              }
+            } catch (error) {
+              console.error(`Chyba pri získavaní údajov o užívateľovi ${participantId}:`, error);
+            }
+          }
+        }
+        
+        // Ak sú potrebné aktualizácie, aktualizujeme dokument v Firestore
+        if (needsUpdate) {
+          try {
+            await updateDoc(doc(db, 'conversations', conversation.id), updates);
+            console.log(`Aktualizované informácie o firmách pre konverzáciu ${conversation.id}`);
+          } catch (error) {
+            console.error(`Chyba pri aktualizácii konverzácie ${conversation.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Chyba pri načítaní údajov o firmách:', error);
     }
   };
 

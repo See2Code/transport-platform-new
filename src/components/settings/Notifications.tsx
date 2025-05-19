@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -20,7 +20,7 @@ import {
   Refresh as RefreshIcon,
   MarkEmailRead as MarkEmailReadIcon
 } from '@mui/icons-material';
-import { useNotifications, NotificationData } from '../../contexts/NotificationsContext';
+import { useNotifications} from '../../contexts/NotificationsContext';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
