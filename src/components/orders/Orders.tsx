@@ -56,6 +56,9 @@ import CustomerForm, { CustomerData } from '../management/CustomerForm';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../firebase';
 import MobileOrderCard from './MobileOrderCard'; // Import nového komponentu
+import OrderDetail from './OrderDetail';
+import { Business as BusinessIcon } from '@mui/icons-material';
+import Divider from '@mui/material/Divider';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -396,6 +399,8 @@ const OrdersList: React.FC = () => {
   const [_showOrderNumberDialog, setShowOrderNumberDialog] = useState(false);
   // eslint-disable-next-line
   const [_orderToDelete, _setOrderToDelete] = useState<string>('');
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [_deleteDialogOpen, _setDeleteDialogOpen] = useState(false);
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   
@@ -1035,6 +1040,15 @@ const OrdersList: React.FC = () => {
     setShowOrderNumberDialog(false);
   };
 
+  const handleRowClick = (order: OrderFormData) => {
+    setSelectedOrder(order);
+    setDetailDialogOpen(true);
+  };
+
+  const handleCloseDetail = () => {
+    setDetailDialogOpen(false);
+  };
+
   return (
     <PageWrapper>
       <DialogGlobalStyles open={showNewOrderDialog || showCustomerForm || showCarrierForm || showDeleteConfirm || showCustomerDeleteConfirm || showCarrierDeleteConfirm} />
@@ -1220,7 +1234,12 @@ const OrdersList: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {getFilteredCustomerOrders().map((order) => (
-                    <StyledTableRow isDarkMode={isDarkMode} key={order.id}>
+                    <StyledTableRow 
+                      isDarkMode={isDarkMode} 
+                      key={order.id}
+                      onClick={() => handleRowClick(order)}
+                      sx={{ cursor: 'pointer' }}
+                    >
                       <StyledTableCell isDarkMode={isDarkMode}>{(order as any).orderNumberFormatted || 'N/A'}</StyledTableCell>
                       <StyledTableCell isDarkMode={isDarkMode}>{(order as any).zakaznik || order.customerCompany || '-'}</StyledTableCell>
                       <StyledTableCell isDarkMode={isDarkMode}>{(order as any).kontaktnaOsoba || '-'}</StyledTableCell>
@@ -1551,70 +1570,63 @@ const OrdersList: React.FC = () => {
         onClose={handleCloseNewOrderForm}
         maxWidth="lg"
         fullWidth
-        sx={{
-          '& .MuiBackdrop-root': {
-            backdropFilter: 'blur(5px)',
-            backgroundColor: theme.palette.mode === 'dark' 
-              ? 'rgba(0, 0, 0, 0.8)' 
-              : 'rgba(255, 255, 255, 0.8)'
-          },
-          '& .MuiPaper-root': {
-            backgroundColor: theme.palette.mode === 'dark' 
-              ? 'rgba(22, 28, 36, 0.95)' 
-              : 'rgba(255, 255, 255, 0.95)',
+        PaperProps={{
+          sx: {
+            background: 'none',
+            boxShadow: 'none',
+            margin: {
+              xs: '8px',
+              sm: '16px'
+            },
+            maxHeight: '90vh',
+            overflow: 'hidden'
+          }
+        }}
+        BackdropProps={{
+          sx: {
             backdropFilter: 'blur(10px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-            border: theme.palette.mode === 'dark' 
-              ? '1px solid rgba(255, 255, 255, 0.08)' 
-              : '1px solid rgba(0, 0, 0, 0.08)',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            maxHeight: '90vh'
-          },
-          '& .MuiDialogContent-root': {
-            padding: 0,
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            maxHeight: '90vh'
-          },
-          '& .MuiDialogTitle-root': {
-            padding: '20px 24px 12px',
-            borderBottom: theme.palette.mode === 'dark' 
-              ? '1px solid rgba(255, 255, 255, 0.08)' 
-              : '1px solid rgba(0, 0, 0, 0.08)',
-            fontWeight: 600,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
+            backgroundColor: 'rgba(0, 0, 0, 0.8)'
           }
         }}
       >
         <DialogGlobalStyles open={showNewOrderDialog} />
-        <DialogTitle>
-          {isEditMode ? 'Upraviť objednávku' : 'Nová objednávka'}
-          <IconButton 
-            onClick={handleCloseNewOrderForm} 
-            edge="end" 
-            aria-label="close"
-            sx={{
-              position: 'absolute',
-              right: 16,
-              top: 16,
-              color: theme.palette.grey[500],
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <NewOrderForm 
-            isModal={true} 
-            onClose={handleCloseNewOrderForm} 
-            isEdit={isEditMode}
-            orderData={selectedOrder || undefined}
-          />
-        </DialogContent>
+        <StyledDialogContent isDarkMode={isDarkMode}>
+          <DialogTitle sx={{ 
+            p: 0, 
+            mb: 3, 
+            fontWeight: 700, 
+            color: isDarkMode ? '#ffffff' : '#000000',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BusinessIcon sx={{ color: '#ff9f43' }} />
+              {isEditMode ? 'Upraviť objednávku' : 'Nová objednávka'}
+            </Box>
+            <IconButton 
+              onClick={handleCloseNewOrderForm} 
+              edge="end" 
+              aria-label="close"
+              sx={{
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          
+          <Divider sx={{ mb: 3, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+          
+          <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+            <NewOrderForm 
+              isModal={true} 
+              onClose={handleCloseNewOrderForm} 
+              isEdit={isEditMode}
+              orderData={selectedOrder || undefined}
+            />
+          </Box>
+        </StyledDialogContent>
       </Dialog>
 
       {/* Dialog pre mazanie OBJEDNÁVKY */}
@@ -2132,6 +2144,12 @@ const OrdersList: React.FC = () => {
           </DialogActions>
         </StyledDialogContent>
     </Dialog>
+
+    <OrderDetail 
+      open={detailDialogOpen}
+      onClose={handleCloseDetail}
+      order={selectedOrder}
+    />
     </PageWrapper>
   );
 };
