@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext, useEffect, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline, GlobalStyles, Theme } from '@mui/material';
+import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline, GlobalStyles } from '@mui/material';
 import Box from '@mui/material/Box';
 import Navbar from './components/layout/Navbar';
 import Dashboard from './components/layout/Dashboard';
@@ -22,7 +22,6 @@ import { useThemeMode } from './contexts/ThemeContext';
 import ChatDrawer from './components/chat/ChatDrawer';
 import { useChat } from './contexts/ChatContext';
 import styled from '@emotion/styled';
-import { Typography } from '@mui/material';
 
 // Konštanta pre šírku chat drawera
 const DRAWER_WIDTH = 320;
@@ -44,17 +43,6 @@ export const useChatUI = () => {
     throw new Error('useChatUI musí byť použitý vnútri ChatUIProvider');
   }
   return context;
-};
-
-type _AppContainerProps = {
-  isDarkMode: boolean;
-  children: React.ReactNode;
-};
-
-type _PageContentProps = {
-  isDarkMode: boolean;
-  children: React.ReactNode;
-  sx?: Record<string, any>;
 };
 
 const AppContainer = styled(Box)(({ _theme }) => ({
@@ -89,23 +77,6 @@ const PageContent = styled(Box)(({ _theme }) => ({
     marginTop: '48px',
     padding: '16px',
     minHeight: 'calc(100vh - 48px)',
-  }
-}));
-
-const _PageTitle = styled(Typography)(({ theme }: { theme: Theme }) => ({
-  fontSize: '1.75rem',
-  fontWeight: 700,
-  color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-  position: 'relative' as const,
-  '&::after': {
-    content: '""',
-    position: 'absolute' as const,
-    bottom: '-8px',
-    left: 0,
-    width: '60px',
-    height: '4px',
-    backgroundColor: '#ff9f43',
-    borderRadius: '2px',
   }
 }));
 

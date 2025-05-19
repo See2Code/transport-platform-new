@@ -215,7 +215,7 @@ const convertToDate = (dateTime: any): Date | null => {
     try { 
         const date = new Date(dateTime.seconds ? dateTime.seconds * 1000 : dateTime);
         return isNaN(date.getTime()) ? null : date; 
-    } catch (_) { return null; }
+    } catch { return null; }
 };
 
 const DialogGlobalStyles = ({ open }: { open: boolean }) => {
@@ -243,121 +243,6 @@ const DialogGlobalStyles = ({ open }: { open: boolean }) => {
   );
 };
 
-const OrderDetailPanel = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
-  backgroundColor: theme.palette.mode === 'dark' 
-    ? 'rgba(28, 28, 45, 0.95)' 
-    : 'rgba(255, 255, 255, 0.95)',
-  // Dočasne zakomentujeme potenciálne problematické štýly
-  // backdropFilter: 'blur(10px)',
-  // borderRadius: '0 0 12px 12px',
-  // boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-  borderTop: `1px solid ${theme.palette.mode === 'dark' 
-    ? 'rgba(255, 255, 255, 0.1)' 
-    : 'rgba(0, 0, 0, 0.1)'}`,
-  // margin: '0 -1px',
-  // position: 'relative',
-  // zIndex: 5,
-  // maxHeight: '600px', // Odstránime obmedzenie výšky
-  // overflowY: 'auto',
-  // animation: 'slideDown 0.3s ease-out forwards',
-  // '@keyframes slideDown': {
-  //   from: { maxHeight: '0', opacity: 0 },
-  //   to: { maxHeight: '600px', opacity: 1 }
-  // },
-  '@media (max-width: 600px)': {
-    padding: theme.spacing(2)
-  }
-}));
-
-const DetailSection = styled(Box)(({ theme }) => ({
-  marginBottom: theme.spacing(3),
-}));
-
-const DetailSectionTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '1rem',
-  fontWeight: 600,
-  marginBottom: theme.spacing(1),
-  color: '#ff9f43',
-  display: 'flex',
-  alignItems: 'center',
-  '&::after': {
-    content: '""',
-    flex: 1,
-    height: '1px',
-    backgroundColor: theme.palette.mode === 'dark' 
-      ? 'rgba(255, 255, 255, 0.1)' 
-      : 'rgba(0, 0, 0, 0.1)',
-    marginLeft: theme.spacing(1)
-  }
-}));
-
-const DetailRow = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  marginBottom: theme.spacing(1),
-  '@media (max-width: 600px)': {
-    flexDirection: 'column'
-  }
-}));
-
-const DetailLabel = styled(Typography)(({ theme }) => ({
-  fontWeight: 500,
-  minWidth: '200px',
-  fontSize: '0.875rem', // Zjednotená veľkosť písma
-  color: theme.palette.mode === 'dark' 
-    ? 'rgba(255, 255, 255, 0.7)' 
-    : 'rgba(0, 0, 0, 0.7)',
-  '@media (max-width: 600px)': {
-    minWidth: 'auto',
-    marginBottom: theme.spacing(0.5)
-  }
-}));
-
-const DetailValue = styled(Typography)(({ theme }) => ({
-  flex: 1,
-  fontSize: '0.875rem', // Zjednotená veľkosť písma
-  color: theme.palette.mode === 'dark' 
-    ? '#ffffff' 
-    : '#000000',
-  fontWeight: 400
-}));
-
-interface Customer {
-  id: string;
-  companyName: string;
-  street: string;
-  city: string;
-  zip: string;
-  country: string;
-  contactName: string;
-  contactSurname: string;
-  contactEmail: string;
-  ico?: string;
-  dic?: string;
-  icDph?: string;
-  createdAt: Date;
-}
-
-interface Carrier {
-  id: string;
-  companyName: string;
-  street: string;
-  city: string;
-  zip: string;
-  country: string;
-  contactName: string;
-  contactSurname: string;
-  contactEmail: string;
-  contactPhone?: string;
-  ico?: string;
-  dic?: string;
-  icDph?: string;
-  vehicleTypes?: string[];
-  notes?: string;
-  createdAt: Date;
-}
-
-// DEFINÍCIA StyledDialogContent (upravená podľa Contacts.tsx)
 const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
   color: isDarkMode ? '#ffffff' : '#000000',
@@ -411,6 +296,41 @@ const StyledTableCell = styled(TableCell, {
   whiteSpace: 'nowrap'
 }));
 
+interface Customer {
+  id: string;
+  companyName: string;
+  street: string;
+  city: string;
+  zip: string;
+  country: string;
+  contactName: string;
+  contactSurname: string;
+  contactEmail: string;
+  ico?: string;
+  dic?: string;
+  icDph?: string;
+  createdAt?: Date;
+}
+
+interface Carrier {
+  id: string;
+  companyName: string;
+  street: string;
+  city: string;
+  zip: string;
+  country: string;
+  contactName: string;
+  contactSurname: string;
+  contactEmail: string;
+  contactPhone?: string;
+  ico?: string;
+  dic?: string;
+  icDph?: string;
+  vehicleTypes?: string[];
+  notes?: string;
+  createdAt: Date;
+}
+
 const OrdersList: React.FC = () => {
   const theme = useTheme();
   const { isDarkMode } = useThemeMode();
@@ -431,7 +351,6 @@ const OrdersList: React.FC = () => {
   const [showNewOrderDialog, setShowNewOrderDialog] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Record<string, any>>({});
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [selectedOrderDetail, setSelectedOrderDetail] = useState<OrderFormData | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderFormData | null>(null);
@@ -442,6 +361,7 @@ const OrdersList: React.FC = () => {
   const [_newOrderNumber, setNewOrderNumber] = useState('');
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [previewOrder, setPreviewOrder] = useState<OrderFormData | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -726,30 +646,15 @@ const OrdersList: React.FC = () => {
   };
 
   const handleOpenNewOrderForm = () => {
+    setShowNewOrderDialog(true);
     setSelectedOrder(null);
     setIsEditMode(false);
-    setShowNewOrderDialog(true);
   };
 
   const handleCloseNewOrderForm = () => {
     setShowNewOrderDialog(false);
     setSelectedOrder(null);
     setIsEditMode(false);
-    fetchOrders();
-  };
-
-  const handleRowClick = (order: OrderFormData) => {
-    console.log('--- handleRowClick called ---');
-    console.log('Current selectedOrderId:', selectedOrderId, 'Clicked order.id:', order.id);
-    if (selectedOrderId === order.id) {
-      console.log('Closing detail for order:', order.id);
-      setSelectedOrderId(null);
-      setSelectedOrderDetail(null); // Zatvorí detail ak sa klikne znova
-    } else {
-      console.log('Opening detail for order:', order);
-      setSelectedOrderId(order.id || null);
-      setSelectedOrderDetail(order); // Nastaví detail pre zobrazenie
-    }
   };
 
   // Upravená funkcia pre náhľad PDF
@@ -762,6 +667,7 @@ const OrdersList: React.FC = () => {
       
       setLoadingPdf(true);
       setShowPdfPreview(true);
+      setPreviewOrder(order); // Nastaviť aktuálnu objednávku do stavu
       
       // Volanie serverovej funkcie pre generovanie PDF
       const generatePdf = httpsCallable(functions, 'generateOrderPdf');
@@ -1801,7 +1707,7 @@ const OrdersList: React.FC = () => {
                                 if (pdfUrl) {
                                     const a = document.createElement('a');
                                     a.href = pdfUrl;
-                                    a.download = `objednavka-${selectedOrderDetail?.id?.substring(0, 8) || 'preview'}.pdf`;
+                                    a.download = `objednavka-${previewOrder?.id?.substring(0, 8) || 'preview'}.pdf`;
                                     document.body.appendChild(a);
                                     a.click();
                                     document.body.removeChild(a);

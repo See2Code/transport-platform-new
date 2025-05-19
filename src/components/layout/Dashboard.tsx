@@ -278,7 +278,6 @@ export default function Dashboard() {
   const [activeVehicles, setActiveVehicles] = useState<VehicleLocation[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [statusGraphLoading, setStatusGraphLoading] = useState(true);
-  const [_error, setError] = useState<string | null>(null);
 
   // Fetch jednorazových dát - použitie useCallback, aby sme mali stabilnú referenciu na funkciu
   const fetchStaticData = useCallback(async () => {
@@ -301,7 +300,6 @@ export default function Dashboard() {
         totalDrivers: driversSnap.size
       }));
     } catch (_error) {
-      setError('Chyba pri načítaní údajov');
       console.error('Error fetching static data:', _error);
     }
   }, [userData]);
@@ -342,7 +340,6 @@ export default function Dashboard() {
                 if (retryCount < 3) {
                   setTimeout(() => setupVehiclesListener(retryCount + 1), 1000 * (retryCount + 1));
                 } else {
-                  setError('Nepodarilo sa načítať údaje o vozidlách');
                   setVehiclesLoading(false);
                 }
               }
@@ -418,7 +415,6 @@ export default function Dashboard() {
                 if (retryCount < 3) {
                   setTimeout(() => setupBusinessCasesListener(retryCount + 1), 1000 * (retryCount + 1));
                 } else {
-                  setError('Nepodarilo sa načítať obchodné prípady');
                   setStatusGraphLoading(false);
                 }
               }
@@ -441,7 +437,6 @@ export default function Dashboard() {
 
       } catch (error) {
         console.error('Chyba pri nastavovaní listenerov:', error);
-        setError('Nepodarilo sa načítať dáta');
         setVehiclesLoading(false);
       }
     };

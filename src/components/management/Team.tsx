@@ -44,7 +44,7 @@ import {
 import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
 import { auth, db, functions } from '../../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { httpsCallable } from 'firebase/functions';
 import 'react-phone-input-2/lib/style.css';
 
@@ -815,7 +815,6 @@ const _TransparentTooltip = muiStyled(({ className, ...props }: TooltipProps) =>
 }));
 
 function Team() {
-  const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteItem, setDeleteItem] = useState<DeleteableItem | null>(null);
@@ -831,7 +830,6 @@ function Team() {
   const [isEmailValid, setIsEmailValid] = useState(true);
   const [editingInvite, setEditingInvite] = useState<Invitation | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phonePrefix, setPhonePrefix] = useState('+421');

@@ -2,11 +2,8 @@ import React, { useState, useEffect, useRef, FC, useCallback } from 'react';
 
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
-import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 
 import Menu from '@mui/material/Menu';
@@ -16,13 +13,11 @@ import Toolbar from '@mui/material/Toolbar';
 import AppBar from '@mui/material/AppBar';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme, styled } from '@mui/material/styles';
-import MenuList from '@mui/material/MenuList';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
-import Drawer from '@mui/material/Drawer';
 import Badge from '@mui/material/Badge';
 import Popover from '@mui/material/Popover';
 import Paper from '@mui/material/Paper';
@@ -47,7 +42,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { MenuProps } from '@mui/material/Menu';
@@ -77,9 +72,6 @@ const ENFlagIcon = () => (
   </span>
 );
 
-const _drawerWidth = 240;
-const _miniDrawerWidth = 64;
-
 // Definícia farebnej palety
 const colors = {
   primary: {
@@ -99,91 +91,7 @@ const colors = {
   }
 };
 
-const _Logo = styled(Typography)(({ theme }) => ({
-  fontWeight: 800,
-  color: colors.primary.main,
-  fontSize: '1.5rem',
-  marginRight: theme.spacing(2),
-  letterSpacing: '-0.5px',
-  transition: 'color 0.2s ease-in-out',
-  '&:hover': {
-    color: colors.primary.light,
-  }
-}));
-
-const _AesaLogoDrawer = styled('img')({
-  height: '32px',
-  width: 'auto',
-  transition: 'all 0.3s ease-in-out',
-  filter: 'brightness(1.1)',
-  '&:hover': {
-    transform: 'scale(1.05)',
-  }
-});
-
-const _AesaLogoMini = styled('img')({
-  height: '28px',
-  width: 'auto',
-  transition: 'all 0.3s ease-in-out',
-  filter: 'brightness(1.1)',
-  '&:hover': {
-    transform: 'scale(1.05)',
-  }
-});
-
-const _DrawerHeader = styled('div')(({ theme }) => ({
-  display: 'flex', // Zobraziť hlavičku pre krížik
-  alignItems: 'center',
-  justifyContent: 'flex-end', // Krížik vpravo
-  padding: theme.spacing(0, 1),
-  // Ostatné štýly odstránené alebo upravené, aby sa nelámali zobrazenie
-  ...theme.mixins.toolbar,
-}));
-
-const _ToggleButton = styled(IconButton)(({ _theme }) => ({
-  position: 'fixed',
-  right: '24px',
-  bottom: '24px',
-  backgroundColor: `${colors.primary.main}e6`,
-  color: colors.text.primary,
-  zIndex: 1300,
-  padding: '12px',
-  borderRadius: '16px',
-  width: '48px',
-  height: '48px',
-  backdropFilter: 'blur(10px)',
-  boxShadow: `0 4px 20px ${colors.primary.main}4d`,
-  '&:hover': {
-    backgroundColor: colors.primary.main,
-    transform: 'translateY(-2px)',
-    boxShadow: `0 8px 24px ${colors.primary.main}66`,
-  },
-  '&:active': {
-    transform: 'translateY(0)',
-    boxShadow: `0 4px 16px ${colors.primary.main}4d`,
-  },
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '& .MuiSvgIcon-root': {
-    fontSize: '24px',
-    transition: 'transform 0.3s ease',
-  },
-  '&:hover .MuiSvgIcon-root': {
-    transform: 'scale(1.1)',
-  },
-  '@media (max-width: 600px)': {
-    position: 'relative',
-    right: 'auto',
-    bottom: 'auto',
-    margin: '16px auto',
-    display: 'flex',
-    justifyContent: 'center',
-    width: '48px',
-    height: '48px',
-    borderRadius: '50%',
-  }
-}));
-
-const ListItemIconStyled = styled(ListItemIcon)({
+const _ListItemIconStyled = styled(ListItemIcon)({
   minWidth: 48,
   color: 'inherit',
   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -195,126 +103,6 @@ const ListItemIconStyled = styled(ListItemIcon)({
     transition: 'transform 0.3s ease',
     fontSize: '24px'
   }
-});
-
-const _NavListItem = styled(ListItem, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode?: boolean }>(({ _theme, isDarkMode = true }) => ({
-  position: 'relative',
-  padding: '4px',
-  '& .MuiListItemButton-root': {
-    borderRadius: '8px',
-    padding: '12px 16px',
-    minWidth: '56px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    transition: 'all 0.2s ease-in-out',
-    color: isDarkMode ? colors.text.secondary : 'rgba(0, 0, 0, 0.6)',
-    '&:hover': {
-      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.04)',
-      color: isDarkMode ? colors.text.primary : 'rgba(0, 0, 0, 0.87)',
-      transform: 'translateY(-2px)',
-      boxShadow: isDarkMode 
-        ? '0 4px 12px rgba(0, 0, 0, 0.2)' 
-        : '0 4px 12px rgba(0, 0, 0, 0.1)',
-      '& .MuiSvgIcon-root': {
-        transform: 'scale(1.1)',
-        color: colors.primary.main
-      }
-    },
-    '&.Mui-selected': {
-      backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)',
-      color: colors.primary.main,
-      '&:hover': {
-        backgroundColor: isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)',
-      }
-    }
-  },
-  '& .MuiListItemText-root': {
-    marginTop: '4px',
-    '& .MuiTypography-root': {
-      fontSize: '0.75rem',
-      fontWeight: 500,
-      textAlign: 'center',
-      transition: 'all 0.2s ease-in-out'
-    }
-  }
-}));
-
-interface _U__serData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-}
-
-interface MenuItemType {
-  text: string;
-  icon: React.ReactNode;
-  path?: string;
-  onClick?: () => void;
-  hidden?: boolean;
-  description?: string;
-  access?: string[];
-}
-
-const _MinimizedMenuItem = styled(MenuItem)(({ _theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '12px 0',
-  minWidth: '60px',
-  margin: '0 auto',
-  '& .MuiSvgIcon-root': {
-    fontSize: '1.5rem',
-    marginBottom: '4px',
-  },
-  '& .MuiTypography-root': {
-    fontSize: '0.75rem',
-  }
-}));
-
-const _MinimizedMenuList = styled(MenuList)({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  padding: '8px 0',
-  width: '100%',
-  '& > *': {
-    width: '100%',
-    textAlign: 'center',
-    display: 'flex',
-    justifyContent: 'center',
-  }
-});
-
-const _LogoImage = styled('img')<{ isDarkMode: boolean }>({
-  transition: 'filter 0.3s ease',
-});
-
-const _BrandContainer = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-});
-
-const _MenuContainer = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '16px',
-  flex: 1,
-  justifyContent: 'flex-end'
-});
-
-const _StyledMenuList = styled(List)({
-  display: 'flex',
-  flexDirection: 'row',
-  alignItems: 'center',
-  padding: 0,
-  gap: '8px',
-  margin: 0
 });
 
 const _StyledMenuItem = styled(MenuItem)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
@@ -348,20 +136,6 @@ const _StyledMenuItem = styled(MenuItem)<{ isDarkMode?: boolean }>(({ isDarkMode
   },
 }));
 
-const _StyledMenuItemIcon = styled(ListItemIcon)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
-  minWidth: 0,
-  marginRight: 1,
-  color: isDarkMode ? colors.text.primary : '#000000'
-}));
-
-const _StyledMenuItemText = styled(ListItemText)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
-  '& .MuiTypography-root': {
-    fontSize: '0.9rem',
-    fontWeight: 500,
-    color: isDarkMode ? colors.text.primary : '#000000'
-  }
-}));
-
 const _LogoutButton = styled(IconButton)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? colors.text.primary : '#000000',
   '&:hover': {
@@ -370,41 +144,6 @@ const _LogoutButton = styled(IconButton)<{ isDarkMode?: boolean }>(({ isDarkMode
   }
 }));
 
-interface _A__uthContextType {
-  logout: () => Promise<void>;
-}
-
-const _SideNav = styled('nav')(({ _theme }) => ({
-  width: '100%',
-  backgroundColor: colors.background.main,
-  backdropFilter: 'blur(20px)',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  position: 'fixed',
-  height: '64px',
-  zIndex: 1200,
-  boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.2)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '0 16px',
-  bottom: 0,
-  left: 0,
-  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-  '@media (max-width: 600px)': {
-    height: '56px',
-    padding: '0 12px'
-  }
-}));
-
-const _MainWrapper = styled('main')({
-  width: '100%',
-  marginBottom: '64px',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '@media (max-width: 600px)': {
-    marginBottom: '56px'
-  }
-});
-
 const _ContentWrapper = styled('div')({
   padding: '24px',
   position: 'relative',
@@ -412,15 +151,6 @@ const _ContentWrapper = styled('div')({
   '@media (max-width: 600px)': {
     padding: '16px'
   }
-});
-
-const _AppWrapper = styled('div')({
-  display: 'flex',
-  minHeight: '100vh',
-  backgroundColor: colors.background.light,
-  width: '100%',
-  position: 'relative',
-  overflow: 'hidden',
 });
 
 const _Overlay = styled('div')({
@@ -446,8 +176,8 @@ const _Overlay = styled('div')({
 });
 
 const StyledAppBar = styled(AppBar, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode' && prop !== 'chatOpen'
-})<{ isDarkMode?: boolean; chatOpen?: boolean }>(({ _theme, isDarkMode = false, chatOpen = false }) => ({
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode?: boolean }>(({ _theme, isDarkMode = false }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
   color: isDarkMode ? '#ffffff' : '#000000',
   boxShadow: '0 1px 8px 0 rgba(0,0,0,0.1)',
@@ -461,7 +191,7 @@ const StyledAppBar = styled(AppBar, {
   transition: 'all 0.3s ease-in-out',
 }));
 
-const StyledToolbar = styled(Toolbar)(({ _theme }) => ({
+const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   padding: '0 24px',
@@ -469,30 +199,8 @@ const StyledToolbar = styled(Toolbar)(({ _theme }) => ({
   '@media (max-width: 600px)': {
     padding: '0 16px',
     minHeight: '48px',
-  }
-}));
-
-const _MenuButton = styled(IconButton)(({ theme }) => ({
-  color: theme.palette.text.primary,
-}));
-
-const MobileDrawer = styled(Drawer, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
-  '& .MuiDrawer-paper': {
-    backgroundColor: isDarkMode ? 'rgba(25, 25, 40, 0.98)' : 'rgba(255, 255, 255, 0.98)',
-    backdropFilter: 'blur(25px)',
-    width: '280px',
-    height: '100%',
-    padding: '0',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-    border: 'none',
-    borderRadius: '16px 0 0 16px',
   },
-  '& .MuiBackdrop-root': {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    backdropFilter: 'blur(4px)',
-  }
+  color: theme.palette.text.primary,
 }));
 
 const _BottomActions = styled(Box)({
@@ -516,50 +224,6 @@ const _ActionItem = styled(MenuItem)<{ isDarkMode?: boolean; isLogout?: boolean 
       : (isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)'),
     transform: 'translateX(4px)',
   },
-}));
-
-const _MenuItemWrapper = styled(ListItemButton)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  padding: '12px 16px',
-  gap: '12px',
-  borderRadius: 0,
-  width: '100%',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    backgroundColor: isDarkMode 
-      ? 'rgba(99, 102, 241, 0.1)' 
-      : 'rgba(99, 102, 241, 0.05)',
-    transform: 'translateX(4px)',
-  },
-}));
-
-const _MenuItemIcon = styled(ListItemIconStyled)({
-  minWidth: '24px',
-  width: '24px',
-  margin: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  '& .MuiSvgIcon-root': {
-    fontSize: '20px'
-  }
-});
-
-const _MenuItemContent = styled(Box)({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2px'
-});
-
-const _PageWrapper = styled('div', {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  width: '100%',
-  position: 'relative',
-  backgroundColor: isDarkMode ? colors.background.dark : '#FFFFFF',
 }));
 
 const _MainContent = styled('main')({
@@ -789,7 +453,6 @@ const BareTooltip: FC<BareTooltipProps> = ({
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isHoveringRef = useRef(false);
   
-  const _theme = useTheme();
   const { isDarkMode } = useThemeMode();
 
   // Prida globálne štýly
@@ -957,106 +620,23 @@ const BareTooltip: FC<BareTooltipProps> = ({
   );
 };
 
-const StyledMobileMenuItem = styled(ListItemButton)(({ theme }) => ({
-  margin: '4px 12px',
-  padding: '12px 16px',
-  borderRadius: '12px',
-  transition: 'all 0.3s ease',
-  position: 'relative',
-  overflow: 'hidden',
-  '&:hover, &:focus': {
-    backgroundColor: theme.palette.mode === 'dark' 
-      ? 'rgba(80, 80, 160, 0.15)' 
-      : 'rgba(0, 0, 0, 0.05)',
-    transform: 'translateX(4px)',
-    '& .MuiListItemIcon-root': {
-      color: theme.palette.primary.main,
-    },
-  },
-  '& .MuiListItemIcon-root': {
-    minWidth: '40px',
-    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
-    transition: 'color 0.3s ease',
-    '& .MuiSvgIcon-root': {
-      fontSize: '1.3rem',
-      transition: 'transform 0.3s ease',
-    }
-  },
-  '&:hover .MuiSvgIcon-root': {
-    transform: 'scale(1.1)',
-  },
-  '& .MuiListItemText-primary': {
-    fontWeight: 500,
-    transition: 'color 0.3s ease',
-  },
-  '&:hover .MuiListItemText-primary': {
-    color: theme.palette.primary.main,
-  },
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    bottom: 0,
-    left: '16px',
-    width: 0,
-    height: '2px',
-    backgroundColor: theme.palette.primary.main,
-    transition: 'width 0.3s ease',
-  },
-  '&:hover::after': {
-    width: 'calc(100% - 32px)',
-  }
-}));
-
-const StyledCloseButton = styled(IconButton)(({ theme }) => ({
-  position: 'absolute',
-  right: '12px',
-  top: '12px',
-  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(80, 80, 160, 0.15)' : 'rgba(0, 0, 0, 0.05)',
-  padding: '8px',
-  color: theme.palette.primary.main,
-  '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(100, 100, 200, 0.25)' : 'rgba(0, 0, 0, 0.1)',
-    transform: 'rotate(90deg)',
-  },
-  transition: 'all 0.3s ease',
-}));
-
-const MobileMenuHeader = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: '24px 16px 16px 16px',
-  position: 'relative',
-  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
-  background: theme.palette.mode === 'dark' 
-    ? 'linear-gradient(135deg, rgba(25, 25, 40, 0.8) 0%, rgba(40, 40, 80, 0.8) 100%)' 
-    : 'linear-gradient(135deg, rgba(250, 250, 255, 0.9) 0%, rgba(240, 240, 250, 0.9) 100%)',
-  backdropFilter: 'blur(10px)',
-  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)'
-}));
-
 const Navbar: FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const _location = useLocation();
-  const { userData, logout } = useAuth();
+  const { logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
   const { toggleChat } = useChatUI();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [_notifications, _setNotifications] = useState<any[]>([]);
   const [unreadCount, _setUnreadCount] = useState(0);
-  const [_anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { t, i18n } = useTranslation();
 
   const handleNotificationsClick = () => {
-    setAnchorEl(null);
     navigate('/notifications');
   };
 
   const _handleNotificationClick = (_notification: any) => {
-    setAnchorEl(null);
     // Handle notification click
   };
 
@@ -1088,7 +668,7 @@ const Navbar: FC = () => {
 
   return (
     <>
-      <StyledAppBar position="fixed" isDarkMode={isDarkMode} chatOpen={useChatUI().chatOpen}>
+      <StyledAppBar position="fixed" isDarkMode={isDarkMode}>
         <StyledToolbar>
           {isMobile ? (
             <>

@@ -553,7 +553,6 @@ const VehicleMap: React.FC = () => {
     const [, setTimeUpdate] = useState(0);
     const { isDarkMode } = useThemeMode();
     const [showTrail, setShowTrail] = useState(false);
-    const [filterOptions, _setFilterOptions] = useState({ showOfflineVehicles: true, showOnlineOnly: false });
     const [routeHistory, setRouteHistory] = useState<RouteHistoryEntry[]>([]);
     const [selectedHistoryRoute, setSelectedHistoryRoute] = useState<RouteHistoryEntry | null>(null);
     const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -822,7 +821,7 @@ const VehicleMap: React.FC = () => {
                                     </ListItem><Divider />
                                     </React.Fragment>
                             ))}
-                            {filterOptions.showOfflineVehicles && staleVehicles.length > 0 && (
+                            {staleVehicles.length > 0 && (
                                 <>
                                     <ListItem><ListItemText primary={<Typography variant="h6">Neaktívni vodiči ({staleVehicles.length})</Typography>} /></ListItem><Divider />
                                     {staleVehicles.map((vehicle: VehicleLocation) => (

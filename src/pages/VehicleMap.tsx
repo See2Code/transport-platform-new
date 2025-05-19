@@ -39,7 +39,6 @@ const VehicleMap: React.FC = () => {
   const { vehicles, loading, error } = useVehicleTracking();
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [hiddenVehicles, setHiddenVehicles] = useState<Set<string>>(new Set());
-  const [_map, setMap] = useState<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -48,13 +47,11 @@ const VehicleMap: React.FC = () => {
     version: "weekly"
   });
 
-  const onLoad = useCallback((map: google.maps.Map) => {
+  const onLoad = useCallback(() => {
     console.log('Mapa načítaná');
-    setMap(map);
   }, []);
 
   const onUnmount = useCallback(() => {
-    setMap(null);
   }, []);
 
   const toggleVehicleVisibility = (vehicleId: string) => {

@@ -9,8 +9,7 @@ import {
   Drawer,
   ListItemButton,
   Button,
-  styled,
-  useTheme
+  styled
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -60,41 +59,8 @@ const MobileDrawer = styled(Drawer)(({ theme }) => ({
   }
 }));
 
-const _StyledMobileMenuItem = styled(ListItemButton)(({ theme }) => ({
-  py: 1.5,
-  borderRadius: '8px',
-  mb: 1,
-  '&:hover': {
-    background: theme.palette.mode === 'dark' 
-      ? 'rgba(255, 255, 255, 0.05)' 
-      : 'rgba(0, 0, 0, 0.05)',
-  },
-  '& .MuiListItemIcon-root': {
-    minWidth: '40px',
-    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
-    '& .MuiSvgIcon-root': {
-      fontSize: '1.3rem',
-    }
-  },
-  '& .MuiListItemText-primary': {
-    fontWeight: 500,
-  },
-}));
-
 const StyledCloseButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.mode === 'dark' ? '#fff' : '#333',
-}));
-
-const _SocialButtonsContainer = styled(Box)(({ theme }) => ({
-  display: 'flex', 
-  justifyContent: 'center', 
-  alignItems: 'center', 
-  gap: 2,
-  mb: 2, 
-  mt: 1,
-  p: 1.5,
-  borderRadius: '10px',
-  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
 }));
 
 interface MobileNavbarProps {
@@ -105,7 +71,6 @@ interface MobileNavbarProps {
 
 const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
   const navigate = useNavigate();
-  const _theme = useTheme();
   const { t, i18n } = useTranslation();
   const { isDarkMode, toggleTheme } = useThemeMode();
 

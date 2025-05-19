@@ -275,7 +275,9 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                 : { ...prev, unloadingPlaces: [...(prev.unloadingPlaces || []), newPlace] };
         });
     };
-     const _removePlace = (type: 'loading' | 'unloading', index: number) => {
+    
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _removePlace = (type: 'loading' | 'unloading', index: number) => {
         setFormData(prev => {
             const places = type === 'loading' ? [...(prev.loadingPlaces || [])] : [...(prev.unloadingPlaces || [])];
             if (places.length > 1) { // Prevent removing the last place
@@ -1113,13 +1115,15 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
     );
 };
 
-// Pridáme nové rozhrania
+// Pridáme nové rozhrania - s podčiarkovníkom pre ESLint ignorovanie
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface _CustomerDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (customerData: Customer) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface _CarrierDialogProps {
   open: boolean;
   onClose: () => void;

@@ -44,7 +44,7 @@ import {
   AddButton,
   SearchWrapper
 } from '../styled';
-import { Contact, User, ContactFormData, SnackbarState } from '../../types/contact';
+import { Contact, ContactFormData, SnackbarState } from '../../types/contact';
 
 const colors = {
   primary: {
@@ -73,48 +73,6 @@ const colors = {
     dark: '#f7b067',
   }
 };
-
-const _ContactCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
-  borderRadius: '16px',
-  padding: '16px',
-  color: isDarkMode ? '#ffffff' : '#000000',
-  boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
-  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
-  marginBottom: '16px',
-  width: '100%'
-}));
-
-const _ContactInfo = styled(Box)({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-  gap: '24px',
-  marginBottom: '16px',
-});
-
-const _InfoSection = styled(Box)({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '16px',
-});
-
-const _InfoLabel = styled(Typography)({
-  fontSize: '0.85rem',
-  color: 'rgba(255, 255, 255, 0.5)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-});
-
-const _InfoValue = styled(Typography)({
-  fontSize: '1rem',
-  color: '#ffffff',
-});
-
-const _ContactName = styled(Typography)({
-  fontSize: '1.1rem',
-  fontWeight: 600,
-  color: colors.accent.main,
-});
 
 const MobileContactCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
@@ -183,15 +141,6 @@ const MobileContactActions = styled(Box)({
   gap: '8px',
   marginTop: '12px',
 });
-
-const _StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  color: isDarkMode ? '#ffffff' : '#000000',
-  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-  '&.MuiTableCell-head': {
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-    fontWeight: 600,
-  }
-}));
 
 const StyledTableRow = styled(TableRow)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   '&:hover': {
@@ -338,8 +287,6 @@ const Contacts = () => {
     updatedAt: Timestamp.now()
   });
 
-  const [_users, setUsers] = useState<User[]>([]);
-
   const fetchContacts = useCallback(async () => {
     try {
       if (!userData?.companyID) {
@@ -406,20 +353,6 @@ const Contacts = () => {
       }));
     }
   }, [userData, editingContact]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef);
-      const querySnapshot = await getDocs(q);
-      const usersList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as User[];
-      setUsers(usersList);
-    };
-    fetchUsers();
-  }, []);
 
   const handleCountryChange = (e: SelectChangeEvent) => {
     const countryCode = e.target.value;

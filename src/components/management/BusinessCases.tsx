@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -49,7 +49,6 @@ import 'react-phone-input-2/lib/material.css';
 import SearchField from '../common/SearchField';
 import { format } from 'date-fns';
 import { useThemeMode } from '../../contexts/ThemeContext';
-import { useJsApiLoader } from '@react-google-maps/api';
 import { useTranslation } from 'react-i18next'; // Pridaný import pre preklady
 
 const euCountries = [
@@ -419,8 +418,8 @@ export default function BusinessCases() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const { t } = useTranslation(); // Hook pre preklady
 
-  // Definícia stavov obchodného prípadu - definované vo vnútri komponentu
-  const caseStatuses = {
+  // Definícia stavov obchodného prípadu - zabalená do useMemo
+  const caseStatuses = useMemo(() => ({
     NOT_CALLED: { label: t('business.status.notCalled'), color: 'default' as const },
     CALLED: { label: t('business.status.called'), color: 'primary' as const },
     EMAIL_SENT: { label: t('business.status.emailSent'), color: 'default' as const },
@@ -430,13 +429,7 @@ export default function BusinessCases() {
     CALL: { label: t('business.status.call'), color: 'info' as const },
     INTERESTED: { label: t('business.status.interested'), color: 'success' as const },
     NOT_INTERESTED: { label: t('business.status.notInterested'), color: 'error' as const }
-  };
-
-  const { isLoaded: _isLoaded } = useJsApiLoader({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
-    libraries: ['places'],
-    id: 'script-loader'
-  });
+  }), [t]);
 
   const fetchCases = useCallback(async () => {
     try {
@@ -457,7 +450,7 @@ export default function BusinessCases() {
         const phasesWithDates: Phase[] = (data.phases || []).map((phase: any): Phase => {
             let createdAtDate: Date;
             if (phase.createdAt instanceof Timestamp) { createdAtDate = phase.createdAt.toDate(); }
-            else if (phase.createdAt) { try { const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); createdAtDate = !isNaN(d.getTime()) ? d : new Date(); } catch (_) { createdAtDate = new Date(); } }
+            else if (phase.createdAt) { try { const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); createdAtDate = !isNaN(d.getTime()) ? d : new Date(); } catch { createdAtDate = new Date(); } }
             else { createdAtDate = new Date(); }
             return { id: phase.id || crypto.randomUUID(), name: phase.name || 'Neznáma fáza', createdAt: createdAtDate };
         });

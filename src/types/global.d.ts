@@ -1,7 +1,6 @@
 // This file contains global type definitions used throughout the application
 
-// Globálne rozšírenie React typov pre prácu s event parametermi a komponentmi Material UI
-import React from 'react';
+// Globálne rozšírenie React typov pre prácu s event parametrami a komponentmi Material UI
 
 declare namespace React {
   interface ReactElement<P = any, T extends string | JSXElementConstructor<any> = string | JSXElementConstructor<any>> {

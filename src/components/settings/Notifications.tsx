@@ -22,7 +22,6 @@ import {
 } from '@mui/icons-material';
 import { useNotifications} from '../../contexts/NotificationsContext';
 import { useThemeMode } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 
@@ -34,8 +33,7 @@ interface SnackbarState {
 
 const Notifications = () => {
   const { isDarkMode } = useThemeMode();
-  const { userData } = useAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, refreshNotifications, loading } = useNotifications();
+  const { notifications, markAsRead, markAllAsRead, refreshNotifications, loading } = useNotifications();
   const [snackbar, setSnackbar] = useState<SnackbarState>({ 
     open: false, 
     message: '', 
@@ -50,7 +48,7 @@ const Notifications = () => {
         message: 'Notifikácia bola označená ako prečítaná',
         severity: 'success'
       });
-    } catch (_e_rror) {
+    } catch {
       setSnackbar({
         open: true,
         message: 'Nepodarilo sa označiť notifikáciu ako prečítanú',
@@ -67,7 +65,7 @@ const Notifications = () => {
         message: 'Všetky notifikácie boli označené ako prečítané',
         severity: 'success'
       });
-    } catch (_e_rror) {
+    } catch {
       setSnackbar({
         open: true,
         message: 'Nepodarilo sa označiť všetky notifikácie ako prečítané',
@@ -84,7 +82,7 @@ const Notifications = () => {
         message: 'Notifikácie boli obnovené',
         severity: 'success'
       });
-    } catch (_e_rror) {
+    } catch {
       setSnackbar({
         open: true,
         message: 'Nepodarilo sa obnoviť notifikácie',

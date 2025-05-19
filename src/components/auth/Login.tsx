@@ -10,8 +10,7 @@ import {
   Grid,
   IconButton,
   Alert,
-  CircularProgress,
-  useTheme
+  CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +25,6 @@ function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const _theme = useTheme();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +37,7 @@ function Login() {
       await login(email, password);
       
       await navigationPromise;
+    // eslint-disable-next-line unused-imports/no-unused-vars
     } catch (_) {
       setError('Nesprávne prihlasovacie údaje');
       setLoading(false);

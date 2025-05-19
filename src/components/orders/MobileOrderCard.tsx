@@ -17,7 +17,6 @@ import {
   Email as EmailIcon,
 } from '@mui/icons-material';
 import { OrderFormData } from '../../types/orders';
-import { useThemeMode } from '../../contexts/ThemeContext';
 import { format } from 'date-fns';
 import { sk } from 'date-fns/locale';
 
@@ -122,7 +121,6 @@ const MobileOrderCard: React.FC<MobileOrderCardProps> = ({
   onPreviewPDF,
   onDownloadPDF
 }) => {
-  const { isDarkMode: _isDarkMode } = useThemeMode();
   const theme = useTheme();
 
   const displayDate = order.createdAt 

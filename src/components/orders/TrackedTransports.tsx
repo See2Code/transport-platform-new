@@ -446,7 +446,6 @@ const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
 }));
 
 // Hook pre zobrazovanie pripomienok
-type _R__eminderType = 'loading' | 'unloading';
 
 // Jednoduchý hook pre notifikácie
 function useNotifications() {
@@ -621,21 +620,6 @@ const TrackedTransports: React.FC = () => {
       clearInterval(checkInterval);
     };
   }, [userData?.companyID, showNotification]);
-
-  // Funkcia pre logovanie
-  const _logToStorage = (message: string, data?: any) => {
-    console.log(message, data);
-  };
-
-  const _handleOpenDialog = (transport?: Transport) => {
-    if (transport) {
-      setTransportToDelete(transport);
-      setDeleteConfirmOpen(true);
-    } else {
-      setTransportToDelete(null);
-      setDeleteConfirmOpen(false);
-    }
-  };
 
   const handleConfirmDelete = async () => {
     if (!transportToDelete) return;
