@@ -29,8 +29,7 @@ import {
   CircularProgress,
   Collapse,
   TablePagination,
-  SelectChangeEvent
-} from '@mui/material';
+  SelectChangeEvent} from '@mui/material';
 import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -422,18 +421,18 @@ export default function BusinessCases() {
 
   // Definícia stavov obchodného prípadu - definované vo vnútri komponentu
   const caseStatuses = {
-    CALLED: { label: t('business.status.called'), color: 'success' as const },
-    NOT_CALLED: { label: t('business.status.notCalled'), color: 'error' as const },
-    EMAIL_SENT: { label: t('business.status.emailSent'), color: 'info' as const },
-    IN_PROGRESS: { label: t('business.status.inProgress'), color: 'warning' as const },
-    CALL_LATER: { label: t('business.status.callLater'), color: 'secondary' as const },
-    MEETING: { label: t('business.status.meeting'), color: 'primary' as const },
+    NOT_CALLED: { label: t('business.status.notCalled'), color: 'default' as const },
+    CALLED: { label: t('business.status.called'), color: 'primary' as const },
+    EMAIL_SENT: { label: t('business.status.emailSent'), color: 'default' as const },
+    IN_PROGRESS: { label: t('business.status.inProgress'), color: 'primary' as const },
+    CALL_LATER: { label: t('business.status.callLater'), color: 'warning' as const },
+    MEETING: { label: t('business.status.meeting'), color: 'info' as const },
     CALL: { label: t('business.status.call'), color: 'info' as const },
     INTERESTED: { label: t('business.status.interested'), color: 'success' as const },
     NOT_INTERESTED: { label: t('business.status.notInterested'), color: 'error' as const }
   };
 
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded: _isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
     libraries: ['places'],
     id: 'script-loader'
@@ -458,7 +457,7 @@ export default function BusinessCases() {
         const phasesWithDates: Phase[] = (data.phases || []).map((phase: any): Phase => {
             let createdAtDate: Date;
             if (phase.createdAt instanceof Timestamp) { createdAtDate = phase.createdAt.toDate(); }
-            else if (phase.createdAt) { try { const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); createdAtDate = !isNaN(d.getTime()) ? d : new Date(); } catch (_e_) { createdAtDate = new Date(); } }
+            else if (phase.createdAt) { try { const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); createdAtDate = !isNaN(d.getTime()) ? d : new Date(); } catch (_) { createdAtDate = new Date(); } }
             else { createdAtDate = new Date(); }
             return { id: phase.id || crypto.randomUUID(), name: phase.name || 'Neznáma fáza', createdAt: createdAtDate };
         });
@@ -771,7 +770,7 @@ export default function BusinessCases() {
         </IconButton>
       </MobileCardActions>
     </MobileBusinessCard>
-  ), [isDarkMode, handleEdit, handleDelete, t]);
+  ), [isDarkMode, handleEdit, handleDelete, t, caseStatuses]);
 
   const fetchPhases = useCallback(async () => {
     try {

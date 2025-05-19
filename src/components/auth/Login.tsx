@@ -39,7 +39,7 @@ function Login() {
       await login(email, password);
       
       await navigationPromise;
-    } catch (_err) {
+    } catch (_) {
       setError('Nesprávne prihlasovacie údaje');
       setLoading(false);
     }

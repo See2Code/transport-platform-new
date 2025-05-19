@@ -17,8 +17,7 @@ import {
   Alert,
   CircularProgress,
   useTheme,
-  SelectChangeEvent
-} from '@mui/material';
+  SelectChangeEvent} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';

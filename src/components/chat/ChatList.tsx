@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Box, List, ListItem, ListItemButton, ListItemText, Typography, Avatar, Divider } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { chatService } from '../../services/ChatService';
@@ -15,6 +15,10 @@ const ChatList: React.FC = () => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const getOtherParticipantId = useCallback((chat: ChatType) => {
+    return chat.participants.find(id => id !== currentUser?.uid) || '';
+  }, [currentUser?.uid]);
+
   useEffect(() => {
     if (!currentUser?.uid || !currentUser?.companyID) return;
 
@@ -30,11 +34,7 @@ const ChatList: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUser]);
-
-  const getOtherParticipantId = (chat: ChatType) => {
-    return chat.participants.find(id => id !== currentUser?.uid) || '';
-  };
+  }, [currentUser, getOtherParticipantId]);
 
   const handleChatClick = (chatId: string) => {
     navigate(`/chat/${chatId}`);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -25,8 +25,7 @@ import {
   Grid,
   DialogContentText,
   InputAdornment,
-  SelectChangeEvent
-} from '@mui/material';
+  SelectChangeEvent} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
@@ -341,7 +340,7 @@ const Contacts = () => {
 
   const [_users, setUsers] = useState<User[]>([]);
 
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       if (!userData?.companyID) {
         console.log('Chýbajúce companyID - používateľ nemá priradenú firmu');
@@ -390,7 +389,7 @@ const Contacts = () => {
         severity: 'error'
       });
     }
-  };
+  }, [userData?.companyID, setContacts, setLoading, setSnackbar]);
 
   useEffect(() => {
     fetchContacts();

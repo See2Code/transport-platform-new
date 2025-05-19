@@ -131,7 +131,7 @@ const _AesaLogoMini = styled('img')({
   }
 });
 
-const DrawerHeader = styled('div')(({ theme }) => ({
+const _DrawerHeader = styled('div')(({ theme }) => ({
   display: 'flex', // Zobraziť hlavičku pre krížik
   alignItems: 'center',
   justifyContent: 'flex-end', // Krížik vpravo
@@ -249,7 +249,7 @@ interface _U__serData {
   role: string;
 }
 
-interface MenuItem {
+interface MenuItemType {
   text: string;
   icon: React.ReactNode;
   path?: string;
@@ -1041,7 +1041,7 @@ const Navbar: FC = () => {
   const _location = useLocation();
   const { userData, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
-  const { toggleChat, chatOpen } = useChatUI();
+  const { toggleChat } = useChatUI();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [_notifications, _setNotifications] = useState<any[]>([]);
   const [unreadCount, _setUnreadCount] = useState(0);
@@ -1088,7 +1088,7 @@ const Navbar: FC = () => {
 
   return (
     <>
-      <StyledAppBar position="fixed" isDarkMode={isDarkMode} chatOpen={chatOpen}>
+      <StyledAppBar position="fixed" isDarkMode={isDarkMode} chatOpen={useChatUI().chatOpen}>
         <StyledToolbar>
           {isMobile ? (
             <>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -29,9 +29,9 @@ import {
   useMediaQuery,
   useTheme,
   Snackbar,
-  SelectChangeEvent,
-  Card
-} from '@mui/material';
+  Card,
+  SelectChangeEvent
+  } from '@mui/material';
 import { 
   Add as AddIcon, 
   Mail as MailIcon, 
@@ -44,7 +44,7 @@ import {
 import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, orderBy } from 'firebase/firestore';
 import { auth, db, functions } from '../../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { httpsCallable } from 'firebase/functions';
 import 'react-phone-input-2/lib/style.css';
 
@@ -562,7 +562,7 @@ const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
   }
 }));
 
-const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme: _theme, isDarkMode }) => ({
   '& .MuiDialog-paper': {
     background: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.95)',
     borderRadius: '16px',
@@ -815,29 +815,30 @@ const _TransparentTooltip = muiStyled(({ className, ...props }: TooltipProps) =>
 }));
 
 function Team() {
-  const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width: 600px)');
+  const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<DeleteableItem | null>(null);
+  const [openInvite, setOpenInvite] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [companyID, setCompanyID] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [openInvite, setOpenInvite] = useState(false);
-  const [openEdit, setOpenEdit] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [inviteToDelete, setInviteToDelete] = useState<DeleteableItem | null>(null);
-  const [editingInvite, setEditingInvite] = useState<Invitation | null>(null);
   const [email, setEmail] = useState('');
-  const [isEmailValid, setIsEmailValid] = useState(false);
+  const [isEmailValid, setIsEmailValid] = useState(true);
+  const [editingInvite, setEditingInvite] = useState<Invitation | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phonePrefix, setPhonePrefix] = useState('+421');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [countryCode, setCountryCode] = useState('sk');
   const [role, setRole] = useState('user');
-  const { userData } = useAuth();
+  const { userData: _userData } = useAuth();
   const [_deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
   const _theme = useTheme();
   const { isDarkMode } = useThemeMode();
@@ -854,6 +855,7 @@ function Team() {
   });
   const [isCreating, setIsCreating] = useState(false);
   const [_isInitializingLastLogin, setIsInitializingLastLogin] = useState(false);
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   const fetchData = useCallback(async () => {
     const user = auth.currentUser;
@@ -1034,7 +1036,7 @@ function Team() {
     setCountryCode(countries.find(c => c.prefix === prefix)?.code || 'sk');
     setPhoneNumber(member.phone.replace(prefix, ''));
     setRole(member.role);
-    setOpenEdit(true);
+    setEditOpen(true);
   };
 
   const handleUpdate = async () => {
@@ -1076,7 +1078,7 @@ function Team() {
       setSuccess('Záznam bol úspešne aktualizovaný.');
       fetchData();
 
-      setOpenEdit(false);
+      setEditOpen(false);
       setEditingInvite(null);
       setEmail('');
       setFirstName('');
@@ -1099,29 +1101,29 @@ function Team() {
   };
 
   const handleDeleteClick = (member: DeleteableItem) => {
-    setInviteToDelete(member);
-    setDeleteConfirmOpen(true);
+    setDeleteItem(member);
+    setDeleteOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!inviteToDelete) return;
+    if (!deleteItem) return;
 
     try {
       setLoading(true);
-      if ('userId' in inviteToDelete && inviteToDelete.userId) {
-        console.log('Mazanie člena tímu s ID:', inviteToDelete.userId);
-        setDeletingMemberId(inviteToDelete.id);
-        await deleteDoc(doc(db, 'users', inviteToDelete.userId));
+      if ('userId' in deleteItem && deleteItem.userId) {
+        console.log('Mazanie člena tímu s ID:', deleteItem.userId);
+        setDeletingMemberId(deleteItem.id);
+        await deleteDoc(doc(db, 'users', deleteItem.userId));
       } else {
-        console.log('Mazanie pozvánky s ID:', inviteToDelete.id);
-        const invitationRef = doc(db, 'invitations', inviteToDelete.id);
+        console.log('Mazanie pozvánky s ID:', deleteItem.id);
+        const invitationRef = doc(db, 'invitations', deleteItem.id);
         await deleteDoc(invitationRef);
       }
       setSuccess('Záznam bol úspešne vymazaný.');
       fetchData();
 
-      setDeleteConfirmOpen(false);
-      setInviteToDelete(null);
+      setDeleteOpen(false);
+      setDeleteItem(null);
 
       setTimeout(() => {
         setSuccess('');
@@ -1833,8 +1835,8 @@ function Team() {
 
       {/* Dialóg pre úpravu */}
       <Dialog
-        open={openEdit}
-        onClose={() => setOpenEdit(false)}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
         maxWidth="md"
         fullWidth
         PaperProps={{
@@ -1990,7 +1992,7 @@ function Team() {
           </DialogContent>
           <DialogActions>
             <Button 
-              onClick={() => setOpenEdit(false)} 
+              onClick={() => setEditOpen(false)} 
               sx={{ 
                 color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
                 '&:hover': {
@@ -2033,8 +2035,8 @@ function Team() {
 
       {/* Dialóg pre potvrdenie vymazania */}
       <Dialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
         PaperProps={{
           sx: {
             background: 'none',
@@ -2056,11 +2058,11 @@ function Team() {
           <DialogTitle>Potvrdiť vymazanie</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              Ste si istý, že chcete {inviteToDelete ? 'vymazať člena z tímu' : 'zrušiť pozvánku pre'} {inviteToDelete?.firstName} {inviteToDelete?.lastName}? Táto akcia je nezvratná.
+              Ste si istý, že chcete {deleteItem ? 'vymazať člena z tímu' : 'zrušiť pozvánku pre'} {deleteItem?.firstName} {deleteItem?.lastName}? Táto akcia je nezvratná.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDeleteConfirmOpen(false)} aria-label="Zrušiť akciu">
+            <Button onClick={() => setDeleteOpen(false)} aria-label="Zrušiť akciu">
               Zrušiť
             </Button>
             <Button 
@@ -2068,7 +2070,7 @@ function Team() {
               color="error" 
               variant="contained" 
               disabled={loading}
-              aria-label={inviteToDelete && 'userId' in inviteToDelete ? 'Vymazať člena z tímu' : 'Zrušiť pozvánku'}
+              aria-label={deleteItem && 'userId' in deleteItem ? 'Vymazať člena z tímu' : 'Zrušiť pozvánku'}
             >
               {loading ? (
                 <LoadingDots>
@@ -2076,7 +2078,7 @@ function Team() {
                   <Dot isDarkMode={true} />
                   <Dot isDarkMode={true} />
                 </LoadingDots>
-              ) : `${inviteToDelete && 'userId' in inviteToDelete ? 'Vymazať člena z tímu' : 'Zrušiť pozvánku'}`}
+              ) : `${deleteItem && 'userId' in deleteItem ? 'Vymazať člena z tímu' : 'Zrušiť pozvánku'}`}
             </Button>
           </DialogActions>
         </StyledDialogContent>

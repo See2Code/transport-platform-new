@@ -122,7 +122,7 @@ const MobileOrderCard: React.FC<MobileOrderCardProps> = ({
   onPreviewPDF,
   onDownloadPDF
 }) => {
-  const { isDarkMode } = useThemeMode();
+  const { isDarkMode: _isDarkMode } = useThemeMode();
   const theme = useTheme();
 
   const displayDate = order.createdAt 

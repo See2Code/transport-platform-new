@@ -15,8 +15,8 @@ import {
   InputLabel,
   Snackbar,
   Card,
-  Avatar,
   Select,
+  Avatar,
   SelectChangeEvent,
   CardProps,
   SelectProps

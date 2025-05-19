@@ -16,7 +16,7 @@ import {
   Avatar,
   CircularProgress,
   Skeleton,
-  Card,
+  Card
 } from '@mui/material';
 import {
   Business as BusinessIcon,

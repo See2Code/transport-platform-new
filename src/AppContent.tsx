@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect } from 'react';
+import React, { useState, createContext, useContext, useEffect, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider as MuiThemeProvider, createTheme, CssBaseline, GlobalStyles, Theme } from '@mui/material';
 import Box from '@mui/material/Box';
@@ -57,7 +57,7 @@ type _PageContentProps = {
   sx?: Record<string, any>;
 };
 
-const AppContainer = styled(Box)(({ theme }) => ({
+const AppContainer = styled(Box)(({ _theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   minHeight: '100vh',
@@ -76,7 +76,7 @@ const ContentWrapper = styled(Box, {
   marginRight: chatOpen ? `${DRAWER_WIDTH}px` : 0,
 }));
 
-const PageContent = styled(Box)(({ theme }) => ({
+const PageContent = styled(Box)(({ _theme }) => ({
   flexGrow: 1,
   marginTop: '48px',
   padding: '24px 16px',
@@ -114,7 +114,7 @@ const AppContent: React.FC = () => {
   const [chatOpen, setChatOpen] = useState(false);
 
   const toggleChat = () => setChatOpen(prev => !prev);
-  const closeChat = () => setChatOpen(false);
+  const closeChat = useCallback(() => setChatOpen(false), []);
 
   const { unreadConversationsCount, hasNewMessages } = useChat();
 

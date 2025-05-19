@@ -7,8 +7,7 @@ import { normalizeVatId } from '../../utils/helpers';
 import {
   Box, Typography, TextField, Button, Grid, FormControl, InputLabel,
   Select, MenuItem, useTheme, Checkbox, FormControlLabel,
-  Autocomplete, IconButton, Divider, CircularProgress, SelectChangeEvent
-} from '@mui/material';
+  Autocomplete, IconButton, Divider, CircularProgress, SelectChangeEvent} from '@mui/material';
 
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -215,7 +214,7 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
         };
 
         fetchCustomers();
-    }, [userData?.companyID, normalizeVatId]);
+    }, [userData?.companyID]);
 
     // Pridávam závislosti pre useEffect, ktorý načítava dopravcov
     useEffect(() => {
@@ -1115,13 +1114,13 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
 };
 
 // Pridáme nové rozhrania
-interface _C__ustomerDialogProps {
+interface _CustomerDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (customerData: Customer) => void;
 }
 
-interface _C__arrierDialogProps {
+interface _CarrierDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (carrierData: Carrier) => void;

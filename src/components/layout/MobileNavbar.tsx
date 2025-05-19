@@ -10,7 +10,7 @@ import {
   ListItemButton,
   Button,
   styled,
-  useTheme,
+  useTheme
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -60,7 +60,7 @@ const MobileDrawer = styled(Drawer)(({ theme }) => ({
   }
 }));
 
-const StyledMobileMenuItem = styled(ListItemButton)(({ theme }) => ({
+const _StyledMobileMenuItem = styled(ListItemButton)(({ theme }) => ({
   py: 1.5,
   borderRadius: '8px',
   mb: 1,
@@ -85,7 +85,7 @@ const StyledCloseButton = styled(IconButton)(({ theme }) => ({
   color: theme.palette.mode === 'dark' ? '#fff' : '#333',
 }));
 
-const SocialButtonsContainer = styled(Box)(({ theme }) => ({
+const _SocialButtonsContainer = styled(Box)(({ theme }) => ({
   display: 'flex', 
   justifyContent: 'center', 
   alignItems: 'center', 
@@ -105,7 +105,7 @@ interface MobileNavbarProps {
 
 const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
   const navigate = useNavigate();
-  const theme = useTheme();
+  const _theme = useTheme();
   const { t, i18n } = useTranslation();
   const { isDarkMode, toggleTheme } = useThemeMode();
 

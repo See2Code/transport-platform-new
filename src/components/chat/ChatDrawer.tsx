@@ -14,8 +14,7 @@ import {
   Paper,
   CircularProgress,
   Badge,
-  Drawer
-} from '@mui/material';
+  Drawer} from '@mui/material';
 import {
   Close as CloseIcon,
   Search as SearchIcon,
