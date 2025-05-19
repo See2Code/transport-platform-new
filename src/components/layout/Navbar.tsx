@@ -33,7 +33,6 @@ import SettingsIcon from '@mui/icons-material/Settings';
 
 import NotificationsIcon from '@mui/icons-material/Notifications';
 
-import CloseIcon from '@mui/icons-material/Close';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -61,6 +60,9 @@ import { alpha } from '@mui/material/styles';
 
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+
+// Importujeme náš nový MobileNavbar komponent
+import MobileNavbar from './MobileNavbar';
 
 // Importujeme komponenty pre vlajky
 const SKFlagIcon = () => (
@@ -129,9 +131,14 @@ const _AesaLogoMini = styled('img')({
   }
 });
 
-const _DrawerHeader = styled('div')({
-  display: 'none'
-});
+const DrawerHeader = styled('div')(({ theme }) => ({
+  display: 'flex', // Zobraziť hlavičku pre krížik
+  alignItems: 'center',
+  justifyContent: 'flex-end', // Krížik vpravo
+  padding: theme.spacing(0, 1),
+  // Ostatné štýly odstránené alebo upravené, aby sa nelámali zobrazenie
+  ...theme.mixins.toolbar,
+}));
 
 const _ToggleButton = styled(IconButton)(({ _theme }) => ({
   position: 'fixed',
@@ -473,16 +480,17 @@ const MobileDrawer = styled(Drawer, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
 })<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
   '& .MuiDrawer-paper': {
-    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(20px)',
+    backgroundColor: isDarkMode ? 'rgba(25, 25, 40, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+    backdropFilter: 'blur(25px)',
     width: '280px',
     height: '100%',
-    padding: '16px',
-    boxShadow: 'none',
-    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+    padding: '0',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+    border: 'none',
+    borderRadius: '16px 0 0 16px',
   },
   '& .MuiBackdrop-root': {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     backdropFilter: 'blur(4px)',
   }
 }));
@@ -949,6 +957,84 @@ const BareTooltip: FC<BareTooltipProps> = ({
   );
 };
 
+const StyledMobileMenuItem = styled(ListItemButton)(({ theme }) => ({
+  margin: '4px 12px',
+  padding: '12px 16px',
+  borderRadius: '12px',
+  transition: 'all 0.3s ease',
+  position: 'relative',
+  overflow: 'hidden',
+  '&:hover, &:focus': {
+    backgroundColor: theme.palette.mode === 'dark' 
+      ? 'rgba(80, 80, 160, 0.15)' 
+      : 'rgba(0, 0, 0, 0.05)',
+    transform: 'translateX(4px)',
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.primary.main,
+    },
+  },
+  '& .MuiListItemIcon-root': {
+    minWidth: '40px',
+    color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+    transition: 'color 0.3s ease',
+    '& .MuiSvgIcon-root': {
+      fontSize: '1.3rem',
+      transition: 'transform 0.3s ease',
+    }
+  },
+  '&:hover .MuiSvgIcon-root': {
+    transform: 'scale(1.1)',
+  },
+  '& .MuiListItemText-primary': {
+    fontWeight: 500,
+    transition: 'color 0.3s ease',
+  },
+  '&:hover .MuiListItemText-primary': {
+    color: theme.palette.primary.main,
+  },
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    bottom: 0,
+    left: '16px',
+    width: 0,
+    height: '2px',
+    backgroundColor: theme.palette.primary.main,
+    transition: 'width 0.3s ease',
+  },
+  '&:hover::after': {
+    width: 'calc(100% - 32px)',
+  }
+}));
+
+const StyledCloseButton = styled(IconButton)(({ theme }) => ({
+  position: 'absolute',
+  right: '12px',
+  top: '12px',
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(80, 80, 160, 0.15)' : 'rgba(0, 0, 0, 0.05)',
+  padding: '8px',
+  color: theme.palette.primary.main,
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(100, 100, 200, 0.25)' : 'rgba(0, 0, 0, 0.1)',
+    transform: 'rotate(90deg)',
+  },
+  transition: 'all 0.3s ease',
+}));
+
+const MobileMenuHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: '24px 16px 16px 16px',
+  position: 'relative',
+  borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+  background: theme.palette.mode === 'dark' 
+    ? 'linear-gradient(135deg, rgba(25, 25, 40, 0.8) 0%, rgba(40, 40, 80, 0.8) 100%)' 
+    : 'linear-gradient(135deg, rgba(250, 250, 255, 0.9) 0%, rgba(240, 240, 250, 0.9) 100%)',
+  backdropFilter: 'blur(10px)',
+  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)'
+}));
+
 const Navbar: FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -1005,15 +1091,32 @@ const Navbar: FC = () => {
       <StyledAppBar position="fixed" isDarkMode={isDarkMode} chatOpen={chatOpen}>
         <StyledToolbar>
           {isMobile ? (
-            <IconButton
-              edge="start"
-              color="inherit"
-              aria-label="menu"
-              onClick={() => setDrawerOpen(true)}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
+            <>
+              <IconButton
+                edge="start"
+                color="inherit"
+                aria-label="menu"
+                onClick={() => setDrawerOpen(true)}
+              >
+                <MenuIcon />
+              </IconButton>
+              
+              <Box sx={{ 
+                flexGrow: 1, 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center' 
+              }}>
+                <img 
+                  src={isDarkMode ? logoDarkPath : logoLightPath} 
+                  alt="AESA Logo" 
+                  style={{ 
+                    height: '28px',
+                    opacity: 0.9,
+                  }} 
+                />
+              </Box>
+            </>
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <img 
@@ -1180,13 +1283,18 @@ const Navbar: FC = () => {
           )}
 
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <BareTooltip title={t('common.notifications')} placement="bottom">
-              <IconButton color="inherit" onClick={handleNotificationsClick}>
-                <Badge badgeContent={unreadCount} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
-            </BareTooltip>
+            {!isMobile && (
+              <>
+                <BareTooltip title={t('common.notifications')} placement="bottom">
+                  <IconButton color="inherit" onClick={handleNotificationsClick}>
+                    <Badge badgeContent={unreadCount} color="error">
+                      <NotificationsIcon />
+                    </Badge>
+                  </IconButton>
+                </BareTooltip>
+              </>
+            )}
+            
             <BareTooltip title={t('common.chat')} placement="bottom">
               <IconButton 
                 color="inherit" 
@@ -1198,133 +1306,63 @@ const Navbar: FC = () => {
             </BareTooltip>
             
             {/* Prepínač jazykov */}
-            <Box sx={{ display: 'flex', ml: 1 }}>
-              <BareTooltip title="Slovenčina" placement="bottom">
-                <IconButton 
-                  onClick={() => changeLanguage('sk')}
-                  color="inherit"
-                  sx={{ 
-                    opacity: !isEN ? 1 : 0.6,
-                    '&:hover': { opacity: 1 }
-                  }}
-                >
-                  <SKFlagIcon />
-                </IconButton>
-              </BareTooltip>
-              <BareTooltip title="English" placement="bottom">
-                <IconButton 
-                  onClick={() => changeLanguage('en')}
-                  color="inherit"
-                  sx={{ 
-                    opacity: isEN ? 1 : 0.6,
-                    '&:hover': { opacity: 1 }
-                  }}
-                >
-                  <ENFlagIcon />
-                </IconButton>
-              </BareTooltip>
-            </Box>
+            {!isMobile && (
+              <Box sx={{ display: 'flex', ml: 1 }}>
+                <BareTooltip title="Slovenčina" placement="bottom">
+                  <IconButton 
+                    onClick={() => changeLanguage('sk')}
+                    color="inherit"
+                    sx={{ 
+                      opacity: !isEN ? 1 : 0.6,
+                      '&:hover': { opacity: 1 }
+                    }}
+                  >
+                    <SKFlagIcon />
+                  </IconButton>
+                </BareTooltip>
+                <BareTooltip title="English" placement="bottom">
+                  <IconButton 
+                    onClick={() => changeLanguage('en')}
+                    color="inherit"
+                    sx={{ 
+                      opacity: isEN ? 1 : 0.6,
+                      '&:hover': { opacity: 1 }
+                    }}
+                  >
+                    <ENFlagIcon />
+                  </IconButton>
+                </BareTooltip>
+              </Box>
+            )}
             
-            <BareTooltip title={t('settings.toggleTheme')} placement="bottom">
-              <IconButton color="inherit" onClick={toggleTheme} sx={{ ml: 1 }}>
-                {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
-              </IconButton>
-            </BareTooltip>
-            <BareTooltip title={t('auth.logout')} placement="bottom">
-              <IconButton
-                color="inherit"
-                onClick={handleLogoutClick}
-                sx={{ ml: 1 }}
-              >
-                <LogoutIcon />
-              </IconButton>
-            </BareTooltip>
+            {!isMobile && (
+              <>
+                <BareTooltip title={t('settings.toggleTheme')} placement="bottom">
+                  <IconButton color="inherit" onClick={toggleTheme} sx={{ ml: 1 }}>
+                    {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+                  </IconButton>
+                </BareTooltip>
+                <BareTooltip title={t('auth.logout')} placement="bottom">
+                  <IconButton
+                    color="inherit"
+                    onClick={handleLogoutClick}
+                    sx={{ ml: 1 }}
+                  >
+                    <LogoutIcon />
+                  </IconButton>
+                </BareTooltip>
+              </>
+            )}
           </Box>
         </StyledToolbar>
       </StyledAppBar>
 
-      {/* Mobilné menu */}
-      <MobileDrawer
+      {/* Mobilné menu s použitím nového komponentu */}
+      <MobileNavbar 
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-      >
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', p: 2 }}>
-            <img 
-              src={isDarkMode ? logoDarkPath : logoLightPath} 
-              alt="Logo" 
-              style={{ height: '32px' }} 
-            />
-            <Typography variant="h6" sx={{ ml: 2 }}>Transport Platform</Typography>
-            <IconButton 
-              onClick={() => setDrawerOpen(false)}
-              sx={{ ml: 'auto' }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-          <Divider />
-          <List>
-            <ListItemButton onClick={() => { navigate('/dashboard'); setDrawerOpen(false); }}>
-              <ListItemIcon><DashboardIcon /></ListItemIcon>
-              <ListItemText primary={t('navigation.dashboard')} />
-            </ListItemButton>
-            <ListItemButton onClick={() => { navigate('/business-cases'); setDrawerOpen(false); }}>
-              <ListItemIcon><BusinessIcon /></ListItemIcon>
-              <ListItemText primary={t('navigation.cases')} />
-            </ListItemButton>
-            <ListItemButton onClick={() => { navigate('/orders'); setDrawerOpen(false); }}>
-              <ListItemIcon><ReceiptIcon /></ListItemIcon>
-              <ListItemText primary={t('navigation.orders')} />
-            </ListItemButton>
-            <ListItemButton onClick={() => { navigate('/tracked-shipments'); setDrawerOpen(false); }}>
-              <ListItemIcon><VisibilityIcon /></ListItemIcon>
-              <ListItemText primary={t('tracking.vehicleTracking')} />
-            </ListItemButton>
-            <ListItemButton onClick={() => { navigate('/vehicle-map'); setDrawerOpen(false); }}>
-              <ListItemIcon><LocationOnIcon /></ListItemIcon>
-              <ListItemText primary={t('tracking.liveLocation')} />
-            </ListItemButton>
-            <ListItemButton onClick={() => { navigate('/team'); setDrawerOpen(false); }}>
-              <ListItemIcon><PeopleIcon /></ListItemIcon>
-              <ListItemText primary={t('navigation.team')} />
-            </ListItemButton>
-            <ListItemButton onClick={() => { navigate('/settings'); setDrawerOpen(false); }}>
-              <ListItemIcon><SettingsIcon /></ListItemIcon>
-              <ListItemText primary={t('navigation.settings')} />
-            </ListItemButton>
-            
-            <Divider sx={{ my: 2 }} />
-            
-            {/* Jazykové prepínanie v mobilnom menu */}
-            <Box sx={{ px: 2, py: 1 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, opacity: 0.7 }}>
-                {t('settings.language')}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton 
-                  onClick={() => { changeLanguage('sk'); setDrawerOpen(false); }}
-                  sx={{ 
-                    opacity: !isEN ? 1 : 0.6,
-                    '&:hover': { opacity: 1 }
-                  }}
-                >
-                  <SKFlagIcon />
-                </IconButton>
-                <IconButton 
-                  onClick={() => { changeLanguage('en'); setDrawerOpen(false); }}
-                  sx={{ 
-                    opacity: isEN ? 1 : 0.6,
-                    '&:hover': { opacity: 1 }
-                  }}
-                >
-                  <ENFlagIcon />
-                </IconButton>
-              </Box>
-            </Box>
-          </List>
-        </Box>
-      </MobileDrawer>
+        onLogout={handleLogoutClick}
+      />
 
       {/* Dialóg pre odhlásenie */}
       <Dialog
