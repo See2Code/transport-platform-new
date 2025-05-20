@@ -170,7 +170,9 @@ const AnimatedGraphContainer = styled(Box)(({ _theme }) => ({
 }));
 
 // Upravíme progressbar segment - odstránime vlastnú animáciu
-const ProgressBarSegment = styled(Box)<{ 
+const ProgressBarSegment = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode' && prop !== 'percentage' && prop !== 'color'
+})<{ 
   percentage: number; 
   isDarkMode: boolean; 
   color: string; 

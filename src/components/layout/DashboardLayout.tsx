@@ -7,7 +7,9 @@ interface DashboardLayoutProps {
   children?: ReactNode;
 }
 
-const LayoutContainer = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const LayoutContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   flexDirection: 'column',
   minHeight: '100vh',
@@ -18,7 +20,9 @@ const LayoutContainer = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) =>
   backdropFilter: 'blur(10px)',
 }));
 
-const MainContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const MainContent = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   flexGrow: 1,
   padding: 0,
   display: 'flex',

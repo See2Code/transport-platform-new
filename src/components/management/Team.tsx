@@ -293,7 +293,9 @@ const _fadeOut = {
   }
 };
 
-const _MobileTeamCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamCard = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
   borderRadius: '16px',
   padding: '16px',
@@ -304,7 +306,9 @@ const _MobileTeamCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) =>
   width: '100%'
 }));
 
-const _MobileTeamHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamHeader = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -312,13 +316,17 @@ const _MobileTeamHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) 
   color: isDarkMode ? '#ffffff' : '#000000'
 }));
 
-const _MobileTeamName = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamName = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.1rem',
   fontWeight: 600,
   color: isDarkMode ? colors.accent.main : '#000000'
 }));
 
-const _MobileTeamInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamInfo = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
@@ -330,7 +338,9 @@ const _MobileTeamInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) =>
   }
 }));
 
-const _MobileTeamMember = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamMember = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -342,7 +352,9 @@ const _MobileTeamMember = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) 
   }
 }));
 
-const _MobileTeamRole = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamRole = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -432,7 +444,9 @@ const _StyledTableWrapper = styled(Paper)({
   }
 });
 
-const _StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _StyledTableCell = styled(TableCell, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   '&.MuiTableCell-head': {
@@ -451,7 +465,9 @@ const _StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledDialogContent = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
   color: isDarkMode ? '#ffffff' : '#000000',
   padding: '24px',
@@ -575,7 +591,9 @@ const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
   }
 }));
 
-const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme: _theme, isDarkMode }) => ({
+const LoadingDialog = styled(Dialog, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ theme: _theme, isDarkMode }) => ({
   '& .MuiDialog-paper': {
     background: isDarkMode ? '#1c1c2d' : '#ffffff',
     borderRadius: '36px',
@@ -601,7 +619,9 @@ const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme: _theme, 
   }
 }));
 
-const _LoadingText = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _LoadingText = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   textAlign: 'center',
   marginBottom: '20px',
@@ -617,7 +637,9 @@ const LoadingDots = styled(Box)({
   alignItems: 'center'
 });
 
-const Dot = styled(Box)<{ isDarkMode?: boolean }>(({ isDarkMode = true }) => ({
+const Dot = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode?: boolean }>(({ isDarkMode = true }) => ({
   width: '6px',
   height: '6px',
   borderRadius: '50%',
@@ -840,6 +862,93 @@ const _TransparentTooltip = muiStyled(({ className, ...props }: TooltipProps) =>
   '& .MuiTooltip-arrow': {
     color: 'transparent',
   },
+}));
+
+// Vytvoríme nové štýlované komponenty pre mobilné zobrazenie
+const TeamMemberCard = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
+  borderRadius: '16px',
+  padding: '16px',
+  color: isDarkMode ? '#ffffff' : '#000000',
+  boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
+  marginBottom: '16px',
+  width: '100%'
+}));
+
+
+
+const TeamMemberHeader = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '12px',
+  color: isDarkMode ? '#ffffff' : '#000000'
+}));
+
+const TeamMemberName = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  fontSize: '1.1rem',
+  fontWeight: 600,
+  color: isDarkMode ? colors.accent.main : '#000000'
+}));
+
+const TeamMemberRole = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontSize: '0.85rem',
+  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'
+}));
+
+const TeamMemberInfo = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  color: isDarkMode ? '#ffffff' : '#000000',
+  '& > *': {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  }
+}));
+
+const TeamMemberActions = styled(Box)({
+  display: 'flex',
+  justifyContent: 'flex-end',
+  gap: '8px',
+  marginTop: '12px',
+});
+
+// Pridáme štýlované komponenty pre dodatočné komponenty využívajúce isDarkMode
+const StyledDivider = styled(Divider, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  marginBottom: '24px',
+  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+  flexShrink: 0
+}));
+
+const PhonePrefixWrapper = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  marginRight: '8px',
+  color: isDarkMode ? '#ffffff' : '#000000'
+}));
+
+const StyledDialogContentText = styled(DialogContentText, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)'
 }));
 
 function Team() {
@@ -1257,50 +1366,17 @@ function Team() {
     }
   };
 
+  // Aktualizujeme funkciu renderMobileTeamMember
   const renderMobileTeamMember = (member: TeamMember | Invitation) => (
-    <Box
-      sx={{
-        backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
-        borderRadius: '16px',
-        padding: '16px',
-        color: isDarkMode ? '#ffffff' : '#000000',
-        boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
-        border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
-        marginBottom: '16px',
-        width: '100%'
-      }}
-      key={member.id}
-    >
-      <Box 
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '12px',
-          color: isDarkMode ? '#ffffff' : '#000000'
-        }}
-      >
+    <TeamMemberCard isDarkMode={isDarkMode} key={member.id}>
+      <TeamMemberHeader isDarkMode={isDarkMode}>
         <Box>
-          <Typography 
-            sx={{
-              fontSize: '1.1rem',
-              fontWeight: 600,
-              color: isDarkMode ? colors.accent.main : '#000000'
-            }}
-          >
+          <TeamMemberName isDarkMode={isDarkMode}>
             {member.firstName} {member.lastName}
-          </Typography>
-          <Box 
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '0.85rem',
-              color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'
-            }}
-          >
+          </TeamMemberName>
+          <TeamMemberRole isDarkMode={isDarkMode}>
             {member.role}
-          </Box>
+          </TeamMemberRole>
         </Box>
         <Box>
           <Chip
@@ -1310,21 +1386,9 @@ function Team() {
             sx={{ fontSize: '0.75rem' }}
           />
         </Box>
-      </Box>
+      </TeamMemberHeader>
       
-      <Box 
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          color: isDarkMode ? '#ffffff' : '#000000',
-          '& > *': {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }
-        }}
-      >
+      <TeamMemberInfo isDarkMode={isDarkMode}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <MailIcon />
           <Typography variant="body2">{member.email}</Typography>
@@ -1345,14 +1409,9 @@ function Team() {
             </Typography>
           </Box>
         )}
-      </Box>
+      </TeamMemberInfo>
       
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: '8px',
-        marginTop: '12px',
-      }}>
+      <TeamMemberActions>
         {member.status === 'pending' && 'id' in member && (
           <>
             <IconButton
@@ -1393,8 +1452,8 @@ function Team() {
         >
           <DeleteIcon fontSize="small" />
         </IconButton>
-      </Box>
-    </Box>
+      </TeamMemberActions>
+    </TeamMemberCard>
   );
 
   if (loading) {
@@ -1784,7 +1843,7 @@ function Team() {
             </IconButton>
           </DialogTitle>
           
-          <Divider sx={{ mb: 3, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', flexShrink: 0 }} />
+          <StyledDivider isDarkMode={isDarkMode} />
           
           <DialogContent>
             <Grid container spacing={2}>
@@ -1867,9 +1926,9 @@ function Team() {
                   required
                   InputProps={{
                     startAdornment: (
-                      <Box component="span" sx={{ mr: 1, color: isDarkMode ? '#ffffff' : '#000000' }}>
+                      <PhonePrefixWrapper isDarkMode={isDarkMode}>
                         {phonePrefix}
-                      </Box>
+                      </PhonePrefixWrapper>
                     ),
                   }}
                 />
@@ -1996,7 +2055,7 @@ function Team() {
             </IconButton>
           </DialogTitle>
           
-          <Divider sx={{ mb: 3, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', flexShrink: 0 }} />
+          <StyledDivider isDarkMode={isDarkMode} />
           
           <DialogContent>
             <Grid container spacing={2}>
@@ -2079,9 +2138,9 @@ function Team() {
                   required
                   InputProps={{
                     startAdornment: (
-                      <Box component="span" sx={{ mr: 1, color: isDarkMode ? '#ffffff' : '#000000' }}>
+                      <PhonePrefixWrapper isDarkMode={isDarkMode}>
                         {phonePrefix}
-                      </Box>
+                      </PhonePrefixWrapper>
                     ),
                   }}
                 />
@@ -2214,12 +2273,12 @@ function Team() {
             </IconButton>
           </DialogTitle>
           
-          <Divider sx={{ mb: 3, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', flexShrink: 0 }} />
+          <StyledDivider isDarkMode={isDarkMode} />
           
           <DialogContent>
-            <DialogContentText sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)' }}>
+            <StyledDialogContentText isDarkMode={isDarkMode}>
               Ste si istý, že chcete {deleteItem ? 'vymazať člena z tímu' : 'zrušiť pozvánku pre'} {deleteItem?.firstName} {deleteItem?.lastName}? Táto akcia je nezvratná.
-            </DialogContentText>
+            </StyledDialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDeleteOpen(false)} aria-label="Zrušiť akciu">
