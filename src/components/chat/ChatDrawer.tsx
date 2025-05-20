@@ -656,27 +656,29 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                       </ListItemAvatar>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} component="span">
                             <Typography 
                               variant="subtitle2" 
                               fontWeight={hasUnread ? 'bold' : 'normal'}
                               noWrap
+                              component="span"
                             >
                               {name}
                             </Typography>
                           </Box>
                         }
                         secondary={
-                          <Box>
+                          <Box component="span">
                             <Typography 
                               variant="caption" 
                               color="textSecondary" 
                               sx={{ display: 'block', mb: 0.5 }}
+                              component="span"
                             >
                               {companyName && companyName !== 'Nezadaná firma' ? companyName : ''}
                             </Typography>
                             {conversation.lastMessage ? (
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }} component="span">
                                 <Typography 
                                   variant="body2" 
                                   color="textSecondary" 
@@ -686,6 +688,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                                     color: hasUnread ? (isDarkMode ? 'white' : 'black') : 'inherit'
                                   }}
                                   noWrap
+                                  component="span"
                                 >
                                   {conversation.lastMessage.text}
                                 </Typography>
@@ -704,7 +707,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                                 )}
                               </Box>
                             ) : (
-                              <Typography variant="body2" color="textSecondary">
+                              <Typography variant="body2" color="textSecondary" component="span">
                                 Začnite konverzáciu
                               </Typography>
                             )}

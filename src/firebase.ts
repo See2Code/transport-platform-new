@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator, enableIndexedDbPersistence } from 'firebase/firestore';
+import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getDatabase } from 'firebase/database';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
@@ -47,7 +47,9 @@ try {
 
 // Get Firebase services
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache()
+});
 const functions = getFunctions(app, 'europe-west1');
 const database = getDatabase(app);
 const storage = getStorage(app);
@@ -61,22 +63,6 @@ if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_USE_FIREBASE
     console.error('Chyba pri pripájaní Firestore emulátora:', error);
   }
 }
-
-// Povolenie offline perzistencie
-/* 
-  🆕 POZNÁMKA: V novších verziách Firebase SDK (10.14+) sa odporúča používať:
-  const db = initializeFirestore(app, {
-    cache: persistentLocalCache()
-  });
-  Keď aktualizujete Firebase SDK, môžete prejsť na túto formu.
-*/
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    console.warn('Offline perzistencia nie je podporovaná v tomto prehliadači');
-  } else if (err.code === 'unimplemented') {
-    console.warn('Prehliadač nepodporuje offline perzistenciu');
-  }
-});
 
 // Storage Rules
 const storageRules = `

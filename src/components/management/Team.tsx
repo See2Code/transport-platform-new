@@ -592,15 +592,15 @@ const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
 
 const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme: _theme, isDarkMode }) => ({
   '& .MuiDialog-paper': {
-    background: isDarkMode ? 'rgba(28, 28, 45, 1)' : 'rgba(255, 255, 255, 1)',
+    background: isDarkMode ? '#1c1c2d' : '#ffffff',
     borderRadius: '36px',
     padding: '36px',
     minWidth: '320px',
     margin: '20px',
     boxShadow: isDarkMode 
-      ? '0 12px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4)' 
-      : '0 12px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1)',
-    border: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'}`,
+      ? '0 12px 40px #000000, 0 4px 12px #000000' 
+      : '0 12px 40px #000000, 0 4px 12px #000000',
+    border: `2px solid ${isDarkMode ? '#333333' : '#cccccc'}`,
     transform: 'translateY(0)',
     backdropFilter: 'none',
     overflow: 'visible',
@@ -612,7 +612,7 @@ const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme: _theme, 
   },
   '& .MuiBackdrop-root': {
     backdropFilter: 'none',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)'
+    backgroundColor: '#000000'
   }
 }));
 
@@ -2184,7 +2184,7 @@ function Team() {
         isDarkMode={isDarkMode}
       >
         <DialogContent sx={{ 
-          background: isDarkMode ? 'rgba(28, 28, 45, 1)' : 'rgba(255, 255, 255, 1)', 
+          background: isDarkMode ? '#2a2a3d' : '#ffffff', // Svetlejšie pozadie pre dialóg v dark mode
           padding: '0',
           borderRadius: '36px',
           overflow: 'visible',
@@ -2201,14 +2201,14 @@ function Team() {
               width: '90px',
               height: '90px',
               borderRadius: '50%',
-              backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.12)' : 'rgba(255, 159, 67, 0.15)',
+              backgroundColor: isDarkMode ? '#2e2e40' : '#ffefd9', // Svetlejšie pozadie kruhu pre loader, zodpovedá obrázku
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
               position: 'relative',
               mb: 1,
-              border: `2px solid ${isDarkMode ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 159, 67, 0.25)'}`,
-              boxShadow: '0 8px 24px rgba(255, 159, 67, 0.15)'
+              border: `2px solid ${isDarkMode ? '#ff9f43' : '#ff9f43'}`,
+              boxShadow: '0 8px 24px #ff9f43'
             }}>
               <CircularProgress 
                 size={54} 
@@ -2222,13 +2222,13 @@ function Team() {
                 <PersonAddIcon sx={{ 
                   fontSize: '36px', 
                   color: colors.accent.main,
-                  opacity: 0.9
+                  opacity: 1
                 }} />
               ) : (
                 <MailIcon sx={{ 
                   fontSize: '36px', 
                   color: colors.accent.main,
-                  opacity: 0.9
+                  opacity: 1
                 }} />
               )}
             </Box>
@@ -2239,16 +2239,16 @@ function Team() {
               fontWeight: 600,
               fontSize: '1.2rem'
             }}>
-              Preposielanie pozvánky...
+              {isCreating ? 'Vytváranie pozvánky...' : 'Preposielanie pozvánky...'}
             </Typography>
             
             <Typography variant="body2" sx={{ 
-              color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+              color: isDarkMode ? '#cccccc' : '#333333',
               textAlign: 'center',
               maxWidth: '280px',
               mt: -1
             }}>
-              Prosím počkajte, odosielame pozvánku znova
+              {isCreating ? 'Prosím počkajte, pozývame nového člena do vášho tímu' : 'Prosím počkajte, odosielame pozvánku znova'}
             </Typography>
           </Box>
         </DialogContent>

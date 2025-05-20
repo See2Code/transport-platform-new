@@ -1362,7 +1362,7 @@ export default function BusinessCases() {
                                                               key={phase.id}
                                                               label={
                                                                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                                                      <Typography sx={{ fontSize: '0.8rem', whiteSpace: 'normal', overflow: 'visible', paddingRight: '5px' }}>
+                                                                      <Typography sx={{ fontSize: '0.8rem', whiteSpace: 'normal', overflow: 'visible', paddingRight: '5px' }} component="span">
                                                                           {`${phase.translationKey ? t(phase.translationKey) : translatePhase(phase.name)} - ${phase.createdAt && phase.createdAt instanceof Date && !isNaN(phase.createdAt.getTime()) ? format(phase.createdAt, 'dd.MM.yyyy HH:mm') : t('business.unknownDate')}`}
                                                                       </Typography>
                                                                                                                                               <BareTooltip title={t('common.delete')}>

@@ -725,14 +725,18 @@ function Home() {
                 }
               }}
             >
-              <Typography 
-                sx={{ 
-                  color: isDarkMode ? '#fff' : '#333',
-                  fontWeight: 500,
-                }}
-              >
-                {item.label}
-              </Typography>
+              <ListItemText
+                primary={
+                  <Typography 
+                    sx={{ 
+                      color: isDarkMode ? '#fff' : '#333',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {item.label}
+                  </Typography>
+                }
+              />
             </ListItemButton>
           ))}
           <Divider sx={{ my: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
@@ -751,14 +755,18 @@ function Home() {
               }
             }}
           >
-            <Typography 
-              sx={{ 
-                color: '#ff9f43',
-                fontWeight: 600,
-              }}
-            >
-              Prihlásiť sa
-            </Typography>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: '#ff9f43',
+                    fontWeight: 600,
+                  }}
+                >
+                  Prihlásiť sa
+                </Typography>
+              }
+            />
           </ListItemButton>
           <ListItemButton 
             onClick={() => {
@@ -777,15 +785,21 @@ function Home() {
               }
             }}
           >
-            <Typography 
-              sx={{ 
-                color: isDarkMode ? '#fff' : '#333',
-                fontWeight: 500,
-              }}
-            >
-              {isDarkMode ? 'Svetlý režim' : 'Tmavý režim'}
-            </Typography>
-            {isDarkMode ? <Brightness7Icon sx={{ color: '#fff' }} /> : <Brightness4Icon sx={{ color: '#333' }} />}
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {isDarkMode ? 'Svetlý režim' : 'Tmavý režim'}
+                </Typography>
+              }
+              secondary={
+                isDarkMode ? <Brightness7Icon sx={{ color: '#fff' }} /> : <Brightness4Icon sx={{ color: '#333' }} />
+              }
+            />
           </ListItemButton>
         </List>
       </Drawer>
@@ -1043,10 +1057,10 @@ function Home() {
         {/* Features Section */}
         <Section id="features">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+            <SectionTitle variant="h2">
               Prečo si vybrať CORE?
             </SectionTitle>
-            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+            <SectionSubtitle variant="h6">
               Poskytujeme komplexné a moderné riešenie, ktoré zefektívni každý aspekt vašej špedičnej spoločnosti
             </SectionSubtitle>
           </Box>
@@ -1089,10 +1103,10 @@ function Home() {
         {/* Benefits Section */}
         <Section id="benefits">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+            <SectionTitle variant="h2">
               Všetko čo potrebujete
             </SectionTitle>
-            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+            <SectionSubtitle variant="h6">
               CORE poskytuje funkcionalitu, ktorá pokrýva každý aspekt prevádzky špedičnej spoločnosti
             </SectionSubtitle>
           </Box>
@@ -1167,10 +1181,10 @@ function Home() {
         {/* Testimonial */}
         <Section id="testimonials">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+            <SectionTitle variant="h2">
               Čo o nás hovoria klienti
             </SectionTitle>
-            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+            <SectionSubtitle variant="h6">
               Reálne skúsenosti našich zákazníkov
             </SectionSubtitle>
           </Box>
