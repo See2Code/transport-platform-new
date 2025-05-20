@@ -33,6 +33,7 @@ import { useThemeMode } from '../../contexts/ThemeContext';
 import { formatDistanceToNow } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { PageTitle } from '../styled/PageTitle';
+import { useTranslation } from 'react-i18next';
 
 interface BusinessCase {
   id?: string;
@@ -267,6 +268,7 @@ const SimpleStatsCard = styled(Card, {
 export default function Dashboard() {
   const { userData } = useAuth();
   const { isDarkMode } = useThemeMode();
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     totalBusinessCases: 0,
     totalContacts: 0,
@@ -465,7 +467,7 @@ export default function Dashboard() {
 
   // Helper function to format time ago
   const formatTimeAgo = (timestamp: Timestamp | any) => {
-    if (!timestamp) return 'Neznámy čas';
+    if (!timestamp) return t('dashboard.unknownTime');
     
     let date;
     if (timestamp instanceof Timestamp) {
@@ -476,7 +478,18 @@ export default function Dashboard() {
       date = new Date(timestamp);
     }
     
-    return formatDistanceToNow(date, { addSuffix: true, locale: sk });
+    const timeAgo = formatDistanceToNow(date, { addSuffix: true, locale: sk });
+    return timeAgo
+      .replace('približne', t('dashboard.approximately'))
+      .replace('pred', t('dashboard.timeAgo'))
+      .replace('minútami', t('dashboard.minutes'))
+      .replace('minútou', t('dashboard.minute'))
+      .replace('hodinami', t('dashboard.hours'))
+      .replace('hodinou', t('dashboard.hour'))
+      .replace('dňami', t('dashboard.days'))
+      .replace('dňom', t('dashboard.day'))
+      .replace('mesiacmi', t('dashboard.months'))
+      .replace('mesiacom', t('dashboard.month'));
   };
 
   const getDriverStatusColor = (vehicle: VehicleLocation) => {
@@ -499,12 +512,12 @@ export default function Dashboard() {
   };
 
   const getDriverStatus = (vehicle: VehicleLocation) => {
-    if (vehicle.isOffline) return 'Offline';
+    if (vehicle.isOffline) return t('dashboard.offline');
     
     const lastUpdate = vehicle.lastUpdate?.toDate?.() || 
                        (vehicle.lastUpdate?.seconds ? new Date(vehicle.lastUpdate.seconds * 1000) : null);
     
-    if (!lastUpdate) return 'Neznámy';
+    if (!lastUpdate) return t('dashboard.unknown');
     
     // Kontrola, či je aktualizácia polohy staršia ako 15 minút
     const fifteenMinutesAgo = new Date();
@@ -515,11 +528,11 @@ export default function Dashboard() {
     fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
     
     if (lastUpdate > fiveMinutesAgo) {
-      return 'Online';
+      return t('dashboard.online');
     } else if (lastUpdate > fifteenMinutesAgo) {
-      return 'Neaktívny';
+      return t('dashboard.inactive');
     } else {
-      return 'Offline';
+      return t('dashboard.offline');
     }
   };
 
@@ -543,7 +556,7 @@ export default function Dashboard() {
   return (
     <SimplePageWrapper isDarkMode={isDarkMode}>
       <PageHeader>
-        <PageTitle>Dashboard</PageTitle>
+        <PageTitle>{t('navigation.dashboard')}</PageTitle>
       </PageHeader>
 
       <Grid container spacing={3}>
@@ -574,7 +587,7 @@ export default function Dashboard() {
               <Typography variant="body1" sx={{ 
                 opacity: 0.7,
                 fontSize: { xs: '0.9rem', sm: '1rem' }
-              }}>Obchodné prípady</Typography>
+              }}>{t('dashboard.businessCases')}</Typography>
             </StatsCardContent>
           </SimpleStatsCard>
         </Grid>
@@ -605,7 +618,7 @@ export default function Dashboard() {
               <Typography variant="body1" sx={{ 
                 opacity: 0.7,
                 fontSize: { xs: '0.9rem', sm: '1rem' }
-              }}>Kontakty</Typography>
+              }}>{t('dashboard.contacts')}</Typography>
             </StatsCardContent>
           </SimpleStatsCard>
         </Grid>
@@ -636,7 +649,7 @@ export default function Dashboard() {
               <Typography variant="body1" sx={{ 
                 opacity: 0.7,
                 fontSize: { xs: '0.9rem', sm: '1rem' }
-              }}>Počet vodičov</Typography>
+              }}>{t('dashboard.drivers')}</Typography>
             </StatsCardContent>
           </SimpleStatsCard>
         </Grid>
@@ -667,7 +680,7 @@ export default function Dashboard() {
               <Typography variant="body1" sx={{ 
                 opacity: 0.7,
                 fontSize: { xs: '0.9rem', sm: '1rem' }
-              }}>Členovia tímu</Typography>
+              }}>{t('dashboard.teamMembers')}</Typography>
             </StatsCardContent>
           </SimpleStatsCard>
         </Grid>
@@ -682,7 +695,7 @@ export default function Dashboard() {
                 fontSize: { xs: '1.1rem', sm: '1.25rem' },
                 fontWeight: 600
               }}>
-                Rozdelenie podľa statusu (posledných 14 dní)
+                {t('dashboard.statusDistribution')}
               </Typography>
               
               {statusGraphLoading ? (
@@ -866,7 +879,7 @@ export default function Dashboard() {
                     }}
                   >
                     <Typography component="span">
-                      Celkom: {stats.statusDistribution.reduce((acc, curr) => acc + curr.value, 0)}
+                      {t('dashboard.total')}: {stats.statusDistribution.reduce((acc, curr) => acc + curr.value, 0)}
                     </Typography>
                   </AnimatedBox>
                 </Box>
@@ -889,7 +902,7 @@ export default function Dashboard() {
                 gap: 1
               }}>
                 <DriveEtaIcon sx={{ color: '#2196f3' }} />
-                Aktuálny stav vozidiel
+                {t('dashboard.currentVehicleStatus')}
               </Typography>
 
               {vehiclesLoading ? (
@@ -902,7 +915,7 @@ export default function Dashboard() {
                   py: 4,
                   textAlign: 'center'
                 }}>
-                  Žiadne aktívne vozidlá neboli nájdené
+                  {t('dashboard.noActiveVehicles')}
                 </Typography>
               ) : (
                 <TableContainer component={Paper} sx={{ 
@@ -918,22 +931,22 @@ export default function Dashboard() {
                           color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
                           fontWeight: 600,
                           borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
-                        }}>Vodič</TableCell>
+                        }}>{t('dashboard.driver')}</TableCell>
                         <TableCell sx={{ 
                           color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
                           fontWeight: 600,
                           borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
-                        }}>ŠPZ</TableCell>
+                        }}>{t('dashboard.licensePlate')}</TableCell>
                         <TableCell sx={{ 
                           color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
                           fontWeight: 600,
                           borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
-                        }}>Status</TableCell>
+                        }}>{t('dashboard.status')}</TableCell>
                         <TableCell sx={{ 
                           color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
                           fontWeight: 600,
                           borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
-                        }}>Posledná aktivita</TableCell>
+                        }}>{t('dashboard.lastActivity')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -963,7 +976,7 @@ export default function Dashboard() {
                                 fontSize: '0.9rem',
                                 fontWeight: 500
                               }}>
-                                {vehicle.driverName || 'Neznámy vodič'}
+                                {vehicle.driverName || t('dashboard.unknownDriver')}
                               </Typography>
                             </Box>
                           </TableCell>
@@ -1019,7 +1032,7 @@ export default function Dashboard() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <BusinessIcon sx={{ color: '#ff9f43', fontSize: 28 }} />
                 <Typography variant="h6" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#2d3436' }}>
-                  Posledné obchodné prípady
+                  {t('dashboard.recentBusinessCases')}
                 </Typography>
               </Box>
               <TableContainer component={Paper} sx={{ 
@@ -1035,17 +1048,17 @@ export default function Dashboard() {
                         color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
                         fontWeight: 600,
                         borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
-                      }}>Názov spoločnosti</TableCell>
+                      }}>{t('dashboard.companyName')}</TableCell>
                       <TableCell sx={{ 
                         color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
                         fontWeight: 600,
                         borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
-                      }}>Status</TableCell>
+                      }}>{t('dashboard.status')}</TableCell>
                       <TableCell sx={{ 
                         color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
                         fontWeight: 600,
                         borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
-                      }}>Vytvorené</TableCell>
+                      }}>{t('dashboard.created')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1066,7 +1079,7 @@ export default function Dashboard() {
                           borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
                         }}>
                           <Chip
-                            label={case_.status || 'Neznámy'}
+                            label={case_.status || t('dashboard.unknown')}
                             size="small"
                             sx={{
                               ...getStatusChipStyles(case_.status),
@@ -1080,9 +1093,9 @@ export default function Dashboard() {
                           borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
                         }}>
                           {case_.createdAt instanceof Timestamp ? 
-                            formatDistanceToNow(case_.createdAt.toDate(), { addSuffix: true, locale: sk }) : 
-                            case_.createdAt ? formatDistanceToNow(new Date(case_.createdAt), { addSuffix: true, locale: sk }) : 
-                            'Neznámy dátum'}
+                            formatTimeAgo(case_.createdAt) : 
+                            case_.createdAt ? formatTimeAgo(new Date(case_.createdAt)) : 
+                            t('dashboard.unknownDate')}
                         </TableCell>
                       </TableRow>
                     ))}
