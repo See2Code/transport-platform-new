@@ -235,7 +235,6 @@ export default function TransportMap({ origin, destination, isThumbnail = false,
   useEffect(() => {
     console.log('TransportMap props:', { origin, destination, isThumbnail });
     console.log('Google Maps loading status:', { isLoaded, loadError });
-    console.log('API Key:', process.env.REACT_APP_GOOGLE_MAPS_API_KEY);
   }, [origin, destination, isThumbnail, isLoaded, loadError]);
 
   const directionsCallback = useCallback(

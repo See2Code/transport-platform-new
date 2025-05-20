@@ -502,7 +502,25 @@ const HistoryRoutesDialog: React.FC<HistoryRoutesDialogProps> = ({ open, onClose
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle><Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><Typography variant="h6">História trás</Typography><Box sx={{ display: 'flex', gap: 1 }}><LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}><DatePicker label="Od dátumu" value={startDate} onChange={onStartDateChange} slotProps={{ textField: { size: 'small', sx: { width: 140 }}}} /><DatePicker label="Do dátumu" value={endDate} onChange={onEndDateChange} slotProps={{ textField: { size: 'small', sx: { width: 140 }}}} /></LocalizationProvider><Button variant="outlined" size="small" onClick={onFilterClick}>Filtrovať</Button></Box></Box></DialogTitle>
             <DialogContent dividers>
-                {routes.length === 0 ? <Typography sx={{ p: 2, textAlign: 'center' }}>Žiadne trasy neboli nájdené pre vybrané obdobie.</Typography> : <List>{routes.map(route => (<React.Fragment key={route.id}><ListItem button onClick={() => onSelectRoute(route)}><ListItemAvatar><Avatar sx={{ bgcolor: '#4CAF50' }}><TrackChangesIcon /></Avatar></ListItemAvatar><ListItemText primary={<Typography fontWeight="medium">{route.name || `Trasa ${route.startTime ? format(route.startTime, 'dd.MM.yyyy') : ''}`}</Typography>} secondary={<Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}><TimeIcon fontSize="small" /><Typography variant="body2">{route.startTime ? format(route.startTime, 'dd.MM HH:mm') : ''} - {route.endTime ? format(route.endTime, 'HH:mm') : ''}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CarIcon fontSize="small" /><Typography variant="body2">{route.licensePlate} ({route.distance.toFixed(1)} km)</Typography></Box></Box>} /></ListItem><Divider /></React.Fragment>))}</List>}
+                {routes.length === 0 ? <Typography sx={{ p: 2, textAlign: 'center' }}>Žiadne trasy neboli nájdené pre vybrané obdobie.</Typography> : <List>{routes.map(route => (<React.Fragment key={route.id}><ListItem button onClick={() => onSelectRoute(route)}><ListItemAvatar><Avatar sx={{ bgcolor: '#4CAF50' }}><TrackChangesIcon /></Avatar></ListItemAvatar><ListItemText 
+                    primary={<Typography component="span" fontWeight="medium">{route.name || `Trasa ${route.startTime ? format(route.startTime, 'dd.MM.yyyy') : ''}`}</Typography>} 
+                    secondary={
+                      <Box component="span" sx={{ display: 'block' }}>
+                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <TimeIcon fontSize="small" />
+                          <Typography component="span" variant="inherit">
+                            {route.startTime ? format(route.startTime, 'dd.MM HH:mm') : ''} - {route.endTime ? format(route.endTime, 'HH:mm') : ''}
+                          </Typography>
+                        </Box>
+                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CarIcon fontSize="small" />
+                          <Typography component="span" variant="inherit">
+                            {route.licensePlate} ({route.distance.toFixed(1)} km)
+                          </Typography>
+                        </Box>
+                      </Box>
+                    } 
+                  /></ListItem><Divider /></React.Fragment>))}</List>}
             </DialogContent>
             <DialogActions><Button onClick={onClose}>Zavrieť</Button></DialogActions>
         </Dialog>
@@ -790,20 +808,18 @@ const VehicleMap: React.FC = () => {
                                     <React.Fragment key={vehicle.id}>
                                     <ListItem button onClick={() => handleListItemClick(vehicle)} selected={selectedVehicle?.id === vehicle.id} secondaryAction={<IconButton edge="end" aria-label="história" onClick={(e: React.MouseEvent<HTMLButtonElement>) => handleVehicleMenuOpen(e, vehicle.id)}><HistoryIcon /></IconButton>}>
                                         <ListItemAvatar><Avatar><CarIcon /></Avatar></ListItemAvatar>
-                                            <ListItemText
-                                                primary={vehicle.driverName}
-                                                secondary={
-                                                    <Box component="span" sx={{ display: 'block' }}>
-                                                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <TimeIcon fontSize="small" />
-                                                            <span>{formatTimeDiff(vehicle.lastUpdate)}</span>
-                                                        </Box>
-                                                        <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
-                                                            <Chip size="small" color={getStatusColor(vehicle)} label={getStatusText(vehicle)} />
-                                                        </Box>
-                                                    </Box>
-                                                }
-                                            />
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                            <Typography variant="subtitle1">{vehicle.driverName}</Typography>
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <TimeIcon fontSize="small" />
+                                                    <Typography variant="body2" color="text.secondary">{formatTimeDiff(vehicle.lastUpdate)}</Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Chip size="small" color={getStatusColor(vehicle)} label={getStatusText(vehicle)} />
+                                                </Box>
+                                            </Box>
+                                        </Box>
                                     </ListItem><Divider />
                                     </React.Fragment>
                             ))}
@@ -814,20 +830,18 @@ const VehicleMap: React.FC = () => {
                                         <React.Fragment key={`stale-${vehicle.id}`}>
                                             <ListItem button onClick={() => handleListItemClick(vehicle)} selected={selectedVehicle?.id === vehicle.id} sx={{ opacity: 0.6 }}>
                                                 <ListItemAvatar><Avatar sx={{ opacity: 0.7 }}><CarIcon /></Avatar></ListItemAvatar>
-                                                <ListItemText
-                                                    primary={vehicle.driverName}
-                                                    secondary={
-                                                        <Box component="span" sx={{ display: 'block' }}>
-                                                            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                <TimeIcon fontSize="small" />
-                                                                <span>{formatTimeDiff(vehicle.lastUpdate)}</span>
-                                                            </Box>
-                                                            <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
-                                                                <Chip size="small" color={getStatusColor(vehicle)} label="Offline" />
-                                                            </Box>
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                    <Typography variant="subtitle1">{vehicle.driverName}</Typography>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <TimeIcon fontSize="small" />
+                                                            <Typography variant="body2" color="text.secondary">{formatTimeDiff(vehicle.lastUpdate)}</Typography>
                                                         </Box>
-                                                    }
-                                                />
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <Chip size="small" color={getStatusColor(vehicle)} label="Offline" />
+                                                        </Box>
+                                                    </Box>
+                                                </Box>
                                             </ListItem><Divider />
                                         </React.Fragment>
                                     ))}
@@ -871,7 +885,9 @@ const VehicleMap: React.FC = () => {
                                                 <Box sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)', fontWeight: 500, fontSize: '0.875rem' }}>
                                                     {formatTimeDiff(selectedVehicle.lastUpdate)}
                                                 </Box>
-                                                <Chip size="small" color={getStatusColor(selectedVehicle)} label={getStatusText(selectedVehicle)} sx={{ ml: 'auto', height: '20px', fontSize: '0.7rem' }} />
+                                                <Box component="span" sx={{ ml: 'auto' }}>
+                                                    <Chip size="small" color={getStatusColor(selectedVehicle)} label={getStatusText(selectedVehicle)} sx={{ height: '20px', fontSize: '0.7rem' }} />
+                                                </Box>
                                             </Box>
                                         </Box>
                                         <Divider sx={{ my: 2, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />

@@ -125,7 +125,9 @@ const PageHeader = styled(Box)(({ theme }) => ({
   }
 }));
 
-const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const PageTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.75rem',
   fontWeight: 700,
   color: isDarkMode ? '#ffffff' : '#000000',

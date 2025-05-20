@@ -150,7 +150,9 @@ interface Phase {
   translationKey?: string;
 }
 
-const MobileBusinessCard = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+const MobileBusinessCard = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
   borderRadius: '16px !important',
   border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'} !important`,
@@ -182,7 +184,9 @@ const MobileBusinessCard = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDark
   }
 }));
 
-const MobileCardHeader = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+const MobileCardHeader = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -191,13 +195,17 @@ const MobileCardHeader = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMo
   width: '100%',
 }));
 
-const MobileCompanyName = styled(Typography)<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
+const MobileCompanyName = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
   fontWeight: 600,
   color: isDarkMode ? '#ffffff' : '#000000',
   fontSize: '1.1rem',
 }));
 
-const MobileCardContent = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
+const MobileCardContent = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ theme, isDarkMode }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(1),
@@ -205,7 +213,9 @@ const MobileCardContent = styled(Box)<{ isDarkMode: boolean }>(({ theme, isDarkM
   width: '100%',
 }));
 
-const MobileInfoRow = styled(Box)<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
+const MobileInfoRow = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -249,7 +259,9 @@ const PageHeader = styled(Box)({
   }
 });
 
-const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const PageTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.75rem',
   fontWeight: 700,
   color: isDarkMode ? '#ffffff' : '#000000',
@@ -288,7 +300,9 @@ const convertToDate = (dateTime: Date | Timestamp | null): Date | null => {
   return new Date(dateTime);
 };
 
-const StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledTableCell = styled(TableCell, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
   '&.MuiTableCell-head': {
@@ -297,7 +311,9 @@ const StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode
   }
 }));
 
-const StyledTableRow = styled(TableRow)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledTableRow = styled(TableRow, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   '&:hover': {
     backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
   },
@@ -306,7 +322,9 @@ const StyledTableRow = styled(TableRow)<{ isDarkMode: boolean }>(({ isDarkMode }
   }
 }));
 
-const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledDialogContent = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
   color: isDarkMode ? '#ffffff' : '#000000',
   padding: '24px',

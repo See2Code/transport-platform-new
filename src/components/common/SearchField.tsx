@@ -22,7 +22,9 @@ const colors = {
   }
 };
 
-const StyledTextField = styled(TextField)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledTextField = styled(TextField, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   '& .MuiOutlinedInput-root': {
     backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
     borderRadius: '12px',
@@ -99,7 +101,6 @@ const SearchField: React.FC<SearchFieldProps> = ({
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      isDarkMode={isDarkMode}
       InputProps={{
         endAdornment: (
           <InputAdornment position="end">
@@ -107,6 +108,7 @@ const SearchField: React.FC<SearchFieldProps> = ({
           </InputAdornment>
         ),
       }}
+      isDarkMode={isDarkMode}
     />
   );
 };

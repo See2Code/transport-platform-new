@@ -72,7 +72,7 @@ interface MobileNavbarProps {
 const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { isDarkMode, toggleTheme } = useThemeMode();
+  const { toggleTheme } = useThemeMode();
 
   const changeLanguage = (language: string) => {
     i18n.changeLanguage(language);
@@ -119,16 +119,16 @@ const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
         mb: 3, 
         borderRadius: '8px',
         py: 2,
-        background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+        background: 'rgba(0, 0, 0, 0.05)',
       }}>
-        <IconButton onClick={handleNotificationsClick} sx={{ color: isDarkMode ? '#fff' : '#333' }}>
+        <IconButton onClick={handleNotificationsClick} sx={{ color: '#333' }}>
           <NotificationsIcon />
         </IconButton>
         <IconButton 
           onClick={() => { changeLanguage('sk'); }}
           sx={{ 
             opacity: !isEN ? 1 : 0.6,
-            color: isDarkMode ? '#fff' : '#333',
+            color: '#333',
           }}
         >
           <SKFlagIcon />
@@ -137,20 +137,20 @@ const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
           onClick={() => { changeLanguage('en'); }}
           sx={{ 
             opacity: isEN ? 1 : 0.6,
-            color: isDarkMode ? '#fff' : '#333',
+            color: '#333',
           }}
         >
           <ENFlagIcon />
         </IconButton>
         <IconButton 
           onClick={toggleTheme}
-          sx={{ color: isDarkMode ? '#fff' : '#333' }}
+          sx={{ color: '#333' }}
         >
-          {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+          {isEN ? <LightModeIcon /> : <DarkModeIcon />}
         </IconButton>
       </Box>
       
-      <Divider sx={{ my: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+      <Divider sx={{ my: 2, bgcolor: 'rgba(0,0,0,0.1)' }} />
       
       <List>
         {menuItems.map((item, index) => (
@@ -165,21 +165,19 @@ const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
               borderRadius: '8px',
               mb: 1,
               '&:hover': {
-                background: isDarkMode 
-                  ? 'rgba(255, 255, 255, 0.05)' 
-                  : 'rgba(0, 0, 0, 0.05)',
+                background: 'rgba(0, 0, 0, 0.05)',
               }
             }}
           >
             <ListItemIcon sx={{ 
               minWidth: '40px',
-              color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+              color: 'rgba(0, 0, 0, 0.7)',
             }}>
               {item.icon}
             </ListItemIcon>
             <Typography 
               sx={{ 
-                color: isDarkMode ? '#fff' : '#333',
+                color: '#333',
                 fontWeight: 500,
               }}
             >
@@ -189,7 +187,7 @@ const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
         ))}
       </List>
 
-      <Divider sx={{ my: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+      <Divider sx={{ my: 2, bgcolor: 'rgba(0,0,0,0.1)' }} />
       
       <Box sx={{ p: 2 }}>
         <Button

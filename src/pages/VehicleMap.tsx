@@ -115,12 +115,12 @@ const VehicleMap: React.FC = () => {
               {selectedVehicle === vehicle.id && (
                 <InfoWindow onCloseClick={() => setSelectedVehicle(null)}>
                   <Box>
-                    <Typography variant="subtitle1">{vehicle.driverName}</Typography>
-                    <Typography variant="body2">Vozidlo: {vehicle.licensePlate}</Typography>
-                    <Typography variant="body2">
+                    <Typography variant="subtitle1" component="span">{vehicle.driverName}</Typography>
+                    <Typography variant="body2" component="span">Vozidlo: {vehicle.licensePlate}</Typography>
+                    <Typography variant="body2" component="span">
                       Posledná aktualizácia: {new Date(vehicle.lastUpdate).toLocaleString('sk-SK')}
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" component="span">
                       Presnosť: {vehicle.location.accuracy.toFixed(0)}m
                     </Typography>
                   </Box>

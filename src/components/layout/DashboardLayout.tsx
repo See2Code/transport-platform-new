@@ -74,7 +74,6 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
       <MainContent 
         component="main"
-        isDarkMode={isDarkMode}
       >
         {children}
       </MainContent>

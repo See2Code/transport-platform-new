@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  
   Paper,
   Typography,
   Grid,
@@ -17,11 +16,8 @@ import {
   Card,
   Select,
   Avatar,
-  SelectChangeEvent,
-  CardProps,
-  SelectProps
+  SelectChangeEvent
 } from '@mui/material';
-import { TextFieldProps } from '@mui/material/TextField';
 import { useNavigate } from 'react-router-dom';
 import { auth, db, storage } from '../../firebase';
 import { doc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
@@ -37,11 +33,11 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import styled from '@emotion/styled';
-import { useThemeMode } from '../../contexts/ThemeContext';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import ImageCropper from '../common/ImageCropper';
 import { UserData } from '../../contexts/AuthContext';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useTheme } from '@mui/material/styles';
 
 interface CompanyData {
   id: string;
@@ -164,10 +160,10 @@ const PageHeader = styled(Box)(({ _theme }) => ({
   }
 }));
 
-const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const PageTitle = styled(Typography)(({ theme }) => ({
   fontSize: '1.75rem',
   fontWeight: 700,
-  color: isDarkMode ? '#ffffff' : '#000000',
+  color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
   position: 'relative',
   marginBottom: '8px',
   '&::after': {
@@ -197,7 +193,9 @@ const SettingsGrid = styled(Grid)({
   }
 });
 
-const SettingsCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const SettingsCard = styled(Card, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? colors.background.main : '#ffffff',
   backdropFilter: 'blur(20px)',
   borderRadius: '16px',
@@ -228,7 +226,7 @@ const SettingsCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => (
     padding: '16px',
     marginBottom: '16px',
   }
-})) as unknown as React.FC<CardProps & { isDarkMode: boolean }>;
+}));
 
 const CardHeader = styled(Box)({
   display: 'flex',
@@ -252,7 +250,9 @@ const CardHeader = styled(Box)({
   }
 }) as unknown as React.FC<React.HTMLAttributes<HTMLDivElement>>;
 
-const SectionTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const SectionTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.25rem',
   fontWeight: 600,
   color: isDarkMode ? '#ffffff' : '#2d3436',
@@ -289,7 +289,9 @@ const _InfoSection = styled(Box)({
   }
 });
 
-const _InfoLabel = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _InfoLabel = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '0.85rem',
   color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
   textTransform: 'uppercase',
@@ -299,7 +301,9 @@ const _InfoLabel = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) 
   }
 }));
 
-const _InfoValue = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _InfoValue = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1rem',
   color: isDarkMode ? '#ffffff' : '#000000',
   '@media (max-width: 600px)': {
@@ -307,7 +311,9 @@ const _InfoValue = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) 
   }
 }));
 
-const StyledTextField = styled(TextField)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledTextField = styled(TextField, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   '& .MuiOutlinedInput-root': {
     backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
     borderRadius: '12px',
@@ -336,9 +342,11 @@ const StyledTextField = styled(TextField)<{ isDarkMode: boolean }>(({ isDarkMode
     padding: '14px 16px',
     fontSize: '0.95rem',
   }
-})) as unknown as React.FC<TextFieldProps & { isDarkMode: boolean }>;
+}));
 
-const StyledSelect = styled(Select)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledSelect = styled(Select, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
   color: isDarkMode ? '#ffffff' : '#000000',
   '& .MuiOutlinedInput-notchedOutline': {
@@ -353,9 +361,11 @@ const StyledSelect = styled(Select)<{ isDarkMode: boolean }>(({ isDarkMode }) =>
   '& .MuiSelect-icon': {
     color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
   }
-})) as unknown as React.FC<SelectProps & { isDarkMode: boolean }>;
+}));
 
-const ActionButton = styled(Button)<{ isDarkMode: boolean }>(({ _sDarkMode }) => ({
+const ActionButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ _isDarkMode }) => ({
   borderRadius: '12px',
   padding: '8px 24px',
   textTransform: 'none',
@@ -371,7 +381,9 @@ const ActionButton = styled(Button)<{ isDarkMode: boolean }>(({ _sDarkMode }) =>
   }
 }));
 
-const CancelButton = styled(Button)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const CancelButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   borderRadius: '12px',
   padding: '8px 24px',
   textTransform: 'none',
@@ -386,7 +398,9 @@ const CancelButton = styled(Button)<{ isDarkMode: boolean }>(({ isDarkMode }) =>
   }
 }));
 
-const IconButtonStyled = styled(IconButton)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const IconButtonStyled = styled(IconButton, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
   borderRadius: '12px',
   padding: '8px',
@@ -401,7 +415,9 @@ const IconButtonStyled = styled(IconButton)<{ isDarkMode: boolean }>(({ isDarkMo
   }
 }));
 
-const _SettingsContainer = styled(Paper)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _SettingsContainer = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '24px',
   backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.95)' : 'rgba(255, 255, 255, 0.95)',
   borderRadius: '12px',
@@ -474,7 +490,9 @@ const _LargeAvatar = styled(Avatar)(({ _theme }) => ({
   },
 }));
 
-const _CompanyLogo = styled(Box)<{ isDarkMode: boolean }>(({ _sDarkMode }) => ({
+const _CompanyLogo = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ _sDarkMode }) => ({
   width: '100%',
   display: 'flex',
   alignItems: 'center',
@@ -492,7 +510,9 @@ const _LogoImage = styled('img')({
   objectFit: 'unset',
 });
 
-const FormSection = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const FormSection = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   position: 'relative',
   padding: '24px',
   borderRadius: '16px',
@@ -542,7 +562,7 @@ function Settings() {
   const [_isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [selectedCountry, _setSelectedCountry] = useState(euCountries.find(c => c.code === 'SK') || euCountries[0]);
-  const { isDarkMode } = useThemeMode();
+  const theme = useTheme();
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
@@ -555,6 +575,8 @@ function Settings() {
   
   const profileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const isDarkMode = theme.palette.mode === 'dark';
 
   // Konverzia z UserData na LocalUserData
   const convertToLocalData = useCallback((data: UserData): LocalUserData => ({
@@ -985,7 +1007,7 @@ function Settings() {
   return (
     <PageWrapper>
       <PageHeader>
-        <PageTitle isDarkMode={isDarkMode}>Nastavenia</PageTitle>
+        <PageTitle>Nastavenia</PageTitle>
       </PageHeader>
 
       <SettingsGrid container spacing={3}>

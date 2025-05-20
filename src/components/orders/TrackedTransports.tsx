@@ -142,7 +142,9 @@ const PageHeader = styled(Box)({
   }
 });
 
-const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const PageTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.75rem',
   fontWeight: 700,
   color: isDarkMode ? '#ffffff' : '#000000',
@@ -181,7 +183,9 @@ const AddButton = styled(Button)({
   }
 });
 
-const TransportCard = styled(Box)<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
+const TransportCard = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ _theme, isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
   borderRadius: '16px',
   padding: '16px',
@@ -204,7 +208,9 @@ const TransportCard = styled(Box)<{ isDarkMode: boolean }>(({ _theme, isDarkMode
   }
 }));
 
-const CreatorInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const CreatorInfo = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -278,7 +284,9 @@ const MapDialog = styled(Dialog)(({ theme }) => ({
   }
 }));
 
-const MobileTransportHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const MobileTransportHeader = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -294,20 +302,26 @@ const MobileTransportTitle = styled(Box)({
   alignItems: 'center',
 });
 
-const MobileTransportNumber = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const MobileTransportNumber = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.1rem',
   fontWeight: 600,
   color: isDarkMode ? colors.accent.main : '#000000'
 }));
 
-const MobileTransportInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const MobileTransportInfo = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
   color: isDarkMode ? '#ffffff' : '#000000'
 }));
 
-const MobileTransportLocation = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const MobileTransportLocation = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -319,7 +333,9 @@ const MobileTransportLocation = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMo
   }
 }));
 
-const MobileTransportTime = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const MobileTransportTime = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: '12px',
@@ -337,7 +353,6 @@ const MobileTransportTime = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
     marginLeft: '24px',
     '& .MuiSvgIcon-root': {
       fontSize: '1rem',
-      color: colors.accent.main
     }
   },
   '& .reminder-info': {

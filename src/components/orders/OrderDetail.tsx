@@ -49,7 +49,9 @@ const InfoSection = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(3),
 }));
 
-const SectionTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const SectionTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.1rem',
   fontWeight: 600,
   marginBottom: '16px',
@@ -67,18 +69,24 @@ const InfoItem = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(1),
 }));
 
-const InfoLabel = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const InfoLabel = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontWeight: 600,
   minWidth: '160px',
   color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
 }));
 
-const InfoValue = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const InfoValue = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   wordBreak: 'break-word',
 }));
 
-const StyledPaper = styled(Paper)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledPaper = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(37, 37, 56, 0.7)' : 'rgba(255, 255, 255, 0.7)',
   padding: '16px',
   borderRadius: '8px',
@@ -87,7 +95,9 @@ const StyledPaper = styled(Paper)<{ isDarkMode: boolean }>(({ isDarkMode }) => (
   height: '100%',
 }));
 
-const StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledTableCell = styled(TableCell, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
   padding: '8px 16px',
