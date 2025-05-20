@@ -23,7 +23,8 @@
     "firstName": "First Name",
     "lastName": "Last Name",
     "notifications": "Notifications",
-    "chat": "Chat"
+    "chat": "Chat",
+    "add": "Add"
   },
   "auth": {
     "login": "Login",

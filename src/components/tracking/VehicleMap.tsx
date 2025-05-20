@@ -20,8 +20,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { sk } from 'date-fns/locale';
 import { format } from 'date-fns';
-import { styled } from '@mui/material/styles';
 import 'leaflet/dist/leaflet.css';
+import { PageTitle } from '../styled/PageTitle';
 
 interface VehicleTrailPoint {
     lat: number;
@@ -521,24 +521,6 @@ const SaveRouteDialog: React.FC<SaveRouteDialogProps> = ({ open, onClose, routeN
     );
 };
 
-// Pridať PageTitle komponent hneď za importami, pred začiatok komponentu
-const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  fontSize: '1.75rem',
-  fontWeight: 700,
-  color: isDarkMode ? '#ffffff' : '#000000',
-  position: 'relative',
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    bottom: '-8px',
-    left: 0,
-    width: '60px',
-    height: '4px',
-    backgroundColor: '#ff9f43',
-    borderRadius: '2px',
-  }
-}));
-
 // --- Hlavný komponent VehicleMap ---
 
 const VehicleMap: React.FC = () => {
@@ -811,11 +793,17 @@ const VehicleMap: React.FC = () => {
                                             <ListItemText
                                                 primary={vehicle.driverName}
                                                 secondary={
-                                                <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <TimeIcon fontSize="small" />
-                                                    <Typography variant="body2" component="span">{formatTimeDiff(vehicle.lastUpdate)}</Typography>
-                                                    <Chip size="small" color={getStatusColor(vehicle)} label={getStatusText(vehicle)} sx={{ ml: 1 }} />
-                                                    </Box>
+                                                    <React.Fragment>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <TimeIcon fontSize="small" />
+                                                            <Typography variant="body2" component="span">
+                                                                {formatTimeDiff(vehicle.lastUpdate)}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box mt={0.5}>
+                                                            <Chip size="small" color={getStatusColor(vehicle)} label={getStatusText(vehicle)} />
+                                                        </Box>
+                                                    </React.Fragment>
                                                 }
                                             />
                                     </ListItem><Divider />
@@ -831,11 +819,17 @@ const VehicleMap: React.FC = () => {
                                                 <ListItemText
                                                     primary={vehicle.driverName}
                                                     secondary={
-                                                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <TimeIcon fontSize="small" />
-                                                            <Typography variant="body2" component="span">{formatTimeDiff(vehicle.lastUpdate)}</Typography>
-                                                            <Chip size="small" color={getStatusColor(vehicle)} label="Offline" sx={{ ml: 1 }} />
-                                                        </Box>
+                                                        <React.Fragment>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <TimeIcon fontSize="small" />
+                                                                <Typography variant="body2" component="span">
+                                                                    {formatTimeDiff(vehicle.lastUpdate)}
+                                                                </Typography>
+                                                            </Box>
+                                                            <Box mt={0.5}>
+                                                                <Chip size="small" color={getStatusColor(vehicle)} label="Offline" />
+                                                            </Box>
+                                                        </React.Fragment>
                                                     }
                                                 />
                                             </ListItem><Divider />
@@ -869,7 +863,21 @@ const VehicleMap: React.FC = () => {
                             {selectedVehicle && showInfoWindow && (
                                 <InfoWindow position={getInfoWindowPosition(selectedVehicle)} onCloseClick={handleInfoWindowClose} options={{ pixelOffset: new window.google.maps.Size(0, -5), maxWidth: 300 }}>
                                     <Box sx={{ p: 2.5, minWidth: '280px', bgcolor: isDarkMode ? '#2A2D3E' : '#ffffff', borderRadius: 2, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.16)', color: isDarkMode ? '#fff' : '#000' }}>
-                                        <Box sx={{ mb: 2 }}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}><PersonIcon sx={{ color: '#FF6B00', fontSize: 28 }} /><Typography variant="h6" sx={{ color: isDarkMode ? '#fff' : '#000', fontWeight: 600 }}>{selectedVehicle.driverName || 'Neznámy vodič'}</Typography></Box><Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}><TimeIcon sx={{ color: '#FF6B00' }} /><Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)', fontWeight: 500 }}>{formatTimeDiff(selectedVehicle.lastUpdate)}</Typography><Chip size="small" color={getStatusColor(selectedVehicle)} label={getStatusText(selectedVehicle)} sx={{ ml: 'auto', height: '20px', fontSize: '0.7rem' }} /></Box></Box>
+                                        <Box sx={{ mb: 2 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                                                <PersonIcon sx={{ color: '#FF6B00', fontSize: 28 }} />
+                                                <Typography variant="h6" sx={{ color: isDarkMode ? '#fff' : '#000', fontWeight: 600 }}>
+                                                    {selectedVehicle.driverName || 'Neznámy vodič'}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                                                <TimeIcon sx={{ color: '#FF6B00' }} />
+                                                <Box sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)', fontWeight: 500, fontSize: '0.875rem' }}>
+                                                    {formatTimeDiff(selectedVehicle.lastUpdate)}
+                                                </Box>
+                                                <Chip size="small" color={getStatusColor(selectedVehicle)} label={getStatusText(selectedVehicle)} sx={{ ml: 'auto', height: '20px', fontSize: '0.7rem' }} />
+                                            </Box>
+                                        </Box>
                                         <Divider sx={{ my: 2, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}><Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}><CarIcon sx={{ color: '#FF6B00', fontSize: 22, mt: 0.3 }} /><Box><Typography sx={{ color: isDarkMode ? '#fff' : '#000', fontWeight: 500, mb: 0.5 }}>{selectedVehicle.licensePlate || 'Neznáme ŠPZ'}</Typography><Typography variant="caption" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)', display: 'block' }}>Aktuálne vozidlo</Typography></Box></Box><Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}><CompanyIcon sx={{ color: '#FF6B00', fontSize: 22, mt: 0.3 }} /><Box><Typography sx={{ color: isDarkMode ? '#fff' : '#000', fontWeight: 500, mb: 0.5 }}>{selectedVehicle.companyName || 'AESA Group'}</Typography><Typography variant="caption" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)', display: 'block' }}>ID: {selectedVehicle.companyID}</Typography></Box></Box></Box>
                                     </Box>

@@ -32,6 +32,7 @@ import CountUp from 'react-countup';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import { formatDistanceToNow } from 'date-fns';
 import { sk } from 'date-fns/locale';
+import { PageTitle } from '../styled/PageTitle';
 
 interface BusinessCase {
   id?: string;
@@ -86,23 +87,6 @@ const PageHeader = styled(Box)(({ _theme }) => ({
     flexDirection: 'column',
     alignItems: 'flex-start',
     gap: '16px'
-  }
-}));
-
-const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  fontSize: '1.75rem',
-  fontWeight: 700,
-  color: isDarkMode ? '#ffffff' : '#000000',
-  position: 'relative',
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    bottom: '-8px',
-    left: 0,
-    width: '60px',
-    height: '4px',
-    backgroundColor: '#ff9f43',
-    borderRadius: '2px',
   }
 }));
 
@@ -254,13 +238,13 @@ const ProgressBarSegment = styled(Box)<{
   percentage: number; 
   isDarkMode: boolean; 
   color: string; 
-  isLast: boolean;
-}>(({ percentage, isDarkMode, color, isLast }) => ({
+  sx?: any;
+}>(({ percentage, isDarkMode, color, sx }) => ({
   width: `${percentage}%`,
   height: '100%',
   backgroundColor: color,
   position: 'relative',
-  borderRight: isLast ? 'none' : `2px solid ${isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.3)'}`,
+  ...sx
 }));
 
 export default function Dashboard() {
@@ -800,7 +784,9 @@ export default function Dashboard() {
                               percentage={percentage}
                               isDarkMode={isDarkMode}
                               color={color}
-                              isLast={index === stats.statusDistribution.length - 1}
+                              sx={{
+                                borderRight: index === stats.statusDistribution.length - 1 ? 'none' : `2px solid ${isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.3)'}`
+                              }}
                             />
                           );
                         })}

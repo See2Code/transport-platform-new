@@ -23,7 +23,8 @@
     "firstName": "Meno",
     "lastName": "Priezvisko",
     "notifications": "Notifikácie",
-    "chat": "Chat"
+    "chat": "Chat",
+    "add": "Pridať"
   },
   "auth": {
     "login": "Prihlásenie",

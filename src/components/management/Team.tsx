@@ -62,6 +62,7 @@ import { styled as muiStyled } from '@mui/material/styles';
 import Tooltip, { TooltipProps } from '@mui/material/Tooltip';
 import { createPortal } from 'react-dom';
 import styled from '@emotion/styled';
+import { PageTitle } from '../styled/PageTitle'; // Pridáme import pre PageTitle
 
 interface Country {
   code: string;
@@ -183,23 +184,6 @@ const PageHeader = styled(Box)({
     gap: '16px'
   }
 });
-
-const PageTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  fontSize: '1.75rem',
-  fontWeight: 700,
-  color: isDarkMode ? '#ffffff' : '#000000',
-  position: 'relative',
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    bottom: '-8px',
-    left: 0,
-    width: '60px',
-    height: '4px',
-    backgroundColor: '#ff9f43',
-    borderRadius: '2px',
-  }
-}));
 
 const _AddButton = styled('button')({
   backgroundColor: colors.accent.main,
@@ -598,9 +582,9 @@ const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme: _theme, 
     minWidth: '320px',
     margin: '20px',
     boxShadow: isDarkMode 
-      ? '0 12px 40px #000000, 0 4px 12px #000000' 
-      : '0 12px 40px #000000, 0 4px 12px #000000',
-    border: `2px solid ${isDarkMode ? '#333333' : '#cccccc'}`,
+      ? '0 8px 32px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)' 
+      : '0 8px 32px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.1)',
+    border: `2px solid ${isDarkMode ? 'rgba(255, 159, 67, 0.5)' : 'rgba(255, 159, 67, 0.7)'}`, // Výraznejší accent border
     transform: 'translateY(0)',
     backdropFilter: 'none',
     overflow: 'visible',
@@ -611,8 +595,8 @@ const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme: _theme, 
     overflow: 'visible',
   },
   '& .MuiBackdrop-root': {
-    backdropFilter: 'none',
-    backgroundColor: '#000000'
+    backdropFilter: 'blur(10px)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)'
   }
 }));
 
@@ -1273,15 +1257,49 @@ function Team() {
   };
 
   const renderMobileTeamMember = (member: TeamMember | Invitation) => (
-    <MobileTeamCard isDarkMode={isDarkMode} key={member.id}>
-      <MobileTeamHeader isDarkMode={isDarkMode}>
+    <Box
+      sx={{
+        backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
+        borderRadius: '16px',
+        padding: '16px',
+        color: isDarkMode ? '#ffffff' : '#000000',
+        boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+        border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
+        marginBottom: '16px',
+        width: '100%'
+      }}
+      key={member.id}
+    >
+      <Box 
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '12px',
+          color: isDarkMode ? '#ffffff' : '#000000'
+        }}
+      >
         <Box>
-          <MobileTeamName isDarkMode={isDarkMode}>
+          <Typography 
+            sx={{
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              color: isDarkMode ? colors.accent.main : '#000000'
+            }}
+          >
             {member.firstName} {member.lastName}
-          </MobileTeamName>
-          <MobileTeamRole isDarkMode={isDarkMode}>
+          </Typography>
+          <Box 
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.85rem',
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'
+            }}
+          >
             {member.role}
-          </MobileTeamRole>
+          </Box>
         </Box>
         <Box>
           <Chip
@@ -1291,9 +1309,21 @@ function Team() {
             sx={{ fontSize: '0.75rem' }}
           />
         </Box>
-      </MobileTeamHeader>
+      </Box>
       
-      <MobileTeamInfo isDarkMode={isDarkMode}>
+      <Box 
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          color: isDarkMode ? '#ffffff' : '#000000',
+          '& > *': {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <MailIcon />
           <Typography variant="body2">{member.email}</Typography>
@@ -1314,9 +1344,14 @@ function Team() {
             </Typography>
           </Box>
         )}
-      </MobileTeamInfo>
+      </Box>
       
-      <MobileTeamActions>
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '8px',
+        marginTop: '12px',
+      }}>
         {member.status === 'pending' && 'id' in member && (
           <>
             <IconButton
@@ -1357,8 +1392,8 @@ function Team() {
         >
           <DeleteIcon fontSize="small" />
         </IconButton>
-      </MobileTeamActions>
-    </MobileTeamCard>
+      </Box>
+    </Box>
   );
 
   if (loading) {
@@ -1425,14 +1460,10 @@ function Team() {
       {isMobile ? (
         <Box>
           {teamMembers.map(member => renderMobileTeamMember(member))}
-          <Typography 
-            variant="h6" 
+          <Box
             sx={{ 
               mt: 4,
               mb: 2,
-              fontSize: '1.75rem',
-              fontWeight: 700,
-              color: isDarkMode ? '#ffffff' : '#000000',
               position: 'relative',
               '&::after': {
                 content: '""',
@@ -1443,14 +1474,23 @@ function Team() {
                 height: '4px',
                 backgroundColor: colors.accent.main,
                 borderRadius: '2px',
-              },
-              '@media (max-width: 600px)': {
-                fontSize: '1.5rem'
               }
             }}
           >
-            Čakajúce pozvánky
-          </Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontSize: '1.75rem',
+                fontWeight: 700,
+                color: isDarkMode ? '#ffffff' : '#000000',
+                '@media (max-width: 600px)': {
+                  fontSize: '1.5rem'
+                }
+              }}
+            >
+              Čakajúce pozvánky
+            </Typography>
+          </Box>
           {invitations.map(invite => renderMobileTeamMember(invite))}
         </Box>
       ) : (
@@ -1477,7 +1517,17 @@ function Team() {
               <TableBody>
                 <AnimatePresence mode="sync">
                   {teamMembers.map((member) => (
-                    <StyledTableRow isDarkMode={isDarkMode} key={member.id}>
+                    <TableRow 
+                      key={member.id}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                        },
+                        '& .MuiTableCell-root': {
+                          borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        }
+                      }}
+                    >
                       <TableCell>{member.firstName} {member.lastName}</TableCell>
                       <TableCell>{member.email}</TableCell>
                       <TableCell>{member.phone}</TableCell>
@@ -1563,21 +1613,17 @@ function Team() {
                           </Box>
                         </TableCell>
                       )}
-                    </StyledTableRow>
+                    </TableRow>
                   ))}
                 </AnimatePresence>
               </TableBody>
             </Table>
           </TableContainer>
 
-          <Typography 
-            variant="h6" 
+          <Box
             sx={{ 
               mt: 4,
               mb: 2,
-              fontSize: '1.75rem',
-              fontWeight: 700,
-              color: isDarkMode ? '#ffffff' : '#000000',
               position: 'relative',
               '&::after': {
                 content: '""',
@@ -1588,14 +1634,23 @@ function Team() {
                 height: '4px',
                 backgroundColor: colors.accent.main,
                 borderRadius: '2px',
-              },
-              '@media (max-width: 600px)': {
-                fontSize: '1.5rem'
               }
             }}
           >
-            Čakajúce pozvánky
-          </Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontSize: '1.75rem',
+                fontWeight: 700,
+                color: isDarkMode ? '#ffffff' : '#000000',
+                '@media (max-width: 600px)': {
+                  fontSize: '1.5rem'
+                }
+              }}
+            >
+              Čakajúce pozvánky
+            </Typography>
+          </Box>
           <TableContainer component={Paper} sx={{
             backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
             borderRadius: '20px',
@@ -1616,7 +1671,17 @@ function Team() {
               </TableHead>
               <TableBody>
                 {invitations.map((invite) => (
-                  <TableRow key={invite.id}>
+                  <TableRow 
+                    key={invite.id}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                      },
+                      '& .MuiTableCell-root': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                      }
+                    }}
+                  >
                     <TableCell>{invite.firstName} {invite.lastName}</TableCell>
                     <TableCell>{invite.email}</TableCell>
                     <TableCell>{invite.phone}</TableCell>
