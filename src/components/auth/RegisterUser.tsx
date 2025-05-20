@@ -186,13 +186,14 @@ function RegisterUser() {
 
   return (
     <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 4, mt: 8, position: 'relative' }}>
+      <Paper elevation={3} sx={{ p: 4, mt: 8, position: 'relative', bgcolor: '#333' }}>
         <IconButton
           onClick={handleClose}
           sx={{
             position: 'absolute',
             right: 8,
-            top: 8
+            top: 8,
+            color: '#ffffff'
           }}
         >
           <CloseIcon />
@@ -209,58 +210,58 @@ function RegisterUser() {
               component="h1"
               sx={{
                 mb: 4,
-                color: '#000000',
+                color: '#ffffff',
                 fontWeight: 'bold',
               }}
             >
               Dokončenie registrácie
             </Typography>
 
-            <Typography variant="body1" gutterBottom sx={{ color: '#000000' }}>
+            <Typography variant="body1" gutterBottom sx={{ color: '#ffffff' }}>
               Vitajte {invitation.firstName} {invitation.lastName}!
             </Typography>
 
             {!companyLoading && company && (
               <Box sx={{ 
-                bgcolor: 'rgba(255, 255, 255, 0.05)', 
+                bgcolor: 'rgba(255, 255, 255, 0.1)', 
                 p: 3, 
                 borderRadius: 2, 
                 mb: 4,
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                border: '1px solid rgba(255, 255, 255, 0.2)'
               }}>
                 <Typography variant="h6" gutterBottom sx={{ color: '#ff9f43', mb: 2 }}>
                   Boli ste pozvaní spoločnosťou:
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" sx={{ color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="subtitle1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                       Názov spoločnosti
                     </Typography>
-                    <Typography variant="body1" sx={{ color: '#000000', fontWeight: 500 }}>
+                    <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 500 }}>
                       {company.companyName}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle1" sx={{ color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="subtitle1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                       IČO
                     </Typography>
-                    <Typography variant="body1" sx={{ color: '#000000', fontWeight: 500 }}>
+                    <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 500 }}>
                       {company.ico || 'Neuvedené'}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle1" sx={{ color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="subtitle1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                       IČ DPH
                     </Typography>
-                    <Typography variant="body1" sx={{ color: '#000000', fontWeight: 500 }}>
+                    <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 500 }}>
                       {company.icDph || 'Neuvedené'}
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" sx={{ color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="subtitle1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                       Adresa
                     </Typography>
-                    <Typography variant="body1" sx={{ color: '#000000', fontWeight: 500 }}>
+                    <Typography variant="body1" sx={{ color: '#ffffff', fontWeight: 500 }}>
                       {company.street}, {company.zipCode} {company.city}
                     </Typography>
                   </Grid>
@@ -268,8 +269,8 @@ function RegisterUser() {
               </Box>
             )}
 
-            <Divider sx={{ my: 3 }} />
-            <Typography variant="h6" gutterBottom sx={{ color: '#000000' }}>
+            <Divider sx={{ my: 3, bgcolor: 'rgba(255, 255, 255, 0.2)' }} />
+            <Typography variant="h6" gutterBottom sx={{ color: '#ffffff' }}>
               Pre dokončenie registrácie prosím nastavte svoje heslo
             </Typography>
             <Grid container spacing={2}>
@@ -282,23 +283,29 @@ function RegisterUser() {
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  InputLabelProps={{
+                    style: { color: '#ffffff' },
+                  }}
+                  InputProps={{
+                    style: { color: '#ffffff' },
+                  }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': {
-                        borderColor: 'rgba(0, 0, 0, 0.1)',
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(0, 0, 0, 0.2)',
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
                       },
                       '&.Mui-focused fieldset': {
                         borderColor: '#ff9f43',
                       },
                     },
                     '& .MuiInputLabel-root': {
-                      color: 'rgba(0, 0, 0, 0.7)',
+                      color: 'rgba(255, 255, 255, 0.7)',
                     },
                     '& .MuiInputBase-input': {
-                      color: '#000000',
+                      color: '#ffffff',
                     },
                   }}
                 />
@@ -312,23 +319,29 @@ function RegisterUser() {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
+                  InputLabelProps={{
+                    style: { color: '#ffffff' },
+                  }}
+                  InputProps={{
+                    style: { color: '#ffffff' },
+                  }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': {
-                        borderColor: 'rgba(0, 0, 0, 0.1)',
+                        borderColor: 'rgba(255, 255, 255, 0.3)',
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(0, 0, 0, 0.2)',
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
                       },
                       '&.Mui-focused fieldset': {
                         borderColor: '#ff9f43',
                       },
                     },
                     '& .MuiInputLabel-root': {
-                      color: 'rgba(0, 0, 0, 0.7)',
+                      color: 'rgba(255, 255, 255, 0.7)',
                     },
                     '& .MuiInputBase-input': {
-                      color: '#000000',
+                      color: '#ffffff',
                     },
                   }}
                 />

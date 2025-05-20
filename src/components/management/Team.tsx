@@ -593,13 +593,27 @@ const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
 const LoadingDialog = styled(Dialog)<{ isDarkMode: boolean }>(({ theme: _theme, isDarkMode }) => ({
   '& .MuiDialog-paper': {
     background: isDarkMode ? 'rgba(28, 28, 45, 1)' : 'rgba(255, 255, 255, 1)',
-    borderRadius: '16px',
-    padding: '24px',
-    minWidth: '300px',
-    boxShadow: isDarkMode ? '0 8px 32px rgba(0, 0, 0, 0.5)' : '0 8px 32px rgba(0, 0, 0, 0.2)',
-    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+    borderRadius: '36px',
+    padding: '36px',
+    minWidth: '320px',
+    margin: '20px',
+    boxShadow: isDarkMode 
+      ? '0 12px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4)' 
+      : '0 12px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1)',
+    border: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'}`,
+    transform: 'translateY(0)',
     backdropFilter: 'none',
+    overflow: 'visible',
   },
+  '& .MuiDialogContent-root': {
+    padding: '0',
+    background: 'transparent',
+    overflow: 'visible',
+  },
+  '& .MuiBackdrop-root': {
+    backdropFilter: 'none',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)'
+  }
 }));
 
 const _LoadingText = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
@@ -1185,93 +1199,6 @@ function Team() {
         setIsResending(true);
         setResendingInvitationId(invitationId);
 
-        // Vytvorenie vlastného dialógu s pekným designom
-        const dialogRoot = document.createElement('div');
-        dialogRoot.style.position = 'fixed';
-        dialogRoot.style.top = '0';
-        dialogRoot.style.left = '0';
-        dialogRoot.style.width = '100%';
-        dialogRoot.style.height = '100%';
-        dialogRoot.style.display = 'flex';
-        dialogRoot.style.justifyContent = 'center';
-        dialogRoot.style.alignItems = 'center';
-        dialogRoot.style.zIndex = '9999';
-        dialogRoot.style.backdropFilter = 'none';
-        dialogRoot.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        
-        const dialogContent = document.createElement('div');
-        dialogContent.style.background = isDarkMode ? 'rgba(28, 28, 45, 1)' : 'rgba(255, 255, 255, 1)';
-        dialogContent.style.borderRadius = '36px';
-        dialogContent.style.padding = '36px';
-        dialogContent.style.minWidth = '320px';
-        dialogContent.style.maxWidth = '80%';
-        dialogContent.style.textAlign = 'center';
-        dialogContent.style.boxShadow = isDarkMode 
-          ? '0 12px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4)' 
-          : '0 12px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1)';
-        dialogContent.style.border = `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'}`;
-        dialogContent.style.transform = 'translateY(0px)';
-
-        // Kruhový ikónový prvok
-        const iconWrapperEl = document.createElement('div');
-        iconWrapperEl.style.width = '90px';
-        iconWrapperEl.style.height = '90px';
-        iconWrapperEl.style.borderRadius = '50%';
-        iconWrapperEl.style.background = isDarkMode ? 'rgba(255, 159, 67, 0.12)' : 'rgba(255, 159, 67, 0.15)';
-        iconWrapperEl.style.display = 'flex';
-        iconWrapperEl.style.justifyContent = 'center';
-        iconWrapperEl.style.alignItems = 'center';
-        iconWrapperEl.style.margin = '0 auto 20px auto';
-        iconWrapperEl.style.position = 'relative';
-        iconWrapperEl.style.border = `2px solid ${isDarkMode ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 159, 67, 0.25)'}`;
-        iconWrapperEl.style.boxShadow = '0 8px 24px rgba(255, 159, 67, 0.15)';
-        iconWrapperEl.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="#ff9f43" viewBox="0 0 24 24">
-            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-          </svg>
-          <div style="
-            position: absolute;
-            width: 54px;
-            height: 54px;
-            border: 4px solid transparent;
-            border-top: 4px solid #ff9f43;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          "></div>
-        `;
-        
-        // Štýl pre rotáciu
-        const styleEl = document.createElement('style');
-        styleEl.textContent = `
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `;
-        document.head.appendChild(styleEl);
-
-        // Nadpis
-        const titleEl = document.createElement('h2');
-        titleEl.textContent = 'Preposielanie pozvánky...';
-        titleEl.style.fontSize = '1.2rem';
-        titleEl.style.fontWeight = '600';
-        titleEl.style.marginBottom = '10px';
-        titleEl.style.color = isDarkMode ? '#ffffff' : '#000000';
-
-        // Text
-        const textEl = document.createElement('p');
-        textEl.textContent = 'Prosím počkajte, odosielame pozvánku znova';
-        textEl.style.color = isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)';
-        textEl.style.fontSize = '0.9rem';
-        textEl.style.margin = '0';
-
-        // Pridanie prvkov do DOM
-        dialogContent.appendChild(iconWrapperEl);
-        dialogContent.appendChild(titleEl);
-        dialogContent.appendChild(textEl);
-        dialogRoot.appendChild(dialogContent);
-        document.body.appendChild(dialogRoot);
-
         // Volanie API pre preposlanie pozvánky
         const invitationDoc = await getDoc(doc(db, 'invitations', invitationId));
         if (!invitationDoc.exists()) {
@@ -1310,18 +1237,6 @@ function Team() {
           severity: 'error'
         });
       } finally {
-        // Odstránenie dialógu zo stránky
-        const dialog = document.querySelector('div[style*="position: fixed"][style*="display: flex"]');
-        if (dialog && dialog.parentNode) {
-          dialog.parentNode.removeChild(dialog);
-        }
-        
-        // Vyčistenie štýlov
-        const styles = document.querySelectorAll('style[textContent*="@keyframes spin"]');
-        styles.forEach(style => {
-          if (style.parentNode) style.parentNode.removeChild(style);
-        });
-        
         setTimeout(() => {
           setIsResending(false);
           setResendingInvitationId(null);
@@ -1966,15 +1881,7 @@ function Team() {
                 }
               }}
             >
-              {isCreating ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CircularProgress size={20} sx={{ 
-                    color: isDarkMode ? '#ffffff' : colors.accent.main,
-                    opacity: 0.7 
-                  }} />
-                  <Typography variant="body2">Pozývam...</Typography>
-                </Box>
-              ) : 'Pozvať'}
+              Pozvať
             </Button>
           </DialogActions>
         </StyledDialogContent>
@@ -2275,31 +2182,12 @@ function Team() {
         open={isResending || isCreating}
         onClose={() => {}}
         isDarkMode={isDarkMode}
-        PaperProps={{
-          sx: {
-            background: isDarkMode ? 'rgba(28, 28, 45, 1)' : 'rgba(255, 255, 255, 1)',
-            borderRadius: '36px',
-            padding: '36px',
-            margin: '20px',
-            minWidth: '320px',
-            boxShadow: isDarkMode 
-              ? '0 12px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4)' 
-              : '0 12px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1)',
-            border: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'}`,
-            transform: 'translateY(0)',
-            backdropFilter: 'none',
-          }
-        }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'none',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)'
-          }
-        }}
       >
         <DialogContent sx={{ 
           background: isDarkMode ? 'rgba(28, 28, 45, 1)' : 'rgba(255, 255, 255, 1)', 
           padding: '0',
+          borderRadius: '36px',
+          overflow: 'visible',
         }}>
           <Box sx={{ 
             display: 'flex', 
@@ -2351,7 +2239,7 @@ function Team() {
               fontWeight: 600,
               fontSize: '1.2rem'
             }}>
-              {isCreating ? 'Vytváranie pozvánky...' : 'Preposielanie pozvánky...'}
+              Preposielanie pozvánky...
             </Typography>
             
             <Typography variant="body2" sx={{ 
@@ -2360,7 +2248,7 @@ function Team() {
               maxWidth: '280px',
               mt: -1
             }}>
-              {isCreating ? 'Prosím počkajte, pozývame nového člena do vášho tímu' : 'Prosím počkajte, odosielame pozvánku znova'}
+              Prosím počkajte, odosielame pozvánku znova
             </Typography>
           </Box>
         </DialogContent>

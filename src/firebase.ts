@@ -63,6 +63,13 @@ if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_USE_FIREBASE
 }
 
 // Povolenie offline perzistencie
+/* 
+  🆕 POZNÁMKA: V novších verziách Firebase SDK (10.14+) sa odporúča používať:
+  const db = initializeFirestore(app, {
+    cache: persistentLocalCache()
+  });
+  Keď aktualizujete Firebase SDK, môžete prejsť na túto formu.
+*/
 enableIndexedDbPersistence(db).catch((err) => {
   if (err.code === 'failed-precondition') {
     console.warn('Offline perzistencia nie je podporovaná v tomto prehliadači');
