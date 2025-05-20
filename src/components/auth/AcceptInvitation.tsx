@@ -178,16 +178,16 @@ const AcceptInvitation: React.FC = () => {
   return (
     <Container maxWidth="sm">
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center">
+        <Paper elevation={3} sx={{ p: 4, width: '100%', bgcolor: '#333', color: '#ffffff' }}>
+          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: '#ffffff' }}>
             Dokončenie registrácie
           </Typography>
           
-          <Typography variant="body1" gutterBottom>
+          <Typography variant="body1" gutterBottom sx={{ color: '#ffffff' }}>
             Vitajte {invitation?.firstName} {invitation?.lastName}!
           </Typography>
           
-          <Typography variant="body2" color="text.secondary" gutterBottom>
+          <Typography variant="body2" gutterBottom sx={{ color: '#ffffff' }}>
             Pre dokončenie registrácie prosím nastavte svoje heslo.
           </Typography>
 
@@ -200,6 +200,25 @@ const AcceptInvitation: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               margin="normal"
               required
+              InputLabelProps={{
+                style: { color: '#ffffff' },
+              }}
+              InputProps={{
+                style: { color: '#ffffff' },
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#ffffff',
+                  },
+                },
+              }}
             />
             
             <TextField
@@ -210,6 +229,25 @@ const AcceptInvitation: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               margin="normal"
               required
+              InputLabelProps={{
+                style: { color: '#ffffff' },
+              }}
+              InputProps={{
+                style: { color: '#ffffff' },
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#ffffff',
+                  },
+                },
+              }}
             />
 
             <Button
@@ -218,7 +256,7 @@ const AcceptInvitation: React.FC = () => {
               variant="contained"
               color="primary"
               disabled={submitting}
-              sx={{ mt: 3 }}
+              sx={{ mt: 3, color: '#ffffff' }}
             >
               {submitting ? <CircularProgress size={24} /> : 'Dokončiť registráciu'}
             </Button>
