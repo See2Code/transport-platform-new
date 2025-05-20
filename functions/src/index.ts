@@ -159,7 +159,7 @@ export const sendInvitationEmail = functions
         });
       }
 
-      const invitationLink = `https://core-app-423c7.web.app/accept-invitation/${data.invitationId}`;
+      const invitationLink = `https://core.aesa.sk/accept-invitation/${data.invitationId}`;
       const emailTemplate = `
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -364,7 +364,7 @@ export const checkBusinessCaseReminders = functions
             <table border="0" cellpadding="0" cellspacing="0" width="100%">
               <tr>
                 <td align="center" style="padding: 25px 0;">
-                  <a href="https://core-app-423c7.web.app/business-cases/${reminder.businessCaseId}" style="display: inline-block; padding: 14px 32px; background-color: #333; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Zobraziť obchodný prípad</a>
+                  <a href="https://core.aesa.sk/business-cases/${reminder.businessCaseId}" style="display: inline-block; padding: 14px 32px; background-color: #333; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Zobraziť obchodný prípad</a>
                 </td>
               </tr>
             </table>`;
@@ -521,7 +521,7 @@ export const checkTransportNotifications = functions
       <p style="margin: 5px 0;"><strong>Čas pripomienky:</strong> ${formatDate(reminder.reminderDateTime)}</p>
     </div>
     <p style="color: #666;">Pre zobrazenie detailov prepravy kliknite na nasledujúci odkaz:</p>
-    <a href="https://core-app-423c7.web.app/tracked-transports" style="display: inline-block; padding: 10px 20px; background-color: #ff9f43; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0;">Zobraziť prepravu</a>
+    <a href="https://core.aesa.sk/tracked-transports" style="display: inline-block; padding: 10px 20px; background-color: #ff9f43; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0;">Zobraziť prepravu</a>
   </div>
 </body>
 </html>`;
