@@ -9,15 +9,15 @@ import {
   TableRow,
   Chip,
   Skeleton,
+  Card,
+  CardContent,
 } from '@mui/material';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
-import CardContent from '@mui/material/CardContent';
 import Paper from '@mui/material/Paper';
 import Avatar from '@mui/material/Avatar';
 import CircularProgress from '@mui/material/CircularProgress';
-import Card from '@mui/material/Card';
 import {
   Business as BusinessIcon,
   Person as PersonIcon,
@@ -59,25 +59,6 @@ interface VehicleLocation {
   lastOnline?: Timestamp | any;
 }
 
-const PageWrapper = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, _theme }) => ({
-  padding: '24px',
-  minHeight: '100vh',
-  background: 'transparent',
-  color: isDarkMode ? '#ffffff' : '#333333',
-  position: 'relative',
-  '& > *': {
-    position: 'relative',
-    zIndex: 1,
-  },
-  '@media (max-width: 600px)': {
-    padding: '16px',
-    paddingBottom: '80px',
-    overflowX: 'hidden',
-    width: '100%',
-    maxWidth: '100vw'
-  }
-}));
-
 const PageHeader = styled(Box)(({ _theme }) => ({
   display: 'flex',
   justifyContent: 'space-between',
@@ -87,51 +68,6 @@ const PageHeader = styled(Box)(({ _theme }) => ({
     flexDirection: 'column',
     alignItems: 'flex-start',
     gap: '16px'
-  }
-}));
-
-const StatsCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
-  borderRadius: '16px !important',
-  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'} !important`,
-  boxShadow: `${isDarkMode 
-    ? '0 4px 12px rgba(0, 0, 0, 0.15)'
-    : '0 4px 12px rgba(0, 0, 0, 0.1)'} !important`,
-  transition: 'all 0.2s ease-in-out',
-  overflow: 'hidden',
-  position: 'relative',
-  '&.MuiPaper-root': {
-    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff !important',
-    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'} !important`,
-  },
-  '&:before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '4px',
-    backgroundColor: '#ff9f43'
-  },
-  '& .MuiTypography-h4': {
-    color: isDarkMode ? '#ffffff' : '#2d3436',
-    fontWeight: 600,
-    fontSize: '2rem'
-  },
-  '& .MuiTypography-body1': {
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(45, 52, 54, 0.7)',
-    fontWeight: 500
-  },
-  '& .MuiSvgIcon-root': {
-    filter: `drop-shadow(0 2px 4px ${isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.2)'})`
-  },
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 8px 24px rgba(255, 159, 67, 0.3) !important',
-    border: '1px solid rgba(255, 159, 67, 0.3) !important',
-    '& .MuiCardContent-root': {
-      background: 'linear-gradient(180deg, rgba(255, 159, 67, 0.1) 0%, rgba(255, 159, 67, 0) 100%)',
-    }
   }
 }));
 
@@ -239,12 +175,91 @@ const ProgressBarSegment = styled(Box)<{
   isDarkMode: boolean; 
   color: string; 
   sx?: any;
-}>(({ percentage, isDarkMode, color, sx }) => ({
+}>(({ percentage, _isDarkMode, color, sx }) => ({
   width: `${percentage}%`,
   height: '100%',
   backgroundColor: color,
   position: 'relative',
   ...sx
+}));
+
+// Nahradíme za funkčné komponenty - teraz budú styled komponenty
+// interface SimplePageWrapperProps extends Omit<BoxProps, 'isDarkMode'> {
+//   isDarkMode: boolean;
+//   children: React.ReactNode;
+// }
+
+const SimplePageWrapper = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  padding: '24px',
+  minHeight: '100vh',
+  background: 'transparent',
+  color: isDarkMode ? '#ffffff' : '#333333',
+  position: 'relative',
+  '& > *': {
+    position: 'relative',
+    zIndex: 1,
+  },
+  '@media (max-width: 600px)': {
+    padding: '16px',
+    paddingBottom: '80px',
+    overflowX: 'hidden',
+    width: '100%',
+    maxWidth: '100vw'
+  }
+}));
+
+// interface SimpleStatsCardProps extends Omit<CardProps, 'isDarkMode'> {
+//   isDarkMode: boolean;
+//   children: React.ReactNode;
+// }
+
+const SimpleStatsCard = styled(Card, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
+  borderRadius: '16px !important',
+  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'} !important`,
+  boxShadow: `${isDarkMode 
+    ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+    : '0 4px 12px rgba(0, 0, 0, 0.1)'} !important`,
+  transition: 'all 0.2s ease-in-out',
+  overflow: 'hidden',
+  position: 'relative',
+  '&.MuiPaper-root': {
+    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff !important',
+    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'} !important`,
+  },
+  '&:before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '4px',
+    backgroundColor: '#ff9f43'
+  },
+  '& .MuiTypography-h4': {
+    color: isDarkMode ? '#ffffff' : '#2d3436',
+    fontWeight: 600,
+    fontSize: '2rem'
+  },
+  '& .MuiTypography-body1': {
+    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(45, 52, 54, 0.7)',
+    fontWeight: 500
+  },
+  '& .MuiSvgIcon-root': {
+    filter: `drop-shadow(0 2px 4px ${isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.2)'})`
+  },
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 8px 24px rgba(255, 159, 67, 0.3) !important',
+    border: '1px solid rgba(255, 159, 67, 0.3) !important',
+    '& .MuiCardContent-root': {
+      background: 'linear-gradient(180deg, rgba(255, 159, 67, 0.1) 0%, rgba(255, 159, 67, 0) 100%)',
+    }
+  }
 }));
 
 export default function Dashboard() {
@@ -524,15 +539,15 @@ export default function Dashboard() {
   };
 
   return (
-    <PageWrapper isDarkMode={isDarkMode}>
+    <SimplePageWrapper isDarkMode={isDarkMode}>
       <PageHeader>
-        <PageTitle isDarkMode={isDarkMode}>Dashboard</PageTitle>
+        <PageTitle>Dashboard</PageTitle>
       </PageHeader>
 
       <Grid container spacing={3}>
         {/* Štatistické karty */}
         <Grid item xs={12} sm={6} md={3}>
-          <StatsCard isDarkMode={isDarkMode}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
             <StatsCardContent>
               <Box sx={{ 
                 display: 'flex', 
@@ -559,11 +574,11 @@ export default function Dashboard() {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}>Obchodné prípady</Typography>
             </StatsCardContent>
-          </StatsCard>
+          </SimpleStatsCard>
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <StatsCard isDarkMode={isDarkMode}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
             <StatsCardContent>
               <Box sx={{ 
                 display: 'flex', 
@@ -590,11 +605,11 @@ export default function Dashboard() {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}>Kontakty</Typography>
             </StatsCardContent>
-          </StatsCard>
+          </SimpleStatsCard>
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <StatsCard isDarkMode={isDarkMode}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
             <StatsCardContent>
               <Box sx={{ 
                 display: 'flex', 
@@ -621,11 +636,11 @@ export default function Dashboard() {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}>Počet vodičov</Typography>
             </StatsCardContent>
-          </StatsCard>
+          </SimpleStatsCard>
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <StatsCard isDarkMode={isDarkMode}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
             <StatsCardContent>
               <Box sx={{ 
                 display: 'flex', 
@@ -652,12 +667,12 @@ export default function Dashboard() {
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}>Členovia tímu</Typography>
             </StatsCardContent>
-          </StatsCard>
+          </SimpleStatsCard>
         </Grid>
 
         {/* Grafy */}
         <Grid item xs={12}>
-          <StatsCard isDarkMode={isDarkMode}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
             <StatsCardContent>
               <Typography variant="h6" sx={{ 
                 mb: { xs: 2, sm: 3 }, 
@@ -855,12 +870,12 @@ export default function Dashboard() {
                 </Box>
               )}
             </StatsCardContent>
-          </StatsCard>
+          </SimpleStatsCard>
         </Grid>
 
         {/* Aktívni vodiči a vozidlá */}
         <Grid item xs={12}>
-          <StatsCard isDarkMode={isDarkMode}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
             <StatsCardContent>
               <Typography variant="h6" sx={{ 
                 mb: { xs: 2, sm: 3 }, 
@@ -992,12 +1007,12 @@ export default function Dashboard() {
                 </TableContainer>
               )}
             </StatsCardContent>
-          </StatsCard>
+          </SimpleStatsCard>
         </Grid>
 
         {/* Posledné obchodné prípady */}
         <Grid item xs={12}>
-          <StatsCard isDarkMode={isDarkMode}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
             <StatsCardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <BusinessIcon sx={{ color: '#ff9f43', fontSize: 28 }} />
@@ -1073,9 +1088,9 @@ export default function Dashboard() {
                 </Table>
               </TableContainer>
             </StatsCardContent>
-          </StatsCard>
+          </SimpleStatsCard>
         </Grid>
       </Grid>
-    </PageWrapper>
+    </SimplePageWrapper>
   );
 } 

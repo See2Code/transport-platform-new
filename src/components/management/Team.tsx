@@ -31,7 +31,7 @@ import {
   Snackbar,
   Card,
   SelectChangeEvent
-  } from '@mui/material';
+} from '@mui/material';
 import { 
   Add as AddIcon, 
   Mail as MailIcon, 
@@ -293,7 +293,7 @@ const _fadeOut = {
   }
 };
 
-const MobileTeamCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.75)' : '#ffffff',
   borderRadius: '16px',
   padding: '16px',
@@ -304,7 +304,7 @@ const MobileTeamCard = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => 
   width: '100%'
 }));
 
-const MobileTeamHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -312,13 +312,13 @@ const MobileTeamHeader = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) =
   color: isDarkMode ? '#ffffff' : '#000000'
 }));
 
-const MobileTeamName = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamName = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.1rem',
   fontWeight: 600,
   color: isDarkMode ? colors.accent.main : '#000000'
 }));
 
-const MobileTeamInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamInfo = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
@@ -342,7 +342,7 @@ const _MobileTeamMember = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) 
   }
 }));
 
-const MobileTeamRole = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const _MobileTeamRole = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -354,7 +354,7 @@ const MobileTeamRole = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => 
   }
 }));
 
-const MobileTeamActions = styled(Box)({
+const _MobileTeamActions = styled(Box)({
   display: 'flex',
   justifyContent: 'flex-end',
   gap: '8px',
@@ -441,13 +441,14 @@ const _StyledTableCell = styled(TableCell)<{ isDarkMode: boolean }>(({ isDarkMod
   }
 }));
 
-const StyledTableRow = styled(TableRow)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  '&:hover': {
-    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+const _StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:nth-of-type(odd)': {
+    backgroundColor: theme.palette.action.hover,
   },
-  '& .MuiTableCell-root': {
-    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-  }
+  // hide last border
+  '&:last-child td, &:last-child th': {
+    border: 0,
+  },
 }));
 
 const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({

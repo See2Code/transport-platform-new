@@ -771,7 +771,7 @@ const VehicleMap: React.FC = () => {
             <GlobalStyles styles={hideGoogleMapElements} />
             {/* Panel nadpisu */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <PageTitle isDarkMode={isDarkMode}>Mapa vozidiel</PageTitle>
+                <PageTitle>Mapa vozidiel</PageTitle>
             </Box>
             <Grid container spacing={3}>
                 {/* Zoznam vozidiel */} 
@@ -793,17 +793,15 @@ const VehicleMap: React.FC = () => {
                                             <ListItemText
                                                 primary={vehicle.driverName}
                                                 secondary={
-                                                    <React.Fragment>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Box component="span" sx={{ display: 'block' }}>
+                                                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                             <TimeIcon fontSize="small" />
-                                                            <Typography variant="body2" component="span">
-                                                                {formatTimeDiff(vehicle.lastUpdate)}
-                                                            </Typography>
+                                                            <span>{formatTimeDiff(vehicle.lastUpdate)}</span>
                                                         </Box>
-                                                        <Box mt={0.5}>
+                                                        <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
                                                             <Chip size="small" color={getStatusColor(vehicle)} label={getStatusText(vehicle)} />
                                                         </Box>
-                                                    </React.Fragment>
+                                                    </Box>
                                                 }
                                             />
                                     </ListItem><Divider />
@@ -819,17 +817,15 @@ const VehicleMap: React.FC = () => {
                                                 <ListItemText
                                                     primary={vehicle.driverName}
                                                     secondary={
-                                                        <React.Fragment>
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Box component="span" sx={{ display: 'block' }}>
+                                                            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                                 <TimeIcon fontSize="small" />
-                                                                <Typography variant="body2" component="span">
-                                                                    {formatTimeDiff(vehicle.lastUpdate)}
-                                                                </Typography>
+                                                                <span>{formatTimeDiff(vehicle.lastUpdate)}</span>
                                                             </Box>
-                                                            <Box mt={0.5}>
+                                                            <Box component="span" sx={{ display: 'block', mt: 0.5 }}>
                                                                 <Chip size="small" color={getStatusColor(vehicle)} label="Offline" />
                                                             </Box>
-                                                        </React.Fragment>
+                                                        </Box>
                                                     }
                                                 />
                                             </ListItem><Divider />

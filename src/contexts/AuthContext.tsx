@@ -313,8 +313,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserData
   };
 
-  console.log('AuthProvider: Render - loading:', loading, 'currentUser:', currentUser?.uid, 'userData:', userData, 'error:', error);
-
   return (
     <AuthContext.Provider value={value}>
       {loading ? (

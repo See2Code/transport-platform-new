@@ -2,9 +2,10 @@ import { Typography, Box } from '@mui/material';
 import styled from '@emotion/styled';
 import { colors } from '../../theme/colors';
 import React from 'react';
+import { useThemeMode } from '../../contexts/ThemeContext';
 
 interface PageTitleProps {
-  isDarkMode: boolean;
+  isDarkMode?: boolean;  // nepovinný, bude získaný z kontextu ak nie je uvedený
   children: React.ReactNode;
 }
 
@@ -25,7 +26,10 @@ const TitleBox = styled(Box)({
 });
 
 // Exportujeme funkčný komponent namiesto styled komponentu s isDarkMode
-export const PageTitle: React.FC<PageTitleProps> = ({ isDarkMode, children }) => {
+export const PageTitle: React.FC<PageTitleProps> = ({ isDarkMode: propIsDarkMode, children }) => {
+  const { isDarkMode: contextIsDarkMode } = useThemeMode();
+  const isDarkMode = propIsDarkMode !== undefined ? propIsDarkMode : contextIsDarkMode;
+
   return (
     <TitleBox>
       <Typography 
