@@ -31,6 +31,7 @@ import {
   Tabs,
   Tab,
   DialogContentText,
+  Divider,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../../contexts/ThemeContext';
@@ -46,20 +47,19 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
 
-import NewOrderForm from './NewOrderForm';
+import NewOrderWizard from './NewOrderWizard';
 import CloseIcon from '@mui/icons-material/Close';
 import CustomerForm, { CustomerData } from '../management/CustomerForm';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../firebase';
 import MobileOrderCard from './MobileOrderCard'; // Import nového komponentu
 import OrderDetail from './OrderDetail';
-import { Business as BusinessIcon } from '@mui/icons-material';
-import Divider from '@mui/material/Divider';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -352,7 +352,7 @@ const OrdersList: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [showNewOrderDialog, setShowNewOrderDialog] = useState(false);
+  const [showNewOrderWizard, setShowNewOrderWizard] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Record<string, any>>({});
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -629,7 +629,7 @@ const OrdersList: React.FC = () => {
     
     setSelectedOrder(modifiedOrder);
     setIsEditMode(true);
-    setShowNewOrderDialog(true);
+    setShowNewOrderWizard(true);
   };
 
   const handleDeleteOrder = async (id: string) => {
@@ -652,13 +652,13 @@ const OrdersList: React.FC = () => {
   };
 
   const handleOpenNewOrderForm = () => {
-    setShowNewOrderDialog(true);
+    setShowNewOrderWizard(true);
     setSelectedOrder(null);
     setIsEditMode(false);
   };
 
   const handleCloseNewOrderForm = () => {
-    setShowNewOrderDialog(false);
+    setShowNewOrderWizard(false);
     setSelectedOrder(null);
     setIsEditMode(false);
   };
@@ -1052,7 +1052,7 @@ const OrdersList: React.FC = () => {
 
   return (
     <PageWrapper>
-      <DialogGlobalStyles open={showNewOrderDialog || showCustomerForm || showCarrierForm || showDeleteConfirm || showCustomerDeleteConfirm || showCarrierDeleteConfirm} />
+      <DialogGlobalStyles open={showNewOrderWizard || showCustomerForm || showCarrierForm || showDeleteConfirm || showCustomerDeleteConfirm || showCarrierDeleteConfirm} />
       <PageHeader>
         <PageTitle isDarkMode={isDarkMode}>{t('navigation.orders')}</PageTitle>
               <PageDescription>
@@ -1566,69 +1566,7 @@ const OrdersList: React.FC = () => {
         </Box>
       </StyledPaper>
 
-      <Dialog 
-        open={showNewOrderDialog} 
-        onClose={handleCloseNewOrderForm}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: {
-            background: 'none',
-            boxShadow: 'none',
-            margin: {
-              xs: '8px',
-              sm: '16px'
-            },
-            maxHeight: '90vh',
-            overflow: 'hidden'
-          }
-        }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(10px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)'
-          }
-        }}
-      >
-        <DialogGlobalStyles open={showNewOrderDialog} />
-        <StyledDialogContent isDarkMode={isDarkMode}>
-          <DialogTitle sx={{ 
-            p: 0, 
-            mb: 3, 
-            fontWeight: 700, 
-            color: isDarkMode ? '#ffffff' : '#000000',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <BusinessIcon sx={{ color: '#ff9f43' }} />
-{isEditMode ? t('orders.edit') + ' ' + t('orders.newOrder').toLowerCase() : t('orders.newOrder')}
-            </Box>
-            <IconButton 
-              onClick={handleCloseNewOrderForm} 
-              edge="end" 
-              aria-label="close"
-              sx={{
-                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </DialogTitle>
-          
-          <Divider sx={{ mb: 3, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
-          
-          <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-            <NewOrderForm 
-              isModal={true} 
-              onClose={handleCloseNewOrderForm} 
-              isEdit={isEditMode}
-              orderData={selectedOrder || undefined}
-            />
-          </Box>
-        </StyledDialogContent>
-      </Dialog>
+
 
       {/* Dialog pre mazanie OBJEDNÁVKY */}
       <Dialog
@@ -1806,64 +1744,91 @@ const OrdersList: React.FC = () => {
       onClose={() => setShowCarrierForm(false)}
       maxWidth="md"
       fullWidth
-      sx={{
-        '& .MuiBackdrop-root': {
-          backdropFilter: 'blur(5px)',
-          backgroundColor: theme.palette.mode === 'dark' 
-            ? 'rgba(0, 0, 0, 0.8)' 
-            : 'rgba(255, 255, 255, 0.8)'
-        },
-        '& .MuiPaper-root': {
-          backgroundColor: theme.palette.mode === 'dark' 
-            ? 'rgba(22, 28, 36, 0.95)' 
-            : 'rgba(255, 255, 255, 0.95)',
+      PaperProps={{
+        sx: {
+          background: 'none',
+          boxShadow: 'none',
+          margin: {
+            xs: '8px',
+            sm: '16px'
+          },
+          maxHeight: '90vh',
+          overflow: 'hidden'
+        }
+      }}
+      BackdropProps={{
+        sx: {
           backdropFilter: 'blur(10px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-          border: theme.palette.mode === 'dark' 
-            ? '1px solid rgba(255, 255, 255, 0.08)' 
-            : '1px solid rgba(0, 0, 0, 0.08)',
-          borderRadius: '12px',
-          overflow: 'hidden',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)'
         }
       }}
     >
-      <GlobalStyles 
-        styles={{
-          '.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#ff9f43 !important'
-          },
-          '.MuiInputLabel-root.Mui-focused': {
-            color: '#ff9f43 !important'
-          },
-          '.MuiCheckbox-root.Mui-checked': {
-            color: '#ff9f43 !important'
-          },
-          '.MuiRadio-root.Mui-checked': {
-            color: '#ff9f43 !important'
-          },
-          '.MuiSwitch-root .MuiSwitch-switchBase.Mui-checked': {
-            color: '#ff9f43 !important'
-          },
-          '.MuiSwitch-root .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-            backgroundColor: '#ff9f43 !important'
-          }
+      <Box
+        sx={{
+          backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+          borderRadius: '12px',
+          padding: '24px',
+          maxWidth: '900px',
+          width: '100%',
+          maxHeight: '80vh',
+          display: 'flex',
+          flexDirection: 'column',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+          border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+          color: isDarkMode ? '#ffffff' : '#000000',
         }}
-      />
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        borderBottom: '1px solid',
-        borderColor: theme.palette.mode === 'dark' 
-          ? 'rgba(255, 255, 255, 0.1)' 
-          : 'rgba(0, 0, 0, 0.1)',
-      }}>
-        <Typography variant="h6">{t('orders.addCarrier')}</Typography>
-        <IconButton onClick={() => setShowCarrierForm(false)} edge="end" aria-label="close">
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ p: 3 }}>
+      >
+        <Box sx={{ 
+          p: 0, 
+          mb: 3, 
+          fontWeight: 700, 
+          color: isDarkMode ? '#ffffff' : '#000000',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <LocalShippingIcon sx={{ color: '#ff9f43' }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {t('orders.addCarrier')}
+            </Typography>
+          </Box>
+          <IconButton 
+            onClick={() => setShowCarrierForm(false)} 
+            edge="end" 
+            aria-label="close"
+            sx={{
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        
+        <Divider sx={{ mb: 3, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', flexShrink: 0 }} />
+
+        <DialogContent sx={{ 
+          p: 0, 
+          mb: 3, 
+          overflow: 'auto',
+          flex: 1,
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+            borderRadius: '8px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '8px',
+            '&:hover': {
+              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+            }
+          }
+        }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
@@ -2038,34 +2003,33 @@ const OrdersList: React.FC = () => {
             />
           </Grid>
         </Grid>
-      </DialogContent>
-      <DialogActions sx={{ 
-        p: 3, 
-        borderTop: '1px solid', 
-        borderColor: theme.palette.mode === 'dark' 
-          ? 'rgba(255, 255, 255, 0.1)' 
-          : 'rgba(0, 0, 0, 0.1)' 
-      }}>
-        <Button 
-          onClick={() => setShowCarrierForm(false)} 
-          sx={{ color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}
-        >
-{t('common.cancel')}
-        </Button>
-        <Button 
-          onClick={handleCarrierFormSubmit} 
-          variant="contained" 
-          sx={{ 
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.8)' : '#ff9f43',
-            color: '#ffffff',
-            '&:hover': { 
-              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 159, 67, 0.9)' : '#f7b067',
-            } 
-          }}
-        >
-{t('common.save')}
-        </Button>
-      </DialogActions>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 0, flexShrink: 0 }}>
+          <Button 
+            onClick={() => setShowCarrierForm(false)} 
+            sx={{ 
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+              '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }
+            }}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button 
+            onClick={handleCarrierFormSubmit} 
+            variant="contained" 
+            sx={{ 
+              backgroundColor: '#ff9f43',
+              color: '#ffffff',
+              '&:hover': { 
+                backgroundColor: '#f7b067',
+              } 
+            }}
+          >
+            {t('common.save')}
+          </Button>
+        </DialogActions>
+      </Box>
     </Dialog>
 
     {/* Potvrdzovací dialóg pre vymazanie ZÁKAZNÍKA */}
@@ -2150,6 +2114,14 @@ const OrdersList: React.FC = () => {
       open={detailDialogOpen}
       onClose={handleCloseDetail}
       order={selectedOrder}
+    />
+
+    {/* New Order Wizard */}
+    <NewOrderWizard
+      open={showNewOrderWizard}
+      onClose={handleCloseNewOrderForm}
+      isEdit={isEditMode}
+      orderData={selectedOrder || undefined}
     />
     </PageWrapper>
   );
