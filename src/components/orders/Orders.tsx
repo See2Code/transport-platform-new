@@ -50,7 +50,7 @@ import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDo
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+
 import NewOrderForm from './NewOrderForm';
 import CloseIcon from '@mui/icons-material/Close';
 import CustomerForm, { CustomerData } from '../management/CustomerForm';
@@ -341,7 +341,6 @@ const OrdersList: React.FC = () => {
   const { t } = useTranslation();
   const { isDarkMode } = useThemeMode();
   const theme = useTheme();
-  const navigate = useNavigate();
   const { userData } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   

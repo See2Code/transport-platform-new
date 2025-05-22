@@ -202,7 +202,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return currentConversations; // Vrátime nezmenený stav konverzácií
     });
-  }, [userData?.uid]); // Zmenšené dependencies - odstránené markConversationAsRead a updateConversationUsersInfo
+  }, [userData?.uid, markConversationAsRead, updateConversationUsersInfo]);
 
   // Kontrola povolení pre notifikácie v prehliadači
   useEffect(() => {
@@ -402,7 +402,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [userData?.uid]); // Odstránené loadUserCompanyInfo a selectConversation zo závislostí
+  }, [userData?.uid, loadUserCompanyInfo]);
 
   // Načítanie správ pre aktuálnu konverzáciu
   useEffect(() => {
@@ -432,7 +432,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [currentConversation?.id]); // Zmenené na currentConversation?.id pre lepšiu optimalizáciu
+  }, [currentConversation]);
 
   // Vyhľadávanie používateľov podľa mena
   const searchUsersByName = async (searchQuery: string): Promise<void> => {
