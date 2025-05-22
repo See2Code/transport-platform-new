@@ -29,7 +29,8 @@ import {
   alpha,
   SelectChangeEvent,
   InputAdornment,
-  Collapse
+  Collapse,
+  Snackbar
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -224,6 +225,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const [newCustomerDialog, setNewCustomerDialog] = useState(false);
   const [newCarrierDialog, setNewCarrierDialog] = useState(false);
   const [expandedLocationCards, setExpandedLocationCards] = useState<{ [key: string]: boolean }>({});
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showValidationAlert, setShowValidationAlert] = useState(false);
 
   // Steps configuration
   const steps = [
@@ -357,6 +360,19 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
   // Handle functions
   const handleNext = () => {
+    const validation = validateStep(activeStep);
+    
+    if (!validation.isValid) {
+      setValidationErrors(validation.errors);
+      setShowValidationAlert(true);
+      // Automaticky skryť alert po 5 sekundách
+      setTimeout(() => setShowValidationAlert(false), 5000);
+      return;
+    }
+
+    // Vyčistíme chyby ak je všetko v poriadku
+    setValidationErrors([]);
+    setShowValidationAlert(false);
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
@@ -530,26 +546,73 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     return customerPrice - carrierPrice;
   };
 
-  const validateStep = (step: number): boolean => {
+  const validateStep = (step: number): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
     switch (step) {
       case 0:
-        return !!(formData.zakaznikData && formData.suma);
+        if (!formData.zakaznikData) {
+          errors.push('Vyberte zákazníka');
+        }
+        if (!formData.suma || parseFloat(formData.suma) <= 0) {
+          errors.push('Zadajte platnú cenu pre zákazníka');
+        }
+        break;
+      
       case 1:
-        return !!(
-          formData.loadingPlaces?.length && 
-          formData.unloadingPlaces?.length &&
-          formData.loadingPlaces.every(place => place.city && place.street && place.contactPerson) &&
-          formData.unloadingPlaces.every(place => place.city && place.street && place.contactPerson)
-        );
+        if (!formData.loadingPlaces?.length) {
+          errors.push('Pridajte aspoň jedno miesto nakládky');
+        } else {
+          formData.loadingPlaces.forEach((place, index) => {
+            if (!place.city) errors.push(`Nakládka #${index + 1}: Zadajte mesto`);
+            if (!place.street) errors.push(`Nakládka #${index + 1}: Zadajte ulicu`);
+            if (!place.contactPerson) errors.push(`Nakládka #${index + 1}: Zadajte kontaktnú osobu`);
+            if (!place.dateTime) errors.push(`Nakládka #${index + 1}: Zadajte dátum a čas`);
+            if (!place.goods?.length || !place.goods.some(g => g.name)) {
+              errors.push(`Nakládka #${index + 1}: Zadajte aspoň jeden tovar`);
+            }
+          });
+        }
+
+        if (!formData.unloadingPlaces?.length) {
+          errors.push('Pridajte aspoň jedno miesto vykládky');
+        } else {
+          formData.unloadingPlaces.forEach((place, index) => {
+            if (!place.city) errors.push(`Vykládka #${index + 1}: Zadajte mesto`);
+            if (!place.street) errors.push(`Vykládka #${index + 1}: Zadajte ulicu`);
+            if (!place.contactPerson) errors.push(`Vykládka #${index + 1}: Zadajte kontaktnú osobu`);
+            if (!place.dateTime) errors.push(`Vykládka #${index + 1}: Zadajte dátum a čas`);
+            if (!place.goods?.length || !place.goods.some(g => g.name)) {
+              errors.push(`Vykládka #${index + 1}: Zadajte aspoň jeden tovar`);
+            }
+          });
+        }
+        break;
+      
       case 2:
-        return !!(formData.carrierCompany);
+        if (!formData.carrierCompany) {
+          errors.push('Vyberte dopravcu');
+        }
+        break;
+      
       default:
-        return true;
+        break;
     }
+
+    return { isValid: errors.length === 0, errors };
   };
 
   const handleSubmit = async () => {
     if (!userData?.companyID) return;
+    
+    // Validácia posledného kroku pred odoslaním
+    const validation = validateStep(2);
+    if (!validation.isValid) {
+      setValidationErrors(validation.errors);
+      setShowValidationAlert(true);
+      setTimeout(() => setShowValidationAlert(false), 5000);
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -646,6 +709,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                     renderInput={(params) => (
                       <TextField
                         {...params}
+                        id="customer-autocomplete"
+                        name="customer"
                         label={t('orders.customer') + ' *'}
                         required
                         fullWidth
@@ -697,6 +762,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                    <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
+                    id="contact-person"
+                    name="contactPerson"
                     label={t('orders.contactPerson') || 'Kontaktná osoba'}
                     value={formData.kontaktnaOsoba || ''}
                     onChange={handleInputChange('kontaktnaOsoba')}
@@ -729,6 +796,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                 <Grid item xs={12} sm={6} md={4}>
                   <TextField
                     fullWidth
+                    id="customer-price"
+                    name="customerPrice"
                     label={t('orders.customerPrice') + ' *'}
                     type="number"
                     value={formData.suma || ''}
@@ -743,8 +812,11 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                 
                 <Grid item xs={12} sm={6} md={4}>
                   <FormControl fullWidth>
-                    <InputLabel>{t('orders.currency') || 'Mena'}</InputLabel>
+                    <InputLabel id="currency-label">{t('orders.currency') || 'Mena'}</InputLabel>
                     <Select
+                      id="currency-select"
+                      name="currency"
+                      labelId="currency-label"
                       value={formData.mena || 'EUR'}
                       label={t('orders.currency') || 'Mena'}
                       onChange={handleInputChange('mena')}
@@ -759,6 +831,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                 <Grid item xs={12} md={4}>
                   <TextField
                     fullWidth
+                    id="customer-reference-number"
+                    name="customerReferenceNumber"
                     label={t('orders.customerReferenceNumber') || 'Referenčné číslo zákazníka'}
                     value={formData.cisloNakladuZakaznika || ''}
                     onChange={handleInputChange('cisloNakladuZakaznika')}
@@ -768,6 +842,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
+                    id="internal-note"
+                    name="internalNote"
                     label={t('orders.internalNote') || 'Interná poznámka'}
                     value={formData.internaPoznamka || ''}
                     onChange={handleInputChange('internaPoznamka')}
@@ -916,6 +992,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                   renderInput={(params) => (
                     <TextField
                       {...params}
+                      id={`${type}-city-${index}`}
+                      name={`${type}City${index}`}
                       label={t('orders.city') + ' *'}
                       required
                       fullWidth
@@ -927,6 +1005,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  id={`${type}-street-${index}`}
+                  name={`${type}Street${index}`}
                   label={t('orders.street') + ' *'}
                   value={place.street}
                   onChange={(e) => updateLocation(type, index, 'street', e.target.value)}
@@ -937,6 +1017,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Grid item xs={6} sm={3}>
                 <TextField
                   fullWidth
+                  id={`${type}-zip-${index}`}
+                  name={`${type}Zip${index}`}
                   label={t('orders.zipCode') + ' *'}
                   value={place.zip}
                   onChange={(e) => updateLocation(type, index, 'zip', e.target.value)}
@@ -953,6 +1035,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                   renderInput={(params) => (
                     <TextField
                       {...params}
+                      id={`${type}-country-${index}`}
+                      name={`${type}Country${index}`}
                       label={t('orders.country') + ' *'}
                       required
                     />
@@ -974,6 +1058,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
+                  id={`${type}-contact-${index}`}
+                  name={`${type}Contact${index}`}
                   label={t('orders.contactPerson') + ' *'}
                   value={place.contactPerson}
                   onChange={(e) => updateLocation(type, index, 'contactPerson', e.target.value)}
@@ -1036,6 +1122,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             renderInput={(params) => (
                               <TextField
                                 {...params}
+                                id={`goods-name-${type}-${index}-${goodsIndex}`}
+                                name={`goodsName${type}${index}${goodsIndex}`}
                                 label="Názov tovaru *"
                                 required
                                 fullWidth
@@ -1047,6 +1135,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                         <Grid item xs={6} sm={3}>
                           <TextField
                             fullWidth
+                            id={`goods-quantity-${type}-${index}-${goodsIndex}`}
+                            name={`goodsQuantity${type}${index}${goodsIndex}`}
                             label="Množstvo *"
                             type="number"
                             value={item.quantity}
@@ -1058,8 +1148,11 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                         
                         <Grid item xs={6} sm={3}>
                           <FormControl fullWidth>
-                            <InputLabel>Jednotka *</InputLabel>
+                            <InputLabel id={`unit-label-${type}-${index}-${goodsIndex}`}>Jednotka *</InputLabel>
                             <Select
+                              id={`unit-select-${type}-${index}-${goodsIndex}`}
+                              name={`unit${type}${index}${goodsIndex}`}
+                              labelId={`unit-label-${type}-${index}-${goodsIndex}`}
                               value={item.unit}
                               label="Jednotka *"
                               onChange={(e) => updateGoods(type, index, goodsIndex, 'unit', e.target.value)}
@@ -1077,6 +1170,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                         <Grid item xs={12} sm={6}>
                           <TextField
                             fullWidth
+                            id={`goods-dimensions-${type}-${index}-${goodsIndex}`}
+                            name={`goodsDimensions${type}${index}${goodsIndex}`}
                             label="Rozmery (d×š×v)"
                             value={item.dimensions || ''}
                             onChange={(e) => updateGoods(type, index, goodsIndex, 'dimensions', e.target.value)}
@@ -1085,8 +1180,11 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                         
                         <Grid item xs={12} sm={6}>
                           <FormControl fullWidth>
-                            <InputLabel>Výmena paliet</InputLabel>
+                            <InputLabel id={`pallet-exchange-label-${type}-${index}-${goodsIndex}`}>Výmena paliet</InputLabel>
                             <Select
+                              id={`pallet-exchange-select-${type}-${index}-${goodsIndex}`}
+                              name={`palletExchange${type}${index}${goodsIndex}`}
+                              labelId={`pallet-exchange-label-${type}-${index}-${goodsIndex}`}
                               value={item.palletExchange}
                               label="Výmena paliet"
                               onChange={(e) => updateGoods(type, index, goodsIndex, 'palletExchange', e.target.value)}
@@ -1101,6 +1199,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                         <Grid item xs={12}>
                           <TextField
                             fullWidth
+                            id={`goods-description-${type}-${index}-${goodsIndex}`}
+                            name={`goodsDescription${type}${index}${goodsIndex}`}
                             label="Popis tovaru"
                             value={item.description || ''}
                             onChange={(e) => updateGoods(type, index, goodsIndex, 'description', e.target.value)}
@@ -1154,6 +1254,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                       renderInput={(params) => (
                         <TextField
                           {...params}
+                          id="carrier-autocomplete"
+                          name="carrier"
                           label={t('orders.carrier')}
                           fullWidth
                           InputProps={{
@@ -1204,6 +1306,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
+                      id="carrier-contact"
+                      name="carrierContact"
                       label={t('orders.carrierContact') || 'Kontakt na dopravcu'}
                       value={formData.carrierContact || ''}
                       onChange={handleInputChange('carrierContact')}
@@ -1220,6 +1324,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
+                      id="vehicle-registration"
+                      name="vehicleRegistration"
                       label={t('orders.vehicleRegistration') || 'EČV vozidla'}
                       value={formData.carrierVehicleReg || ''}
                       onChange={handleInputChange('carrierVehicleReg')}
@@ -1229,6 +1335,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
+                      id="carrier-price"
+                      name="carrierPrice"
                       label={t('orders.carrierPrice') || 'Cena za dopravu'}
                       type="number"
                       value={formData.carrierPrice || ''}
@@ -1446,7 +1554,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
             <Step key={step.label}>
               <StepLabel
                 icon={step.icon}
-                error={activeStep > index && !validateStep(index)}
+                error={activeStep > index && !validateStep(index).isValid}
               >
                 {step.label}
               </StepLabel>
@@ -1508,7 +1616,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={isSubmitting || !validateStep(activeStep)}
+                disabled={isSubmitting || !validateStep(activeStep).isValid}
                 sx={{
                   backgroundColor: '#ff9f43',
                   color: '#ffffff',
@@ -1525,7 +1633,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Button
                 variant="contained"
                 onClick={handleNext}
-                disabled={!validateStep(activeStep)}
+                disabled={!validateStep(activeStep).isValid}
                 sx={{
                   backgroundColor: '#ff9f43',
                   color: '#ffffff',
@@ -1564,6 +1672,36 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           <Button onClick={() => setNewCarrierDialog(false)}>Zavrieť</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Validation Errors Snackbar */}
+      <Snackbar
+        open={showValidationAlert}
+        autoHideDuration={5000}
+        onClose={() => setShowValidationAlert(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowValidationAlert(false)} 
+          severity="error" 
+          sx={{ 
+            width: '100%',
+            '& .MuiAlert-message': {
+              width: '100%'
+            }
+          }}
+        >
+          <Typography variant="body2" fontWeight={600} gutterBottom>
+            Prosím, opravte nasledovné chyby:
+          </Typography>
+          <Box component="ul" sx={{ pl: 2, m: 0 }}>
+            {validationErrors.map((error, index) => (
+              <Typography key={index} component="li" variant="body2">
+                {error}
+              </Typography>
+            ))}
+          </Box>
+        </Alert>
+      </Snackbar>
     </Dialog>
   );
 };

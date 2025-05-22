@@ -1109,6 +1109,8 @@ const OrdersList: React.FC = () => {
         </Box>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
               <TextField
+                  id="search-order"
+                  name="searchOrder"
                   label={t('orders.searchOrder')}
                   variant="outlined"
                   size="small"
@@ -1307,6 +1309,8 @@ const OrdersList: React.FC = () => {
                 </Box>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                   <TextField
+                    id="search-customer"
+                    name="searchCustomer"
                     label={t('orders.searchCustomer')}
                     variant="outlined"
                     size="small"
@@ -1440,6 +1444,8 @@ const OrdersList: React.FC = () => {
                 </Box>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                   <TextField
+                    id="search-carrier"
+                    name="searchCarrier"
                     label={t('orders.searchCarrier')}
                     variant="outlined"
                     size="small"

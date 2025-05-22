@@ -1021,19 +1021,90 @@ const Navbar: FC = () => {
         open={logoutDialogOpen}
         onClose={handleLogoutCancel}
         aria-labelledby="logout-dialog-title"
+        aria-describedby="logout-dialog-description"
+        PaperProps={{
+          sx: {
+            background: 'none',
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            borderRadius: '24px'
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)'
+          }
+        }}
       >
-        <DialogTitle id="logout-dialog-title">{t('auth.logout')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {t('auth.logout')}?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleLogoutCancel}>{t('common.cancel')}</Button>
-          <Button onClick={handleLogoutConfirm} autoFocus>
+        <Box sx={{
+            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : '#000000',
+            padding: '0px',
+            borderRadius: '24px',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+         }}>
+          <DialogTitle id="logout-dialog-title" 
+            sx={{ 
+              padding: '24px 24px 16px 24px',
+              fontSize: '1.25rem',
+              fontWeight: 600
+            }}
+          >
             {t('auth.logout')}
-          </Button>
-        </DialogActions>
+          </DialogTitle>
+          <DialogContent sx={{ 
+              padding: '16px 24px',
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+              overflowY: 'auto', 
+            }}
+          >
+            <DialogContentText id="logout-dialog-description"
+              sx={{ 
+                color: 'inherit',
+                fontSize: '1rem',
+              }}
+            >
+              {t('auth.logout')}?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ 
+              padding: '16px 24px 24px 24px',
+              gap: 2
+            }}
+          >
+            <Button 
+              onClick={handleLogoutCancel}
+              sx={{ 
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button 
+              onClick={handleLogoutConfirm} 
+              autoFocus
+              variant="contained"
+              sx={{
+                backgroundColor: '#ff9f43',
+                color: '#fff',
+                fontWeight: 500,
+                borderRadius: '12px',
+                padding: '8px 20px',
+                '&:hover': {
+                  backgroundColor: '#f9872f',
+                }
+              }}
+            >
+              {t('auth.logout')}
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
 
       <Popover
