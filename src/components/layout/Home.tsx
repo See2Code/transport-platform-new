@@ -24,6 +24,7 @@ import {
   ListItemButton} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import {
   LocalShipping,
   People,
@@ -402,6 +403,7 @@ const itemVariants = {
 };
 
 function Home() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
@@ -419,7 +421,7 @@ function Home() {
     { src: "/Images/whiteview.jpg", alt: "Svetlý motív aplikácie", themeSpecific: 'light' },
     { src: "/Images/tracked-transports.jpg", alt: "Sledovanie prepráv" },
     { src: "/Images/mapview.jpg", alt: "Pohľad na mapu" },
-    { src: "/Images/orders.jpg", alt: "Objednávky" },
+    { src: "/Images/orders.jpg", alt: t('navigation.orders') },
     { src: "/Images/businesscases.jpg", alt: "Obchodné prípady" },
     { src: "/Images/contacs.jpg", alt: "Kontakty" },
     { src: "/Images/team.jpg", alt: "Tímová spolupráca" },

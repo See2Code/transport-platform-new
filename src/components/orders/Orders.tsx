@@ -1,6 +1,7 @@
 import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
 import { OrderFormData as BaseOrderFormData, LoadingPlace, UnloadingPlace, } from '../../types/orders';
 import { countries } from '../../constants/countries';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -337,13 +338,12 @@ interface Carrier {
 }
 
 const OrdersList: React.FC = () => {
-  const theme = useTheme();
+  const { t } = useTranslation();
   const { isDarkMode } = useThemeMode();
+  const theme = useTheme();
+  const navigate = useNavigate();
   const { userData } = useAuth();
-  // eslint-disable-next-line
-  const _navigate = useNavigate();
-  // eslint-disable-next-line
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Použitie useMediaQuery
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // State pre objednávky, zákazníkov, dopravcov, filtre, atď.
   const [orders, setOrders] = useState<OrderFormData[]>([]);
@@ -1055,9 +1055,9 @@ const OrdersList: React.FC = () => {
     <PageWrapper>
       <DialogGlobalStyles open={showNewOrderDialog || showCustomerForm || showCarrierForm || showDeleteConfirm || showCustomerDeleteConfirm || showCarrierDeleteConfirm} />
       <PageHeader>
-        <PageTitle isDarkMode={isDarkMode}>Objednávky</PageTitle>
+        <PageTitle isDarkMode={isDarkMode}>{t('navigation.orders')}</PageTitle>
               <PageDescription>
-          V tejto sekcii môžete spravovať všetky objednávky vašej spoločnosti. Môžete vytvárať nové objednávky, upravovať existujúce alebo ich odstrániť.
+          {t('orders.description')}
               </PageDescription>
       </PageHeader>
 
@@ -1083,9 +1083,9 @@ const OrdersList: React.FC = () => {
                 },
               }}
             >
-              <Tab label="Všetky objednávky" />
-              <Tab label="Zákazníci" />
-              <Tab label="Dopravcovia" />
+              <Tab label={t('orders.allOrders')} />
+              <Tab label={t('orders.customers')} />
+              <Tab label={t('orders.carriers')} />
             </Tabs>
           </Box>
 
@@ -1105,12 +1105,12 @@ const OrdersList: React.FC = () => {
                     }
             }}
           >
-            Nová objednávka
+{t('orders.newOrder')}
           </Button>
         </Box>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
               <TextField
-                  label="Vyhľadať objednávku (Číslo, Firma, Kontakt, Špediter...)"
+                  label={t('orders.searchOrder')}
                   variant="outlined"
                   size="small"
                   value={searchQuery}
@@ -1134,13 +1134,13 @@ const OrdersList: React.FC = () => {
               <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
                   <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
                       <DatePicker
-                          label="Od dátumu"
+                          label={t('common.from')}
                           value={startDate}
                           onChange={(newValue) => setStartDate(newValue)}
                           slotProps={{ textField: { size: 'small' } }}
                       />
                       <DatePicker
-                          label="Do dátumu"
+                          label={t('common.to')}
                           value={endDate}
                           onChange={(newValue) => setEndDate(newValue)}
                           slotProps={{ textField: { size: 'small' } }}
@@ -1154,7 +1154,7 @@ const OrdersList: React.FC = () => {
                       '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
                     }}
                   >
-                    Vymazať filter
+{t('common.clearFilter')}
                   </Button>
               </Box>
           </Collapse>
@@ -1177,11 +1177,11 @@ const OrdersList: React.FC = () => {
                   onDownloadPDF={handleDownloadPDF}
                 />
               ))}
-               {getFilteredCustomerOrders().length === 0 && (
-                  <Typography variant="body1" align="center" sx={{ mt: 4 }}>
-                    Žiadne objednávky sa nenašli.
-                  </Typography>
-               )}
+                                  {getFilteredCustomerOrders().length === 0 && (
+                      <Typography variant="body1" align="center" sx={{ mt: 4 }}>
+                        {t('orders.noOrdersFound')}
+                      </Typography>
+                   )}
             </Box>
           ) : ( // Ak nie je mobilné zariadenie, zobraz tabuľku
             <TableContainer 
@@ -1218,20 +1218,20 @@ const OrdersList: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <StyledTableCell isDarkMode={isDarkMode}>Číslo objednávky</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Zákazník</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Kontaktná osoba</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Nakládka</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Čas nakládky</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Vykládka</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Čas vykládky</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Tovar</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>Cena zák.</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#1976d2', fontWeight: 'bold' }}>Cena dopr.</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#2ecc71', fontWeight: 'bold' }}>Zisk</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Špediter</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Dátum vytvorenia</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>Akcie</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.orderNumber')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.customer')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.contactPerson')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.loading')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.loadingTime')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.unloading')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.unloadingTime')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.goods')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{t('orders.customerPrice')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#1976d2', fontWeight: 'bold' }}>{t('orders.carrierPrice')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#2ecc71', fontWeight: 'bold' }}>{t('orders.profit')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.dispatcher')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.creationDate')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.actions')}</StyledTableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1265,21 +1265,21 @@ const OrdersList: React.FC = () => {
                       <StyledTableCell isDarkMode={isDarkMode}>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy') : 'N/A'}</StyledTableCell>
                       <StyledTableCell isDarkMode={isDarkMode}> {/* Akcie */} 
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <Tooltip title="Upraviť"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></Tooltip>
-                          <Tooltip title="Náhľad PDF"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handlePreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></Tooltip>
-                          <Tooltip title="Stiahnuť PDF"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></Tooltip>
-                          <Tooltip title="Vymazať"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openDeleteConfirmation(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></Tooltip>
+                          <Tooltip title={t('orders.edit')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></Tooltip>
+                          <Tooltip title={t('orders.previewPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handlePreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></Tooltip>
+                          <Tooltip title={t('orders.downloadPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></Tooltip>
+                          <Tooltip title={t('orders.delete')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openDeleteConfirmation(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></Tooltip>
                         </Box>
                       </StyledTableCell>
                     </StyledTableRow>
                   ))}
-                   {getFilteredCustomerOrders().length === 0 && (
-                      <TableRow>
-                          <TableCell colSpan={14} align="center">
-                              Žiadne objednávky sa nenašli.
-                          </TableCell>
-                      </TableRow>
-                   )}
+                                         {getFilteredCustomerOrders().length === 0 && (
+                          <TableRow>
+                              <TableCell colSpan={14} align="center">
+                                  {t('orders.noOrdersFound')}
+                              </TableCell>
+                          </TableRow>
+                       )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -1303,12 +1303,12 @@ const OrdersList: React.FC = () => {
                       }
                     }}
                   >
-                    Pridať zákazníka
+{t('orders.addCustomer')}
                   </Button>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                   <TextField
-                    label="Vyhľadať zákazníka"
+                    label={t('orders.searchCustomer')}
                     variant="outlined"
                     size="small"
                     value={customerSearchQuery}
@@ -1359,15 +1359,15 @@ const OrdersList: React.FC = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Názov spoločnosti</TableCell>
-                      <TableCell>Kontaktná osoba</TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell>IČO</TableCell>
-                      <TableCell>IČ DPH</TableCell>
-                      <TableCell>DIČ</TableCell>
-                      <TableCell>Krajina</TableCell>
-                      <TableCell>Dátum vytvorenia</TableCell>
-                      <TableCell>Akcie</TableCell>
+                      <TableCell>{t('orders.companyName')}</TableCell>
+                      <TableCell>{t('orders.contactPerson')}</TableCell>
+                      <TableCell>{t('orders.email')}</TableCell>
+                      <TableCell>{t('orders.ico')}</TableCell>
+                      <TableCell>{t('orders.icDph')}</TableCell>
+                      <TableCell>{t('orders.dic')}</TableCell>
+                      <TableCell>{t('orders.country')}</TableCell>
+                      <TableCell>{t('orders.creationDate')}</TableCell>
+                      <TableCell>{t('orders.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1383,7 +1383,7 @@ const OrdersList: React.FC = () => {
                         <TableCell>{customer.createdAt ? customer.createdAt.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Tooltip title="Upraviť">
+                            <Tooltip title={t('orders.edit')}>
                               <IconButton 
                                 onClick={() => handleEditCustomer(customer)}
                                 sx={{ 
@@ -1396,7 +1396,7 @@ const OrdersList: React.FC = () => {
                                 <EditIcon />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Vymazať">
+                            <Tooltip title={t('orders.delete')}>
                               <IconButton 
                                 onClick={() => openCustomerDeleteConfirmation(customer.id)}
                                 sx={{ 
@@ -1436,12 +1436,12 @@ const OrdersList: React.FC = () => {
                       }
                     }}
                   >
-                    Pridať dopravcu
+{t('orders.addCarrier')}
                   </Button>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
                   <TextField
-                    label="Vyhľadať dopravcu"
+                    label={t('orders.searchCarrier')}
                     variant="outlined"
                     size="small"
                     value={carrierSearchQuery}
@@ -1493,17 +1493,17 @@ const OrdersList: React.FC = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Názov spoločnosti</TableCell>
-                      <TableCell>Kontaktná osoba</TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Telefón</TableCell>
-                      <TableCell>IČO</TableCell>
-                      <TableCell>IČ DPH</TableCell>
-                      <TableCell>DIČ</TableCell>
-                      <TableCell>Typy vozidiel</TableCell>
-                      <TableCell>Krajina</TableCell>
-                      <TableCell>Dátum vytvorenia</TableCell>
-                      <TableCell>Akcie</TableCell>
+                      <TableCell>{t('orders.companyName')}</TableCell>
+                      <TableCell>{t('orders.contactPerson')}</TableCell>
+                      <TableCell>{t('orders.email')}</TableCell>
+                      <TableCell>{t('orders.phone')}</TableCell>
+                      <TableCell>{t('orders.ico')}</TableCell>
+                      <TableCell>{t('orders.icDph')}</TableCell>
+                      <TableCell>{t('orders.dic')}</TableCell>
+                      <TableCell>{t('orders.vehicleTypes')}</TableCell>
+                      <TableCell>{t('orders.country')}</TableCell>
+                      <TableCell>{t('orders.creationDate')}</TableCell>
+                      <TableCell>{t('orders.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1529,7 +1529,7 @@ const OrdersList: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Tooltip title="Upraviť">
+                            <Tooltip title={t('orders.edit')}>
                               <IconButton 
                                 onClick={() => handleEditCarrier(carrier)}
                                 sx={{ 
@@ -1542,7 +1542,7 @@ const OrdersList: React.FC = () => {
                                 <EditIcon />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Vymazať">
+                            <Tooltip title={t('orders.delete')}>
                               <IconButton 
                                 onClick={() => openCarrierDeleteConfirmation(carrier.id)}
                                 sx={{ 
@@ -1604,7 +1604,7 @@ const OrdersList: React.FC = () => {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <BusinessIcon sx={{ color: '#ff9f43' }} />
-              {isEditMode ? 'Upraviť objednávku' : 'Nová objednávka'}
+{isEditMode ? t('orders.edit') + ' ' + t('orders.newOrder').toLowerCase() : t('orders.newOrder')}
             </Box>
             <IconButton 
               onClick={handleCloseNewOrderForm} 
@@ -1654,10 +1654,10 @@ const OrdersList: React.FC = () => {
         }}
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
-          <DialogTitle id="confirm-order-delete-title">Potvrdiť odstránenie objednávky</DialogTitle>
+          <DialogTitle id="confirm-order-delete-title">{t('common.confirmDelete')}</DialogTitle>
         <DialogContent>
             <DialogContentText id="confirm-order-delete-description"> 
-            Naozaj chcete odstrániť túto objednávku?
+            {t('orders.deleteConfirmation')}
             </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -1668,7 +1668,7 @@ const OrdersList: React.FC = () => {
                 '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', }
             }}
           >
-            Zrušiť
+            {t('common.cancel')}
           </Button>
           <Button 
             onClick={handleDeleteConfirmed} 
@@ -1678,7 +1678,7 @@ const OrdersList: React.FC = () => {
               autoFocus // Vrátenie autoFocus
               sx={{ color: '#ffffff' }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Potvrdiť"} 
+              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')} 
           </Button>
         </DialogActions>
         </StyledDialogContent>
@@ -1712,10 +1712,10 @@ const OrdersList: React.FC = () => {
                 ? 'rgba(255, 255, 255, 0.1)' 
                 : 'rgba(0, 0, 0, 0.1)',
         }}>
-            <Typography variant="h6">Náhľad PDF objednávky</Typography>
+            <Typography variant="h6">{t('orders.pdfPreviewTitle')}</Typography>
             <Box>
                 {pdfUrl && (
-                    <Tooltip title="Stiahnuť PDF">
+                    <Tooltip title={t('orders.downloadPDF')}>
                         <IconButton 
                             onClick={() => {
                                 if (pdfUrl) {
@@ -1756,8 +1756,8 @@ const OrdersList: React.FC = () => {
                     p: 3
                 }}>
                     <CircularProgress size={60} sx={{ mb: 2 }} />
-                    <Typography variant="h6" sx={{ mb: 1 }}>Načítavam PDF objednávky...</Typography>
-                    <Typography variant="body2" color="text.secondary">Tento proces môže trvať niekoľko sekúnd, prosím počkajte.</Typography>
+                    <Typography variant="h6" sx={{ mb: 1 }}>{t('orders.loadingPdf')}</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('orders.processingTime')}</Typography>
                 </Box>
             ) : pdfUrl ? (
                 <iframe 
@@ -1773,7 +1773,7 @@ const OrdersList: React.FC = () => {
                     height: '100%',
                     width: '100%'
                 }}>
-                    <Typography>PDF sa nepodarilo načítať.</Typography>
+                    <Typography>{t('orders.pdfLoadError')}</Typography>
                 </Box>
             )}
         </DialogContent>
@@ -1859,7 +1859,7 @@ const OrdersList: React.FC = () => {
           ? 'rgba(255, 255, 255, 0.1)' 
           : 'rgba(0, 0, 0, 0.1)',
       }}>
-        <Typography variant="h6">Pridať dopravcu</Typography>
+        <Typography variant="h6">{t('orders.addCarrier')}</Typography>
         <IconButton onClick={() => setShowCarrierForm(false)} edge="end" aria-label="close">
           <CloseIcon />
         </IconButton>
@@ -1868,13 +1868,13 @@ const OrdersList: React.FC = () => {
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
-              Informácie o dopravcovi
+              {t('orders.carrierInfo')}
             </Typography>
           </Grid>
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Názov spoločnosti"
+              label={t('orders.companyName')}
               name="companyName"
               value={carrierFormData.companyName}
               onChange={handleCarrierFormChange}
@@ -1884,7 +1884,7 @@ const OrdersList: React.FC = () => {
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Ulica"
+              label={t('orders.street')}
               name="street"
               value={carrierFormData.street}
               onChange={handleCarrierFormChange}
@@ -1894,7 +1894,7 @@ const OrdersList: React.FC = () => {
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              label="Mesto"
+              label={t('orders.city')}
               name="city"
               value={carrierFormData.city}
               onChange={handleCarrierFormChange}
@@ -1904,7 +1904,7 @@ const OrdersList: React.FC = () => {
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              label="PSČ"
+              label={t('orders.zipCode')}
               name="zip"
               value={carrierFormData.zip}
               onChange={handleCarrierFormChange}
@@ -1915,7 +1915,7 @@ const OrdersList: React.FC = () => {
             <TextField
               fullWidth
               select
-              label="Krajina"
+              label={t('orders.country')}
               name="country"
               value={carrierFormData.country}
               onChange={handleCarrierFormChange}
@@ -1933,48 +1933,48 @@ const OrdersList: React.FC = () => {
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ mt: 2, mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
-              Daňové údaje (nepovinné)
+              {t('orders.taxInfo')}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
-              label="IČO"
+              label={t('orders.ico')}
               name="ico"
               value={carrierFormData.ico}
               onChange={handleCarrierFormChange}
-              helperText="Identifikačné číslo organizácie"
+              helperText={t('orders.businessId')}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
-              label="DIČ"
+              label={t('orders.dic')}
               name="dic"
               value={carrierFormData.dic}
               onChange={handleCarrierFormChange}
-              helperText="Daňové identifikačné číslo"
+              helperText={t('orders.taxId')}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
-              label="IČ DPH"
+              label={t('orders.icDph')}
               name="icDph"
               value={carrierFormData.icDph}
               onChange={handleCarrierFormChange}
-              helperText="Identifikačné číslo pre DPH"
+              helperText={t('orders.vatIdDescription')}
             />
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ mt: 2, mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
-              Kontaktná osoba
+              {t('orders.contactPerson')}
             </Typography>
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              label="Meno"
+              label={t('orders.firstName')}
               name="contactName"
               value={carrierFormData.contactName}
               onChange={handleCarrierFormChange}
@@ -1984,7 +1984,7 @@ const OrdersList: React.FC = () => {
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              label="Priezvisko"
+              label={t('orders.lastName')}
               name="contactSurname"
               value={carrierFormData.contactSurname}
               onChange={handleCarrierFormChange}
@@ -1994,7 +1994,7 @@ const OrdersList: React.FC = () => {
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              label="Email"
+              label={t('orders.email')}
               name="contactEmail"
               type="email"
               value={carrierFormData.contactEmail}
@@ -2005,7 +2005,7 @@ const OrdersList: React.FC = () => {
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              label="Telefón"
+              label={t('orders.phone')}
               name="contactPhone"
               type="tel"
               value={carrierFormData.contactPhone}
@@ -2014,15 +2014,15 @@ const OrdersList: React.FC = () => {
           </Grid>
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ mt: 2, mb: 2, color: theme.palette.mode === 'dark' ? '#ff9f43' : '#ff9f43' }}>
-              Dodatočné informácie
+              {t('orders.additionalInfo')}
             </Typography>
           </Grid>
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Typy vozidiel (oddelené čiarkou)"
+              label={t('orders.vehicleTypes')}
               name="vehicleTypes"
-              placeholder="napr. Plachta, Chladnička, Sklápač"
+              placeholder={t('orders.vehicleTypesPlaceholder')}
               value={carrierFormData.vehicleTypes}
               onChange={handleCarrierFormChange}
             />
@@ -2030,7 +2030,7 @@ const OrdersList: React.FC = () => {
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Poznámky"
+              label={t('orders.notes')}
               name="notes"
               value={carrierFormData.notes}
               onChange={handleCarrierFormChange}
@@ -2051,7 +2051,7 @@ const OrdersList: React.FC = () => {
           onClick={() => setShowCarrierForm(false)} 
           sx={{ color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}
         >
-          Zrušiť
+{t('common.cancel')}
         </Button>
         <Button 
           onClick={handleCarrierFormSubmit} 
@@ -2064,7 +2064,7 @@ const OrdersList: React.FC = () => {
             } 
           }}
         >
-          Uložiť
+{t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -2084,15 +2084,15 @@ const OrdersList: React.FC = () => {
         }}
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
-          <DialogTitle id="confirm-customer-delete-title">Potvrdiť odstránenie zákazníka</DialogTitle>
+          <DialogTitle id="confirm-customer-delete-title">{t('common.confirmDelete')}</DialogTitle>
           <DialogContent>
             <DialogContentText id="confirm-customer-delete-description"> 
-              Naozaj chcete odstrániť tohto zákazníka?
+              {t('orders.deleteCustomerConfirmation')}
             </DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCustomerDeleteCancel} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)', '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', } }}>
-              Zrušiť
+              {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleCustomerDeleteConfirmed} 
@@ -2102,7 +2102,7 @@ const OrdersList: React.FC = () => {
               autoFocus // Vrátenie autoFocus
               sx={{ color: '#ffffff' }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Potvrdiť"} 
+              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')} 
             </Button>
           </DialogActions>
         </StyledDialogContent>
@@ -2123,15 +2123,15 @@ const OrdersList: React.FC = () => {
         }}
       >
         <StyledDialogContent isDarkMode={isDarkMode}>
-          <DialogTitle id="confirm-carrier-delete-title">Potvrdiť odstránenie dopravcu</DialogTitle>
+          <DialogTitle id="confirm-carrier-delete-title">{t('common.confirmDelete')}</DialogTitle>
           <DialogContent>
             <DialogContentText id="confirm-carrier-delete-description"> 
-              Naozaj chcete odstrániť tohto dopravcu?
+              {t('orders.deleteCarrierConfirmation')}
             </DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCarrierDeleteCancel} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)', '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', } }}>
-              Zrušiť
+              {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleCarrierDeleteConfirmed} 
@@ -2141,7 +2141,7 @@ const OrdersList: React.FC = () => {
               autoFocus // Vrátenie autoFocus
               sx={{ color: '#ffffff' }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Potvrdiť"} 
+              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')} 
             </Button>
           </DialogActions>
         </StyledDialogContent>
