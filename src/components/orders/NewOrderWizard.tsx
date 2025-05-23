@@ -445,15 +445,41 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     if (!userData?.companyID) return;
     setIsCustomerLoading(true);
     try {
+      console.log('🔎 Searching customers for companyID:', userData.companyID);
+      
+      // Najprv skúsme bez orderBy aby sme videli všetky dokumenty
+      const qWithoutOrder = query(
+        collection(db, 'customers'),
+        where('companyID', '==', userData.companyID)
+      );
+      const snapshotWithoutOrder = await getDocs(qWithoutOrder);
+      console.log('📊 Total customers without orderBy:', snapshotWithoutOrder.docs.length);
+      
+      snapshotWithoutOrder.docs.forEach((doc, index) => {
+        const data = doc.data();
+        console.log(`📋 Customer ${index + 1}:`, {
+          id: doc.id,
+          companyName: data.companyName,
+          hasCompanyName: !!data.companyName,
+          companyID: data.companyID,
+          allFields: Object.keys(data)
+        });
+      });
+      
+      // Teraz skúsme s orderBy
       const q = query(
         collection(db, 'customers'),
         where('companyID', '==', userData.companyID),
         orderBy('companyName')
       );
       const snapshot = await getDocs(q);
+      console.log('🔍 Načítané dokumenty zákazníkov s orderBy:', snapshot.docs.length);
+      
       const customersData = snapshot.docs.map(doc => {
         const data = doc.data();
-        return {
+        console.log('📄 Raw customer data:', data);
+        
+        const customer = {
           id: doc.id,
           ...data,
           // Mapujeme správne názvy polí
@@ -462,10 +488,15 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           phone: data.contactPhone || data.phone || '',
           vatId: data.icDph || data.vatId || ''
         };
+        
+        console.log('✅ Mapped customer:', customer);
+        return customer;
       }) as Customer[];
+      
+      console.log('🎯 Final customerOptions:', customersData);
       setCustomerOptions(customersData);
     } catch (error) {
-      console.error('Chyba pri načítaní zákazníkov:', error);
+      console.error('❌ Chyba pri načítaní zákazníkov:', error);
     } finally {
       setIsCustomerLoading(false);
     }
@@ -533,10 +564,23 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
   // Initialize data
   useEffect(() => {
+    console.log('🚀 NewOrderWizard useEffect triggered:', { 
+      open, 
+      companyID: userData?.companyID,
+      userDataExists: !!userData 
+    });
+    
     if (open && userData?.companyID) {
+      console.log('✅ Conditions met, calling fetch functions...');
       fetchCustomers();
       fetchCarriers();
       fetchSavedData();
+    } else {
+      console.log('❌ Conditions NOT met:', {
+        open,
+        hasCompanyID: !!userData?.companyID,
+        userData: userData
+      });
     }
   }, [open, userData?.companyID, fetchCustomers, fetchCarriers, fetchSavedData]);
 
@@ -898,48 +942,58 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                 <Grid item xs={12} md={8}>
                   <Autocomplete
                     options={customerOptions}
-                    getOptionLabel={(option: Customer) => option.company || ''}
+                    getOptionLabel={(option: Customer) => {
+                      console.log('🏷️ getOptionLabel called for option:', option);
+                      return option.company || '';
+                    }}
                     value={formData.zakaznikData}
-                    onChange={(_, newValue: Customer | null) => handleCustomerChange(newValue)}
+                    onChange={(_, newValue: Customer | null) => {
+                      console.log('🔄 Customer selection changed:', newValue);
+                      handleCustomerChange(newValue);
+                    }}
                     loading={isCustomerLoading}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        id="customer-autocomplete"
-                        name="customer"
-                        label={t('orders.customer') + ' *'}
-                        required
-                        fullWidth
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                              <BareTooltip title={t('orders.addNewCustomer') || 'Pridať nového zákazníka'}>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setNewCustomerDialog(true)}
-                                  sx={{ mr: 1, color: '#ff9f43' }}
-                                >
-                                  <AddIcon />
-                                </IconButton>
-                              </BareTooltip>
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#ff9f43',
+                    renderInput={(params) => {
+                      console.log('📝 Autocomplete renderInput, customerOptions length:', customerOptions.length);
+                      console.log('📝 Current customerOptions:', customerOptions);
+                      return (
+                        <TextField
+                          {...params}
+                          id="customer-autocomplete"
+                          name="customer"
+                          label={t('orders.customer') + ' *'}
+                          required
+                          fullWidth
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                <BareTooltip title={t('orders.addNewCustomer') || 'Pridať nového zákazníka'}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => setNewCustomerDialog(true)}
+                                    sx={{ mr: 1, color: '#ff9f43' }}
+                                  >
+                                    <AddIcon />
+                                  </IconButton>
+                                </BareTooltip>
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#ff9f43',
+                              },
                             },
-                          },
-                          '& .MuiInputLabel-root.Mui-focused': {
-                            color: '#ff9f43',
-                          },
-                        }}
-                      />
-                    )}
+                            '& .MuiInputLabel-root.Mui-focused': {
+                              color: '#ff9f43',
+                            },
+                          }}
+                        />
+                      );
+                    }}
                     renderOption={(props, option: Customer) => (
                          <Box component="li" {...props}>
                            <Box>

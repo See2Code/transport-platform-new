@@ -1067,6 +1067,8 @@ const OrdersList: React.FC = () => {
     setShowNewOrderWizard(false);
     setSelectedOrder(null);
     setIsEditMode(false);
+    // Aktualizujeme zoznam objednávok po zatvorení formulára
+    fetchOrders();
   };
 
   // Upravená funkcia pre náhľad PDF
