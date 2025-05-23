@@ -29,7 +29,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
-import { collection, addDoc, query, deleteDoc, doc, updateDoc, getDocs, Timestamp, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, query, deleteDoc, doc, updateDoc, Timestamp, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import styled from '@emotion/styled';
@@ -287,59 +287,78 @@ const Contacts = () => {
     updatedAt: Timestamp.now()
   });
 
-  const fetchContacts = useCallback(async () => {
-    try {
-      if (!userData?.companyID) {
-        console.log('Chýbajúce companyID - používateľ nemá priradenú firmu');
-        setSnackbar({
-          open: true,
-          message: 'Nemáte priradenú firmu, kontaktujte administrátora',
-          severity: 'error'
-        });
-        return;
-      }
+  const fetchContacts = useCallback(() => {
+    if (!userData?.companyID) {
+      console.log('Contacts: Chýba companyID');
+      setContacts([]);
+      return () => {}; // Return empty cleanup function
+    }
 
-      setLoading(true);
+    setLoading(true);
+    try {
       const contactsCollection = collection(db, 'contacts');
       const contactsQuery = query(
         contactsCollection, 
         where('companyID', '==', userData.companyID),
         orderBy('createdAt', 'desc')
       );
-      const snapshot = await getDocs(contactsQuery);
-      console.log('Contacts: Počet načítaných dokumentov:', snapshot.size);
-      console.log('Contacts: CompanyID používateľa:', userData.companyID);
       
-      const contactsData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('Contacts: Spracovávam dokument:', {
-          id: doc.id,
-          companyID: data.companyID,
-          firstName: data.firstName,
-          lastName: data.lastName
-        });
+      // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
+      const unsubscribe = onSnapshot(contactsQuery, (snapshot) => {
+        console.log('🔄 Real-time aktualizácia kontaktov - počet dokumentov:', snapshot.docs.length);
+        console.log('Contacts: CompanyID používateľa:', userData.companyID);
         
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date(data.createdAt))
-        };
-      }) as Contact[];
-      setContacts(contactsData);
-      setLoading(false);
+        const contactsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Contacts: Spracovávam dokument:', {
+            id: doc.id,
+            companyID: data.companyID,
+            firstName: data.firstName,
+            lastName: data.lastName
+          });
+          
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date(data.createdAt))
+          };
+        }) as Contact[];
+        
+        setContacts(contactsData);
+        setLoading(false);
+      }, (error) => {
+        console.error('Error fetching contacts:', error);
+        setLoading(false);
+        setSnackbar({
+          open: true,
+          message: 'Nastala chyba pri načítaní kontaktov',
+          severity: 'error'
+        });
+      });
+      
+      return unsubscribe; // Return cleanup function
     } catch (error) {
-      console.error('Error fetching contacts:', error);
+      console.error('Error setting up contacts listener:', error);
       setLoading(false);
       setSnackbar({
         open: true,
         message: 'Nastala chyba pri načítaní kontaktov',
         severity: 'error'
       });
+      return () => {}; // Return empty cleanup function
     }
   }, [userData?.companyID, setContacts, setLoading, setSnackbar]);
 
   useEffect(() => {
-    fetchContacts();
+    // Nastavíme real-time listener
+    const unsubscribe = fetchContacts();
+    
+    // Cleanup funkcia pre real-time listener
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [fetchContacts]);
 
   useEffect(() => {
@@ -420,7 +439,6 @@ const Contacts = () => {
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
-      fetchContacts();
     } catch (error) {
       console.error('Chyba pri ukladaní kontaktu:', error);
       setSnackbar({
@@ -450,7 +468,6 @@ const Contacts = () => {
         message: 'Kontakt bol úspešne odstránený',
         severity: 'success'
       });
-      fetchContacts();
     } catch (error) {
       console.error('Chyba pri mazaní kontaktu:', error);
       setSnackbar({

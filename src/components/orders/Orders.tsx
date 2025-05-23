@@ -48,7 +48,7 @@ import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
@@ -651,13 +651,14 @@ const OrdersList: React.FC = () => {
     } catch (err) { console.error('Chyba pri načítaní členov tímu:', err); }
   }, [userData]);
 
-  const fetchCustomers = useCallback(async () => {
+  const fetchCustomers = useCallback(() => {
     console.log("Attempting to fetch customers..."); // Log začiatku
     if (!userData?.companyID) {
       console.log("Fetch Customers: No companyID found.");
       setCustomers([]);
-      return;
+      return () => {}; // Return empty cleanup function
     } 
+    
     try {
       const customersRef = collection(db, 'customers');
       const q = query(
@@ -665,25 +666,41 @@ const OrdersList: React.FC = () => {
         where('companyID', '==', userData.companyID),
         orderBy('createdAt', 'desc')
       );
-      const querySnapshot = await getDocs(q);
-      const customersData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return { id: doc.id, ...data, createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt } as Customer;
+      
+      // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        console.log('🔄 Real-time aktualizácia zákazníkov - počet dokumentov:', querySnapshot.docs.length);
+        
+        const customersData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return { 
+            id: doc.id, 
+            ...data, 
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt 
+          } as Customer;
+        });
+        
+        console.log(`Fetched ${customersData.length} customers for company ${userData.companyID}.`); // Log výsledku
+        setCustomers(customersData);
+      }, (error) => {
+        console.error('Fetch Customers Error:', error); // Log chyby
       });
-      console.log(`Fetched ${customersData.length} customers for company ${userData.companyID}.`); // Log výsledku
-      setCustomers(customersData);
+      
+      return unsubscribe; // Return cleanup function
     } catch (error) {
-      console.error('Fetch Customers Error:', error); // Log chyby
+      console.error('Error setting up customers listener:', error);
+      return () => {}; // Return empty cleanup function
     }
   }, [userData]);
   
-  const fetchCarriers = useCallback(async () => {
+  const fetchCarriers = useCallback(() => {
     console.log("Attempting to fetch carriers..."); // Log začiatku
     if (!userData?.companyID) {
       console.log("Fetch Carriers: No companyID found.");
       setCarriers([]); 
-      return;
+      return () => {}; // Return empty cleanup function
     }
+    
     try {
       const carriersRef = collection(db, 'carriers');
       const q = query(
@@ -691,56 +708,127 @@ const OrdersList: React.FC = () => {
         where('companyID', '==', userData.companyID), 
         orderBy('createdAt', 'desc')
       );
-      const querySnapshot = await getDocs(q);
-      const carriersData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        const carrier = { // Vytvoríme premennú pre logovanie
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
-        } as Carrier;
-        console.log("Mapping carrier:", carrier); // Logujeme spracovaný objekt
-        return carrier;
+      
+      // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        console.log('🔄 Real-time aktualizácia dopravcov - počet dokumentov:', querySnapshot.docs.length);
+        
+        const carriersData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          const carrier = { // Vytvoríme premennú pre logovanie
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
+          } as Carrier;
+          console.log("Mapping carrier:", carrier); // Logujeme spracovaný objekt
+          return carrier;
+        });
+        
+        console.log(`Fetched ${carriersData.length} carriers for company ${userData.companyID}.`); 
+        setCarriers(carriersData);
+      }, (error) => {
+        console.error('Fetch Carriers Error:', error); 
       });
-      console.log(`Fetched ${carriersData.length} carriers for company ${userData.companyID}.`); 
-      setCarriers(carriersData);
+      
+      return unsubscribe; // Return cleanup function
     } catch (error) {
-      console.error('Fetch Carriers Error:', error); 
+      console.error('Error setting up carriers listener:', error);
+      return () => {}; // Return empty cleanup function
     }
   }, [userData]);
 
-  const fetchOrders = useCallback(async () => {
-    if (!userData?.companyID) { setOrders([]); setLoading(false); setError('Nemáte priradenú firmu.'); return; }
-    setLoading(true); setError(null);
+  const fetchOrders = useCallback(() => {
+    if (!userData?.companyID) { 
+      setOrders([]); 
+      setLoading(false); 
+      setError('Nemáte priradenú firmu.'); 
+      return () => {}; // Return empty cleanup function
+    }
+    
+    setLoading(true); 
+    setError(null);
+    
     try {
       let ordersQuery = query(collection(db, 'orders'), where('companyID', '==', userData.companyID));
-      if (startDate) ordersQuery = query(ordersQuery, where('createdAt', '>=', Timestamp.fromDate(new Date(startDate.setHours(0,0,0,0)))));
-      if (endDate) {
-           const endOfDay = new Date(endDate); endOfDay.setHours(23, 59, 59, 999);
-           ordersQuery = query(ordersQuery, where('createdAt', '<=', Timestamp.fromDate(endOfDay)));
+      
+      if (startDate) {
+        ordersQuery = query(ordersQuery, where('createdAt', '>=', Timestamp.fromDate(new Date(startDate.setHours(0,0,0,0)))));
       }
+      
+      if (endDate) {
+        const endOfDay = new Date(endDate); 
+        endOfDay.setHours(23, 59, 59, 999);
+        ordersQuery = query(ordersQuery, where('createdAt', '<=', Timestamp.fromDate(endOfDay)));
+      }
+      
       ordersQuery = query(ordersQuery, orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(ordersQuery);
-      const currentTeamMembers = teamMembers;
-      const ordersData: OrderFormData[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        const createdByName = (data.createdBy && currentTeamMembers[data.createdBy]?.name) || data.createdByName || ''; 
-        const loadingPlacesWithDates = (data.loadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
-        const unloadingPlacesWithDates = (data.unloadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
-        const createdAtTimestamp = data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(convertToDate(data.createdAt) || new Date());
-        const order: OrderFormData = {
-          id: doc.id, companyID: data.companyID, createdBy: data.createdBy, createdAt: createdAtTimestamp, loadingPlaces: loadingPlacesWithDates, unloadingPlaces: unloadingPlacesWithDates, customerCompany: data.zakaznik || data.customerCompany || '', customerPrice: data.suma || data.customerPrice || '', customerContactName: data.customerContactName || '', customerContactSurname: data.customerContactSurname || '', customerVatId: data.customerVatId || '', customerStreet: data.customerStreet || '', customerCity: data.customerCity || '', customerZip: data.customerZip || '', customerCountry: data.customerCountry || 'Slovensko', customerEmail: data.customerEmail || '', customerPhone: data.customerPhone || '', goodsDescription: data.goodsDescription || '', weightKg: data.weightKg || '', dimensionsL: data.dimensionsL || '', dimensionsW: data.dimensionsW || '', dimensionsH: data.dimensionsH || '', quantity: data.quantity || '', carrierCompany: data.carrierCompany || '', carrierContact: data.carrierContact || '', carrierVehicleReg: data.carrierVehicleReg || '', carrierPrice: data.carrierPrice || '', reminderDateTime: convertToDate(data.reminderDateTime),
-        };
-        (order as any).zakaznik = data.zakaznik || data.customerCompany || '';
-        (order as any).kontaktnaOsoba = data.kontaktnaOsoba || `${data.customerContactName || ''} ${data.customerContactSurname || ''}`.trim();
-        (order as any).suma = data.suma || data.customerPrice || '';
-        (order as any).createdByName = createdByName;
-        (order as any).orderNumberFormatted = data.orderNumberFormatted || '';
-        return order;
+      
+      // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
+      const unsubscribe = onSnapshot(ordersQuery, (querySnapshot) => {
+        console.log('🔄 Real-time aktualizácia objednávok - počet dokumentov:', querySnapshot.docs.length);
+        
+        const currentTeamMembers = teamMembers;
+        const ordersData: OrderFormData[] = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          const createdByName = (data.createdBy && currentTeamMembers[data.createdBy]?.name) || data.createdByName || ''; 
+          const loadingPlacesWithDates = (data.loadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
+          const unloadingPlacesWithDates = (data.unloadingPlaces || []).map((p: any) => ({ ...p, dateTime: convertToDate(p.dateTime) }));
+          const createdAtTimestamp = data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(convertToDate(data.createdAt) || new Date());
+          
+          const order: OrderFormData = {
+            id: doc.id, 
+            companyID: data.companyID, 
+            createdBy: data.createdBy, 
+            createdAt: createdAtTimestamp, 
+            loadingPlaces: loadingPlacesWithDates, 
+            unloadingPlaces: unloadingPlacesWithDates, 
+            customerCompany: data.zakaznik || data.customerCompany || '', 
+            customerPrice: data.suma || data.customerPrice || '', 
+            customerContactName: data.customerContactName || '', 
+            customerContactSurname: data.customerContactSurname || '', 
+            customerVatId: data.customerVatId || '', 
+            customerStreet: data.customerStreet || '', 
+            customerCity: data.customerCity || '', 
+            customerZip: data.customerZip || '', 
+            customerCountry: data.customerCountry || 'Slovensko', 
+            customerEmail: data.customerEmail || '', 
+            customerPhone: data.customerPhone || '', 
+            goodsDescription: data.goodsDescription || '', 
+            weightKg: data.weightKg || '', 
+            dimensionsL: data.dimensionsL || '', 
+            dimensionsW: data.dimensionsW || '', 
+            dimensionsH: data.dimensionsH || '', 
+            quantity: data.quantity || '', 
+            carrierCompany: data.carrierCompany || '', 
+            carrierContact: data.carrierContact || '', 
+            carrierVehicleReg: data.carrierVehicleReg || '', 
+            carrierPrice: data.carrierPrice || '', 
+            reminderDateTime: convertToDate(data.reminderDateTime),
+          };
+          
+          (order as any).zakaznik = data.zakaznik || data.customerCompany || '';
+          (order as any).kontaktnaOsoba = data.kontaktnaOsoba || `${data.customerContactName || ''} ${data.customerContactSurname || ''}`.trim();
+          (order as any).suma = data.suma || data.customerPrice || '';
+          (order as any).createdByName = createdByName;
+          (order as any).orderNumberFormatted = data.orderNumberFormatted || '';
+          return order;
+        });
+        
+        setOrders(ordersData);
+        setLoading(false);
+      }, (err) => { 
+        console.error('Chyba pri real-time načítaní objednávok:', err); 
+        setError('Nastala chyba pri načítaní objednávok');
+        setLoading(false);
       });
-      setOrders(ordersData);
-    } catch (err) { console.error('Chyba pri načítaní objednávok:', err); setError('Nastala chyba pri načítaní objednávok'); }
-    finally { setLoading(false); }
+      
+      return unsubscribe; // Return cleanup function
+    } catch (err) { 
+      console.error('Chyba pri nastavovaní real-time listenera objednávok:', err); 
+      setError('Nastala chyba pri načítaní objednávok');
+      setLoading(false);
+      return () => {}; // Return empty cleanup function
+    }
   }, [userData, startDate, endDate, teamMembers]);
 
   const fetchLocations = useCallback(async () => {
@@ -942,11 +1030,27 @@ const OrdersList: React.FC = () => {
 
   useEffect(() => {
     console.log("Running initial data fetch on component mount.");
-    fetchCustomers(); 
-    fetchCarriers();
-    fetchOrders();
+    
+    // Nastavíme real-time listenery
+    const unsubscribeCustomers = fetchCustomers(); 
+    const unsubscribeCarriers = fetchCarriers();
+    const unsubscribeOrders = fetchOrders();
+    
     fetchLocations();
     fetchDispatchers();
+    
+    // Cleanup funkcie pre všetky real-time listenery
+    return () => {
+      if (typeof unsubscribeCustomers === 'function') {
+        unsubscribeCustomers();
+      }
+      if (typeof unsubscribeCarriers === 'function') {
+        unsubscribeCarriers();
+      }
+      if (typeof unsubscribeOrders === 'function') {
+        unsubscribeOrders();
+      }
+    };
   }, [fetchCustomers, fetchCarriers, fetchOrders, fetchLocations, fetchDispatchers]);
 
   useEffect(() => {
@@ -960,10 +1064,17 @@ const OrdersList: React.FC = () => {
 
   useEffect(() => {
     console.log("Running fetchOrders due to filter change (startDate, endDate).");
-    // FetchOrders závisí od startDate/endDate, zavolá sa automaticky
-    fetchOrders(); 
+    // Nastavíme nový listener s aktualizovanými filtrami
+    const unsubscribeOrders = fetchOrders(); 
+    
+    // Cleanup predchádzajúceho listenera
+    return () => {
+      if (typeof unsubscribeOrders === 'function') {
+        unsubscribeOrders();
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate]);
+  }, [startDate, endDate, userData, teamMembers]);
 
   useEffect(() => {
     if (userData?.companyID) {
@@ -1049,7 +1160,7 @@ const OrdersList: React.FC = () => {
     setError(null);
     try {
       await deleteDoc(doc(db, 'orders', id));
-      fetchOrders();
+      // fetchOrders(); // Odstránené - real-time listener automaticky aktualizuje
     } catch (err) {
       console.error('Chyba pri mazaní objednávky:', err);
       setError('Nastala chyba pri mazaní objednávky');
@@ -1068,8 +1179,7 @@ const OrdersList: React.FC = () => {
     setShowNewOrderWizard(false);
     setSelectedOrder(null);
     setIsEditMode(false);
-    // Aktualizujeme zoznam objednávok po zatvorení formulára
-    fetchOrders();
+    // fetchOrders(); // Odstránené - real-time listener automaticky aktualizuje
   };
 
   // Upravená funkcia pre náhľad PDF
@@ -1206,9 +1316,8 @@ const OrdersList: React.FC = () => {
         console.log('Zákazník bol úspešne uložený s ID:', docRef.id);
       }
       
-      // Načítame aktualizovaných zákazníkov
-      console.log("Calling fetchCustomers after successful add..."); // Pridaný log
-      await fetchCustomers();
+      // Real-time listener automaticky aktualizuje zoznam zákazníkov
+      console.log("Real-time listener automaticky aktualizuje zákazníkov");
       
       // Resetujeme stav editácie a zatvoríme formulár
       setSelectedCustomerForEdit(null);
@@ -1219,9 +1328,7 @@ const OrdersList: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  // useEffect pre zákazníkov odstránený - real-time listener sa nastavuje v hlavnom useEffect
 
   const filteredCustomers = customers.filter(customer => {
     const searchLower = customerSearchQuery.toLowerCase();
@@ -1273,9 +1380,8 @@ const OrdersList: React.FC = () => {
       const docRef = await addDoc(carriersRef, carrierDataToSave);
       console.log('Dopravca bol úspešne uložený s ID:', docRef.id);
       
-      // Načítame aktualizovaných dopravcov
-      console.log("Calling fetchCarriers after successful add..."); // Pridaný log
-      await fetchCarriers();
+      // Real-time listener automaticky aktualizuje zoznam dopravcov
+      console.log("Real-time listener automaticky aktualizuje dopravcov");
       
       // Až potom zatvoríme formulár
       setShowCarrierForm(false);
@@ -1285,11 +1391,7 @@ const OrdersList: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCustomers();
-    fetchCarriers(); 
-  // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, [userData]); // fetchCarriers už nie je v závislostiach, ale userData áno, aby sa znovu načítali pri zmene usera
+  // useEffect pre dopravcov odstránený - real-time listener sa nastavuje v hlavnom useEffect
 
   const filteredCarriers = carriers.filter(carrier => {
     const searchLower = carrierSearchQuery.toLowerCase();
@@ -1357,7 +1459,7 @@ const OrdersList: React.FC = () => {
       const customerRef = doc(db, 'customers', id);
       await deleteDoc(customerRef);
       console.log('Zákazník bol úspešne vymazaný');
-      fetchCustomers();
+      // fetchCustomers(); // Odstránené - real-time listener automaticky aktualizuje
     } catch (error) {
       console.error('Chyba pri vymazávaní zákazníka:', error);
       alert('Nastala chyba pri vymazávaní zákazníka: ' + (error as Error).message);
@@ -1411,7 +1513,7 @@ const OrdersList: React.FC = () => {
       const carrierRef = doc(db, 'carriers', id);
       await deleteDoc(carrierRef);
       console.log('Dopravca bol úspešne vymazaný');
-      fetchCarriers();
+      // fetchCarriers(); // Odstránené - real-time listener automaticky aktualizuje
     } catch (error) {
       console.error('Chyba pri vymazávaní dopravcu:', error);
       alert('Nastala chyba pri vymazávaní dopravcu: ' + (error as Error).message);

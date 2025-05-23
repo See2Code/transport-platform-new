@@ -44,7 +44,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import BusinessIcon from '@mui/icons-material/Business';
 import PersonIcon from '@mui/icons-material/Person';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, getDoc, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, getDoc, orderBy, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import 'react-phone-input-2/lib/material.css';
@@ -597,62 +597,104 @@ export default function BusinessCases() {
     NOT_INTERESTED: { label: t('business.status.notInterested'), color: 'error' as const }
   }), [t]);
 
-  const fetchCases = useCallback(async () => {
+  const fetchCases = useCallback(() => {
     try {
-      if (!userData?.companyID) { console.log('Chýbajúce companyID'); return; }
+      if (!userData?.companyID) { 
+        console.log('Chýbajúce companyID'); 
+        setCases([]);
+        return () => {}; // Return empty cleanup function
+      }
       setLoading(true);
+      
       const casesCollection = collection(db, 'businessCases');
       let q = query(casesCollection, where('companyID', '==', userData.companyID));
+      
       // Apply date filters
-      if (filterStartDate) { q = query(q, where('createdAt', '>=', Timestamp.fromDate(new Date(filterStartDate.setHours(0, 0, 0, 0))))); }
-      if (filterEndDate) { q = query(q, where('createdAt', '<=', Timestamp.fromDate(new Date(filterEndDate.setHours(23, 59, 59, 999))))); }
+      if (filterStartDate) { 
+        q = query(q, where('createdAt', '>=', Timestamp.fromDate(new Date(filterStartDate.setHours(0, 0, 0, 0))))); 
+      }
+      if (filterEndDate) { 
+        q = query(q, where('createdAt', '<=', Timestamp.fromDate(new Date(filterEndDate.setHours(23, 59, 59, 999))))); 
+      }
       q = query(q, orderBy('createdAt', 'desc'));
       
-      const snapshot = await getDocs(q);
-      const casesData: BusinessCase[] = snapshot.docs.map(doc => {
-        const data = doc.data();
+      // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        console.log('🔄 Real-time aktualizácia business cases - počet dokumentov:', snapshot.docs.length);
         
-        // Convert phase timestamps correctly
-        const phasesWithDates: Phase[] = (data.phases || []).map((phase: any): Phase => {
-            let createdAtDate: Date;
-            if (phase.createdAt instanceof Timestamp) { createdAtDate = phase.createdAt.toDate(); }
-            else if (phase.createdAt) { try { const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); createdAtDate = !isNaN(d.getTime()) ? d : new Date(); } catch { createdAtDate = new Date(); } }
-            else { createdAtDate = new Date(); }
-            return { id: phase.id || crypto.randomUUID(), name: phase.name || 'Neznáma fáza', createdAt: createdAtDate };
-        });
+        const casesData: BusinessCase[] = snapshot.docs.map(doc => {
+          const data = doc.data();
+          
+          // Convert phase timestamps correctly
+          const phasesWithDates: Phase[] = (data.phases || []).map((phase: any): Phase => {
+              let createdAtDate: Date;
+              if (phase.createdAt instanceof Timestamp) { 
+                createdAtDate = phase.createdAt.toDate(); 
+              }
+              else if (phase.createdAt) { 
+                try { 
+                  const d = new Date(phase.createdAt.seconds ? phase.createdAt.seconds * 1000 : phase.createdAt); 
+                  createdAtDate = !isNaN(d.getTime()) ? d : new Date(); 
+                } catch { 
+                  createdAtDate = new Date(); 
+                } 
+              }
+              else { 
+                createdAtDate = new Date(); 
+              }
+              return { 
+                id: phase.id || crypto.randomUUID(), 
+                name: phase.name || 'Neznáma fáza', 
+                createdAt: createdAtDate 
+              };
+          });
 
-        const createdAtTimestamp = data.createdAt instanceof Timestamp ? data.createdAt : (data.createdAt ? Timestamp.fromDate(new Date(data.createdAt)) : Timestamp.now());
+          const createdAtTimestamp = data.createdAt instanceof Timestamp ? 
+            data.createdAt : 
+            (data.createdAt ? Timestamp.fromDate(new Date(data.createdAt)) : Timestamp.now());
 
-        // Return a full BusinessCase object
-        return {
-            id: doc.id,
-            companyName: data.companyName || '',
-            vatNumber: data.vatNumber || '',
-            companyAddress: data.companyAddress || '',
-            contactPerson: {
-                firstName: data.contactPerson?.firstName || '',
-                lastName: data.contactPerson?.lastName || '',
-                phone: data.contactPerson?.phone || '',
-                email: data.contactPerson?.email || ''
-            },
-            internalNote: data.internalNote || '',
-            status: data.status || 'NOT_CALLED',
-            reminderDateTime: convertToDate(data.reminderDateTime),
-            reminderNote: data.reminderNote || '',
-            createdAt: createdAtTimestamp,
-            createdBy: {
-                firstName: data.createdBy?.firstName || '',
-                lastName: data.createdBy?.lastName || ''
-            },
-            countryCode: data.countryCode,
-            companyID: data.companyID,
-            phases: phasesWithDates
-        } as BusinessCase; // Assert as BusinessCase
-      }); 
+          // Return a full BusinessCase object
+          return {
+              id: doc.id,
+              companyName: data.companyName || '',
+              vatNumber: data.vatNumber || '',
+              companyAddress: data.companyAddress || '',
+              contactPerson: {
+                  firstName: data.contactPerson?.firstName || '',
+                  lastName: data.contactPerson?.lastName || '',
+                  phone: data.contactPerson?.phone || '',
+                  email: data.contactPerson?.email || ''
+              },
+              internalNote: data.internalNote || '',
+              status: data.status || 'NOT_CALLED',
+              reminderDateTime: convertToDate(data.reminderDateTime),
+              reminderNote: data.reminderNote || '',
+              createdAt: createdAtTimestamp,
+              createdBy: {
+                  firstName: data.createdBy?.firstName || '',
+                  lastName: data.createdBy?.lastName || ''
+              },
+              countryCode: data.countryCode,
+              companyID: data.companyID,
+              phases: phasesWithDates
+          } as BusinessCase; // Assert as BusinessCase
+        }); 
+        
+        setCases(casesData);
+        setLoading(false);
+      }, (error) => {
+        console.error('Error fetching cases:', error);
+        setSnackbar({ open: true, message: 'Chyba pri načítaní prípadov', severity: 'error' });
+        setLoading(false);
+      });
       
-      setCases(casesData);
-    } catch (error) { console.error('Error fetching cases:', error); setSnackbar({ open: true, message: 'Chyba pri načítaní prípadov', severity: 'error' }); }
-    finally { setLoading(false); }
+      return unsubscribe; // Return cleanup function
+    } catch (error) { 
+      console.error('Error setting up cases listener:', error); 
+      setSnackbar({ open: true, message: 'Chyba pri načítaní prípadov', severity: 'error' }); 
+      setLoading(false);
+      return () => {}; // Return empty cleanup function
+    }
   }, [userData?.companyID, filterStartDate, filterEndDate]);
 
   const getFilteredCases = useCallback(() => {
@@ -760,19 +802,19 @@ export default function BusinessCases() {
         contactPerson: { firstName: '', lastName: '', phone: '', email: '' },
         internalNote: '', status: 'NOT_CALLED', reminderDateTime: null, reminderNote: '' 
       });
-      fetchCases();
+      // fetchCases(); // Odstránené - real-time listener automaticky aktualizuje
     } catch (error) {
       console.error('Error saving business case:', error);
       setSnackbar({ open: true, message: 'Nastala chyba pri ukladaní', severity: 'error' });
     }
-  }, [currentUser, userData, formData, editCase, selectedCountry, fetchCases]);
+  }, [currentUser, userData, formData, editCase, selectedCountry]); // Odstránené fetchCases zo závislostí
 
   const confirmDelete = useCallback(async () => {
     if (!caseToDelete) return;
     try {
       await deleteDoc(doc(db, 'businessCases', caseToDelete));
       setSnackbar({ open: true, message: 'Prípad bol úspešne vymazaný', severity: 'success' });
-      fetchCases();
+      // fetchCases(); // Odstránené - real-time listener automaticky aktualizuje
     } catch (error) {
       console.error('Error deleting case:', error);
       setSnackbar({ open: true, message: 'Nastala chyba pri mazaní', severity: 'error' });
@@ -780,10 +822,18 @@ export default function BusinessCases() {
       setDeleteDialogOpen(false);
       setCaseToDelete(null);
     }
-  }, [caseToDelete, fetchCases]);
+  }, [caseToDelete]); // Odstránené fetchCases zo závislostí
 
   useEffect(() => {
-    fetchCases();
+    // Nastavíme real-time listener
+    const unsubscribe = fetchCases();
+    
+    // Cleanup funkcia pre real-time listener
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [fetchCases]);
 
   const renderMobileCase = useCallback((businessCase: BusinessCase) => (

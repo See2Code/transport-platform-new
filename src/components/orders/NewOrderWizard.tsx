@@ -586,16 +586,29 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
   // Load edit data
   useEffect(() => {
-    if (isEdit && orderData && open) {
+    if (isEdit && orderData && open && customerOptions.length > 0) {
+      console.log('🔄 Loading edit data:', orderData);
+      console.log('📋 Available customers:', customerOptions);
+      
+      // Nájdeme zákazníka v zozname na základe customerCompany
+      const customerCompanyName = (orderData as any).zakaznik || orderData.customerCompany || '';
+      const matchingCustomer = customerOptions.find(customer => 
+        customer.company === customerCompanyName
+      );
+      
+      console.log('🎯 Looking for customer:', customerCompanyName);
+      console.log('✅ Found matching customer:', matchingCustomer);
+      
       setFormData(prev => ({
         ...prev,
         ...orderData,
-        zakaznik: (orderData as any).zakaznik || orderData.customerCompany || '',
+        zakaznik: customerCompanyName,
+        zakaznikData: matchingCustomer || null, // Nastavíme zákazníka objektu pre Autocomplete
         kontaktnaOsoba: (orderData as any).kontaktnaOsoba || 
           `${orderData.customerContactName || ''} ${orderData.customerContactSurname || ''}`.trim()
       }));
     }
-  }, [isEdit, orderData, open, userData]);
+  }, [isEdit, orderData, open, customerOptions]); // Pridávame customerOptions do závislostí
 
   // Handle functions
   const handleNext = () => {
