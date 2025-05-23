@@ -29,17 +29,27 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 
-// Importujeme komponenty pre vlajky
+// Importujeme komponenty pre vlajky - SVG vlajky z flagcdn.com
 const SKFlagIcon = () => (
-  <span role="img" aria-label="Slovenská vlajka" style={{ fontSize: '1.5rem' }}>
-    🇸🇰
-  </span>
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/sk.svg" 
+    alt="Slovenská vlajka" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
 );
 
 const ENFlagIcon = () => (
-  <span role="img" aria-label="Anglická vlajka" style={{ fontSize: '1.5rem' }}>
-    🇬🇧
-  </span>
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/gb.svg" 
+    alt="Anglická vlajka" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
 );
 
 // Štýly komponentov
@@ -72,7 +82,7 @@ interface MobileNavbarProps {
 const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { toggleTheme } = useThemeMode();
+  const { toggleTheme, isDarkMode } = useThemeMode();
 
   const changeLanguage = (language: string) => {
     i18n.changeLanguage(language);
@@ -119,16 +129,19 @@ const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
         mb: 3, 
         borderRadius: '8px',
         py: 2,
-        background: 'rgba(0, 0, 0, 0.05)',
+        background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
       }}>
-        <IconButton onClick={handleNotificationsClick} sx={{ color: '#333' }}>
+        <IconButton 
+          onClick={handleNotificationsClick} 
+          sx={{ color: isDarkMode ? '#ffffff' : '#333' }}
+        >
           <NotificationsIcon />
         </IconButton>
         <IconButton 
           onClick={() => { changeLanguage('sk'); }}
           sx={{ 
             opacity: !isEN ? 1 : 0.6,
-            color: '#333',
+            color: isDarkMode ? '#ffffff' : '#333',
           }}
         >
           <SKFlagIcon />
@@ -137,20 +150,20 @@ const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
           onClick={() => { changeLanguage('en'); }}
           sx={{ 
             opacity: isEN ? 1 : 0.6,
-            color: '#333',
+            color: isDarkMode ? '#ffffff' : '#333',
           }}
         >
           <ENFlagIcon />
         </IconButton>
         <IconButton 
           onClick={toggleTheme}
-          sx={{ color: '#333' }}
+          sx={{ color: isDarkMode ? '#ffffff' : '#333' }}
         >
-          {isEN ? <LightModeIcon /> : <DarkModeIcon />}
+          {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
         </IconButton>
       </Box>
       
-      <Divider sx={{ my: 2, bgcolor: 'rgba(0,0,0,0.1)' }} />
+      <Divider sx={{ my: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
       
       <List>
         {menuItems.map((item, index) => (
@@ -165,19 +178,19 @@ const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
               borderRadius: '8px',
               mb: 1,
               '&:hover': {
-                background: 'rgba(0, 0, 0, 0.05)',
+                background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
               }
             }}
           >
             <ListItemIcon sx={{ 
               minWidth: '40px',
-              color: 'rgba(0, 0, 0, 0.7)',
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
             }}>
               {item.icon}
             </ListItemIcon>
             <Typography 
               sx={{ 
-                color: '#333',
+                color: isDarkMode ? '#ffffff' : '#333',
                 fontWeight: 500,
               }}
             >
@@ -187,7 +200,7 @@ const MobileNavbar: FC<MobileNavbarProps> = ({ open, onClose, onLogout }) => {
         ))}
       </List>
 
-      <Divider sx={{ my: 2, bgcolor: 'rgba(0,0,0,0.1)' }} />
+      <Divider sx={{ my: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
       
       <Box sx={{ p: 2 }}>
         <Button

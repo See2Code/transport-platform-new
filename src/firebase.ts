@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
+import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getDatabase } from 'firebase/database';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
@@ -48,7 +48,9 @@ try {
 // Get Firebase services
 const auth = getAuth(app);
 const db = initializeFirestore(app, {
-  localCache: persistentLocalCache()
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
 });
 const functions = getFunctions(app, 'europe-west1');
 const database = getDatabase(app);

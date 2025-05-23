@@ -2,17 +2,27 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Tooltip, Box } from '@mui/material';
 
-// Ikonky vlajok môžete nahradiť vlastnými
+// SVG vlajky z flagcdn.com - rovnaké ako v navbar-e
 const SKFlagIcon = () => (
-  <span role="img" aria-label="Slovenská vlajka" style={{ fontSize: '1.5rem' }}>
-    🇸🇰
-  </span>
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/sk.svg" 
+    alt="Slovenská vlajka" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
 );
 
 const ENFlagIcon = () => (
-  <span role="img" aria-label="Anglická vlajka" style={{ fontSize: '1.5rem' }}>
-    🇬🇧
-  </span>
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/gb.svg" 
+    alt="Anglická vlajka" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
 );
 
 /**

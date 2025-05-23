@@ -582,7 +582,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         userData: userData
       });
     }
-  }, [open, userData?.companyID, fetchCustomers, fetchCarriers, fetchSavedData]);
+  }, [open, userData?.companyID, fetchCustomers, fetchCarriers, fetchSavedData, userData]);
 
   // Load edit data
   useEffect(() => {
@@ -595,7 +595,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           `${orderData.customerContactName || ''} ${orderData.customerContactSurname || ''}`.trim()
       }));
     }
-  }, [isEdit, orderData, open]);
+  }, [isEdit, orderData, open, userData]);
 
   // Handle functions
   const handleNext = () => {

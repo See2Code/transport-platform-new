@@ -80,33 +80,33 @@ interface LocalUserData {
 }
 
 const euCountries = [
-  { code: 'SK', name: 'Slovensko', flag: '🇸🇰', prefix: '+421' },
-  { code: 'CZ', name: 'Česko', flag: '🇨🇿', prefix: '+420' },
-  { code: 'HU', name: 'Maďarsko', flag: '🇭🇺', prefix: '+36' },
-  { code: 'PL', name: 'Poľsko', flag: '🇵🇱', prefix: '+48' },
-  { code: 'AT', name: 'Rakúsko', flag: '🇦🇹', prefix: '+43' },
-  { code: 'DE', name: 'Nemecko', flag: '🇩🇪', prefix: '+49' },
-  { code: 'FR', name: 'Francúzsko', flag: '🇫🇷', prefix: '+33' },
-  { code: 'IT', name: 'Taliansko', flag: '🇮🇹', prefix: '+39' },
-  { code: 'ES', name: 'Španielsko', flag: '🇪🇸', prefix: '+34' },
-  { code: 'PT', name: 'Portugalsko', flag: '🇵🇹', prefix: '+351' },
-  { code: 'NL', name: 'Holandsko', flag: '🇳🇱', prefix: '+31' },
-  { code: 'BE', name: 'Belgicko', flag: '🇧🇪', prefix: '+32' },
-  { code: 'DK', name: 'Dánsko', flag: '🇩🇰', prefix: '+45' },
-  { code: 'SE', name: 'Švédsko', flag: '🇸🇪', prefix: '+46' },
-  { code: 'FI', name: 'Fínsko', flag: '🇫🇮', prefix: '+358' },
-  { code: 'IE', name: 'Írsko', flag: '🇮🇪', prefix: '+353' },
-  { code: 'GR', name: 'Grécko', flag: '🇬🇷', prefix: '+30' },
-  { code: 'RO', name: 'Rumunsko', flag: '🇷🇴', prefix: '+40' },
-  { code: 'BG', name: 'Bulharsko', flag: '🇧🇬', prefix: '+359' },
-  { code: 'HR', name: 'Chorvátsko', flag: '🇭🇷', prefix: '+385' },
-  { code: 'SI', name: 'Slovinsko', flag: '🇸🇮', prefix: '+386' },
-  { code: 'EE', name: 'Estónsko', flag: '🇪🇪', prefix: '+372' },
-  { code: 'LV', name: 'Lotyšsko', flag: '🇱🇻', prefix: '+371' },
-  { code: 'LT', name: 'Litva', flag: '🇱🇹', prefix: '+370' },
-  { code: 'CY', name: 'Cyprus', flag: '🇨🇾', prefix: '+357' },
-  { code: 'MT', name: 'Malta', flag: '🇲🇹', prefix: '+356' },
-  { code: 'LU', name: 'Luxembursko', flag: '🇱🇺', prefix: '+352' }
+  { code: 'SK', name: 'Slovensko', prefix: '+421' },
+  { code: 'CZ', name: 'Česko', prefix: '+420' },
+  { code: 'HU', name: 'Maďarsko', prefix: '+36' },
+  { code: 'PL', name: 'Poľsko', prefix: '+48' },
+  { code: 'AT', name: 'Rakúsko', prefix: '+43' },
+  { code: 'DE', name: 'Nemecko', prefix: '+49' },
+  { code: 'FR', name: 'Francúzsko', prefix: '+33' },
+  { code: 'IT', name: 'Taliansko', prefix: '+39' },
+  { code: 'ES', name: 'Španielsko', prefix: '+34' },
+  { code: 'PT', name: 'Portugalsko', prefix: '+351' },
+  { code: 'NL', name: 'Holandsko', prefix: '+31' },
+  { code: 'BE', name: 'Belgicko', prefix: '+32' },
+  { code: 'DK', name: 'Dánsko', prefix: '+45' },
+  { code: 'SE', name: 'Švédsko', prefix: '+46' },
+  { code: 'FI', name: 'Fínsko', prefix: '+358' },
+  { code: 'IE', name: 'Írsko', prefix: '+353' },
+  { code: 'GR', name: 'Grécko', prefix: '+30' },
+  { code: 'RO', name: 'Rumunsko', prefix: '+40' },
+  { code: 'BG', name: 'Bulharsko', prefix: '+359' },
+  { code: 'HR', name: 'Chorvátsko', prefix: '+385' },
+  { code: 'SI', name: 'Slovinsko', prefix: '+386' },
+  { code: 'EE', name: 'Estónsko', prefix: '+372' },
+  { code: 'LV', name: 'Lotyšsko', prefix: '+371' },
+  { code: 'LT', name: 'Litva', prefix: '+370' },
+  { code: 'CY', name: 'Cyprus', prefix: '+357' },
+  { code: 'MT', name: 'Malta', prefix: '+356' },
+  { code: 'LU', name: 'Luxembursko', prefix: '+352' }
 ];
 
 const colors = {
@@ -1123,7 +1123,14 @@ function Settings() {
                       {euCountries.map((country) => (
                         <MenuItem key={country.code} value={country.code}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <span>{country.flag}</span>
+                            <img 
+                              loading="lazy" 
+                              width="20" 
+                              height="15"
+                              src={`https://flagcdn.com/${country.code.toLowerCase()}.svg`} 
+                              alt={`${country.name} vlajka`} 
+                              style={{ borderRadius: '2px', objectFit: 'cover' }}
+                            />
                             <span>{country.name}</span>
                           </Box>
                         </MenuItem>
