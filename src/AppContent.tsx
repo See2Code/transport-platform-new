@@ -25,6 +25,7 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import RegisterUser from './components/auth/RegisterUser';
 import { useThemeMode } from './contexts/ThemeContext';
 import ChatDrawer from './components/chat/ChatDrawer';
+import NotificationPermission from './components/notifications/NotificationPermission';
 import { useChat } from './contexts/ChatContext';
 import styled from '@emotion/styled';
 
@@ -107,6 +108,20 @@ const AppContent: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [chatOpen, closeChat]);
+
+  // Event listener pre automatické otvorenie chatu z notifikácie
+  useEffect(() => {
+    const handleForceOpenChat = () => {
+      if (!chatOpen) {
+        setChatOpen(true);
+      }
+    };
+
+    window.addEventListener('forceOpenChatDrawer', handleForceOpenChat);
+    return () => {
+      window.removeEventListener('forceOpenChatDrawer', handleForceOpenChat);
+    };
+  }, [chatOpen]);
 
   const chatUIValue = {
     chatOpen,
@@ -349,6 +364,9 @@ const AppContent: React.FC = () => {
             </Routes>
           </ContentWrapper>
         </AppContainer>
+        
+        {/* Komponenty, ktoré sa zobrazujú globálne */}
+        <NotificationPermission />
       </ChatUIContext.Provider>
     </MuiThemeProvider>
   );

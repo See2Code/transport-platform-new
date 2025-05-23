@@ -33,9 +33,31 @@ async function sendChatNotification(
   }
 }
 
-// Funkcia na vytvorenie novej konverzácie
+// Pomocná funkcia na inicializáciu unreadMessages objektu
+function initializeUnreadMessages(participants: string[]): { [userId: string]: number } {
+  const unreadMessages: { [userId: string]: number } = {};
+  participants.forEach(participantId => {
+    unreadMessages[participantId] = 0;
+  });
+  return unreadMessages;
+}
+
+// Funkcia na vytvorenie konverzácie
 export const createConversation = functions.region(REGION).https.onCall(
-  async (data: { userId: string }, context: CallableContext) => {
+  async (
+    data: { 
+      participants: string[];
+      participantsInfo: {
+        [userId: string]: {
+          name: string;
+          email: string;
+          photoURL?: string;
+          companyName?: string;
+        }
+      }
+    },
+    context: CallableContext
+  ) => {
     if (!context.auth) {
       throw new functions.https.HttpsError(
         'unauthenticated',
@@ -44,80 +66,46 @@ export const createConversation = functions.region(REGION).https.onCall(
     }
 
     try {
-      const { userId } = data;
+      const { participants, participantsInfo } = data;
       const currentUserId = context.auth.uid;
 
-      if (userId === currentUserId) {
+      // Overíme, že aktuálny používateľ je v participants
+      if (!participants.includes(currentUserId)) {
         throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Nemôžete začať konverzáciu sami so sebou'
+          'permission-denied',
+          'Nemôžete vytvoriť konverzáciu bez seba'
         );
       }
 
-      // Najprv skontrolujeme, či už konverzácia existuje
-      const existingConversationsSnapshot = await db
+      // Skontrolujeme, či už konverzácia existuje
+      const existingConversationsQuery = await db
         .collection('conversations')
         .where('participants', 'array-contains', currentUserId)
         .get();
 
-      let existingConversationId = null;
-
-      existingConversationsSnapshot.forEach((doc) => {
-        const conversationData = doc.data();
-        if (conversationData.participants.includes(userId)) {
-          existingConversationId = doc.id;
+      for (const doc of existingConversationsQuery.docs) {
+        const data = doc.data();
+        if (data.participants && 
+            data.participants.length === participants.length &&
+            participants.every((p: string) => data.participants.includes(p))) {
+          // Konverzácia už existuje
+          return { conversationId: doc.id, exists: true };
         }
-      });
-
-      if (existingConversationId) {
-        return { conversationId: existingConversationId, isNew: false };
       }
 
-      // Získame informácie o aktuálnom používateľovi
-      const currentUserDoc = await db.collection('users').doc(currentUserId).get();
-      const otherUserDoc = await db.collection('users').doc(userId).get();
-
-      if (!currentUserDoc.exists) {
-        throw new functions.https.HttpsError(
-          'not-found',
-          'Aktuálny používateľ neexistuje'
-        );
-      }
-
-      if (!otherUserDoc.exists) {
-        throw new functions.https.HttpsError(
-          'not-found',
-          'Vyhľadávaný používateľ neexistuje'
-        );
-      }
-
-      const currentUserData = currentUserDoc.data();
-      const otherUserData = otherUserDoc.data();
-
-      // Vytvoríme novú konverzáciu
+      // Vytvoríme novú konverzáciu s novou štruktúrou
       const timestamp = admin.firestore.FieldValue.serverTimestamp();
-      const participantsInfo = {
-        [currentUserId]: {
-          name: `${currentUserData?.firstName || ''} ${currentUserData?.lastName || ''}`.trim(),
-          email: currentUserData?.email || '',
-          photoURL: currentUserData?.photoURL || '',
-        },
-        [userId]: {
-          name: `${otherUserData?.firstName || ''} ${otherUserData?.lastName || ''}`.trim(),
-          email: otherUserData?.email || '',
-          photoURL: otherUserData?.photoURL || '',
-        },
-      };
+      const unreadMessages = initializeUnreadMessages(participants);
 
       const conversationRef = await db.collection('conversations').add({
-        participants: [currentUserId, userId],
+        participants,
         participantsInfo,
+        unreadMessages, // Nová štruktúra: { userId1: 0, userId2: 0 }
         createdAt: timestamp,
-        updatedAt: timestamp,
-        unreadCount: 0,
+        updatedAt: timestamp
       });
 
-      return { conversationId: conversationRef.id, isNew: true };
+      return { conversationId: conversationRef.id, exists: false };
     } catch (error) {
       console.error('Chyba pri vytváraní konverzácie:', error);
       throw new functions.https.HttpsError(
@@ -199,7 +187,21 @@ export const sendMessage = functions.region(REGION).https.onCall(
           read: false,
         });
 
-      // Aktualizujeme konverzáciu s poslednou správou
+      // Pripravíme aktualizácie pre unreadMessages
+      const currentUnreadMessages = conversationData.unreadMessages || {};
+      const updatedUnreadMessages = { ...currentUnreadMessages };
+
+      // Pre každého účastníka okrem odosielateľa zvýšime počet neprečítaných správ
+      conversationData.participants.forEach((participantId: string) => {
+        if (participantId !== senderId) {
+          // Pre ostatných zvýšime počet neprečítaných správ
+          updatedUnreadMessages[participantId] = (updatedUnreadMessages[participantId] || 0) + 1;
+        }
+        // Pre odosielateľa netreba meniť count - necháme ako je
+        // (bude sa upravovať cez markMessagesAsRead keď si otvorí chat)
+      });
+
+      // Aktualizujeme konverzáciu s poslednou správou a novými unreadMessages
       await db.collection('conversations').doc(conversationId).update({
         lastMessage: {
           text: text.trim(),
@@ -207,24 +209,26 @@ export const sendMessage = functions.region(REGION).https.onCall(
           senderId,
         },
         updatedAt: timestamp,
-        unreadCount: admin.firestore.FieldValue.increment(1),
+        unreadMessages: updatedUnreadMessages
       });
 
-      // Získame príjemcu (používateľa, ktorý nie je odosielateľom)
-      const recipientId = conversationData.participants.find(
+      // Získame príjemcov (všetci okrem odosielateľa)
+      const recipients = conversationData.participants.filter(
         (id: string) => id !== senderId
       );
 
-      // Odošleme notifikáciu príjemcovi
-      if (recipientId) {
-        await sendChatNotification(
+      // Odošleme notifikácie všetkým príjemcom
+      const notificationPromises = recipients.map((recipientId: string) =>
+        sendChatNotification(
           recipientId,
           senderId,
           senderName,
           text.trim(),
           conversationId
-        );
-      }
+        )
+      );
+
+      await Promise.all(notificationPromises);
 
       return { messageId: messageRef.id };
     } catch (error) {
@@ -273,12 +277,18 @@ export const markMessagesAsRead = functions.region(REGION).https.onCall(
         );
       }
 
-      // Resetujeme počítadlo neprečítaných správ
+      // Aktualizujeme unreadMessages pre aktuálneho používateľa na 0
+      const currentUnreadMessages = conversationData.unreadMessages || {};
+      const updatedUnreadMessages = {
+        ...currentUnreadMessages,
+        [currentUserId]: 0
+      };
+
       await db.collection('conversations').doc(conversationId).update({
-        unreadCount: 0,
+        unreadMessages: updatedUnreadMessages
       });
 
-      // Označíme všetky neprečítané správy od druhého používateľa ako prečítané
+      // Označíme všetky neprečítané správy od ostatných používateľov ako prečítané
       const unreadMessagesQuery = await db
         .collection('conversations')
         .doc(conversationId)
@@ -326,53 +336,55 @@ export const searchUsers = functions.region(REGION).https.onCall(
         return { users: [] };
       }
 
-      const queryLower = query.toLowerCase();
-      const usersRef = db.collection('users');
+      // Vyhľadávanie používateľov (simplified - v realite by ste mohli implementovať fulltext search)
+      const usersSnapshot = await db
+        .collection('users')
+        .limit(100) // Získame viac používateľov pre filtrovanie
+        .get();
 
-      // Vyhľadávame podľa mena, priezviska a emailu
-      const [firstNameResults, lastNameResults, emailResults] = await Promise.all([
-        usersRef
-          .where('firstNameLower', '>=', queryLower)
-          .where('firstNameLower', '<=', queryLower + '\uf8ff')
-          .limit(limit)
-          .get(),
-        usersRef
-          .where('lastNameLower', '>=', queryLower)
-          .where('lastNameLower', '<=', queryLower + '\uf8ff')
-          .limit(limit)
-          .get(),
-        usersRef
-          .where('emailLower', '>=', queryLower)
-          .where('emailLower', '<=', queryLower + '\uf8ff')
-          .limit(limit)
-          .get(),
-      ]);
+      const normalizedQuery = query.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 
-      // Zlúčime výsledky a odstránime duplikáty
-      const usersMap = new Map();
+      const matchingUsers: any[] = [];
 
-      // Funkcia na pridanie používateľa do mapy
-      const addToMap = (doc: FirebaseFirestore.QueryDocumentSnapshot) => {
-        if (doc.id !== currentUserId && !usersMap.has(doc.id)) {
-          const userData = doc.data();
-          usersMap.set(doc.id, {
+      usersSnapshot.forEach(doc => {
+        if (doc.id === currentUserId) return; // Preskočíme seba
+
+        const userData = doc.data();
+        
+        const firstName = (userData.firstName || '')
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        const lastName = (userData.lastName || '')
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        const email = (userData.email || '')
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        
+        if (firstName.includes(normalizedQuery) || 
+            lastName.includes(normalizedQuery) ||
+            email.includes(normalizedQuery) ||
+            `${firstName} ${lastName}`.includes(normalizedQuery)) {
+          
+          matchingUsers.push({
             uid: doc.id,
             firstName: userData.firstName || '',
             lastName: userData.lastName || '',
             email: userData.email || '',
             photoURL: userData.photoURL || '',
-            companyName: userData.companyName || '',
+            companyName: userData.companyName || ''
           });
         }
-      };
 
-      // Pridáme výsledky do mapy
-      firstNameResults.forEach(addToMap);
-      lastNameResults.forEach(addToMap);
-      emailResults.forEach(addToMap);
+        if (matchingUsers.length >= limit) return;
+      });
 
-      // Vrátime zoznam používateľov
-      return { users: Array.from(usersMap.values()) };
+      return { users: matchingUsers.slice(0, limit) };
     } catch (error) {
       console.error('Chyba pri vyhľadávaní používateľov:', error);
       throw new functions.https.HttpsError(
@@ -383,122 +395,17 @@ export const searchUsers = functions.region(REGION).https.onCall(
   }
 );
 
-// Trigger pre aktualizáciu používateľských údajov v konverzáciách
-export const updateUserProfileInConversations = functions
-  .region(REGION)
-  .firestore.document('users/{userId}')
-  .onUpdate(async (change, context) => {
-    const userId = context.params.userId;
-    const newData = change.after.data();
-    const previousData = change.before.data();
-
-    // Kontrola, či sa zmenili relevantné údaje
-    const nameChanged =
-      newData.firstName !== previousData.firstName ||
-      newData.lastName !== previousData.lastName;
-    const photoChanged = newData.photoURL !== previousData.photoURL;
-
-    if (!nameChanged && !photoChanged) {
-      return null; // Ak sa nič relevantné nezmenilo, nič nerobíme
-    }
-
-    try {
-      // Nájdeme všetky konverzácie, kde je používateľ účastníkom
-      const conversationsSnapshot = await db
-        .collection('conversations')
-        .where('participants', 'array-contains', userId)
-        .get();
-
-      const batch = db.batch();
-      let updateCount = 0;
-
-      conversationsSnapshot.forEach((doc) => {
-        const conversationData = doc.data();
-        const participantsInfo = { ...conversationData.participantsInfo };
-
-        // Aktualizujeme údaje používateľa v konverzácii
-        if (participantsInfo[userId]) {
-          const updates: { [key: string]: any } = {};
-
-          if (nameChanged) {
-            updates[`participantsInfo.${userId}.name`] = `${newData.firstName || ''} ${
-              newData.lastName || ''
-            }`.trim();
-          }
-
-          if (photoChanged) {
-            updates[`participantsInfo.${userId}.photoURL`] = newData.photoURL || '';
-          }
-
-          if (Object.keys(updates).length > 0) {
-            batch.update(doc.ref, updates);
-            updateCount++;
-          }
-        }
-      });
-
-      if (updateCount > 0) {
-        await batch.commit();
-        console.log(`Aktualizované údaje používateľa v ${updateCount} konverzáciách`);
-      }
-
-      return { success: true, updatedCount: updateCount };
-    } catch (error) {
-      console.error('Chyba pri aktualizácii profilu v konverzáciách:', error);
-      return { success: false, error: 'Nastala chyba pri aktualizácii' };
-    }
-  });
-
-// Trigger pre aktualizáciu počítadiel neprečítaných správ
-export const updateUnreadCounts = functions
-  .region(REGION)
-  .firestore.document('conversations/{conversationId}/messages/{messageId}')
-  .onCreate(async (snapshot, context) => {
-    const messageData = snapshot.data();
-    const conversationId = context.params.conversationId;
-
-    if (!messageData) {
-      return null;
-    }
-
-    try {
-      // Získame konverzáciu
-      const conversationRef = db.collection('conversations').doc(conversationId);
-      const conversationSnapshot = await conversationRef.get();
-
-      if (!conversationSnapshot.exists) {
-        return null;
-      }
-
-      const conversationData = conversationSnapshot.data();
-      if (!conversationData) {
-        return null;
-      }
-
-      // Získame príjemcu (používateľa, ktorý nie je odosielateľom)
-      const recipientId = conversationData.participants.find(
-        (id: string) => id !== messageData.senderId
-      );
-
-      if (!recipientId) {
-        return null;
-      }
-
-      // Aktualizujeme počítadlo neprečítaných správ
-      await conversationRef.update({
-        unreadCount: admin.firestore.FieldValue.increment(1),
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error('Chyba pri aktualizácii počítadla neprečítaných správ:', error);
-      return { success: false, error: 'Nastala chyba pri aktualizácii' };
-    }
-  });
-
-// Funkcia pre získanie posledných konverzácií používateľa
-export const getUserConversations = functions.region(REGION).https.onCall(
-  async (data: { limit?: number }, context: CallableContext) => {
+// Aktualizovaná funkcia na aktualizáciu informácií o používateľovi v konverzáciách
+export const updateUserProfileInConversations = functions.region(REGION).https.onCall(
+  async (
+    data: { 
+      firstName: string; 
+      lastName: string; 
+      photoURL?: string; 
+      companyName?: string;
+    },
+    context: CallableContext
+  ) => {
     if (!context.auth) {
       throw new functions.https.HttpsError(
         'unauthenticated',
@@ -507,23 +414,85 @@ export const getUserConversations = functions.region(REGION).https.onCall(
     }
 
     try {
-      const { limit = 20 } = data;
+      const { firstName, lastName, photoURL, companyName } = data;
       const userId = context.auth.uid;
 
+      // Nájdeme všetky konverzácie používateľa
       const conversationsSnapshot = await db
         .collection('conversations')
         .where('participants', 'array-contains', userId)
-        .orderBy('updatedAt', 'desc')
-        .limit(limit)
         .get();
 
+      const batch = db.batch();
+
+      conversationsSnapshot.forEach(doc => {
+        const updateData = {
+          [`participantsInfo.${userId}.name`]: `${firstName} ${lastName}`.trim(),
+          [`participantsInfo.${userId}.photoURL`]: photoURL || '',
+          [`participantsInfo.${userId}.companyName`]: companyName || ''
+        };
+
+        batch.update(doc.ref, updateData);
+      });
+
+      await batch.commit();
+
+      return { 
+        success: true, 
+        updatedConversations: conversationsSnapshot.size 
+      };
+    } catch (error) {
+      console.error('Chyba pri aktualizácii profilu v konverzáciách:', error);
+      throw new functions.https.HttpsError(
+        'internal',
+        'Nastala chyba pri aktualizácii profilu'
+      );
+    }
+  }
+);
+
+// Funkcia pre získanie konverzácií používateľa
+export const getUserConversations = functions.region(REGION).https.onCall(
+  async (
+    data: { limit?: number; lastConversationId?: string },
+    context: CallableContext
+  ) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Používateľ nie je prihlásený'
+      );
+    }
+
+    try {
+      const { limit = 20, lastConversationId } = data;
+      const userId = context.auth.uid;
+
+      let conversationsQuery: FirebaseFirestore.Query = db
+        .collection('conversations')
+        .where('participants', 'array-contains', userId)
+        .orderBy('updatedAt', 'desc')
+        .limit(limit);
+
+      if (lastConversationId) {
+        const lastConversationDoc = await db
+          .collection('conversations')
+          .doc(lastConversationId)
+          .get();
+
+        if (lastConversationDoc.exists) {
+          conversationsQuery = conversationsQuery.startAfter(lastConversationDoc);
+        }
+      }
+
+      const conversationsSnapshot = await conversationsQuery.get();
       const conversations: any[] = [];
 
-      conversationsSnapshot.forEach((doc) => {
-        const conversationData = doc.data();
+      conversationsSnapshot.forEach(doc => {
+        const data = doc.data();
         conversations.push({
           id: doc.id,
-          ...conversationData,
+          ...data
         });
       });
 
@@ -675,6 +644,85 @@ export const deleteConversation = functions.region(REGION).https.onCall(
       throw new functions.https.HttpsError(
         'internal',
         'Nastala chyba pri mazaní konverzácie'
+      );
+    }
+  }
+);
+
+// Aktualizovaná funkcia na opravu nesprávne počítaných unreadMessages
+export const fixUnreadCounts = functions.region(REGION).https.onCall(
+  async (data: {}, context: CallableContext) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Používateľ nie je prihlásený'
+      );
+    }
+
+    try {
+      const conversationsSnapshot = await db.collection('conversations').get();
+      const batch = db.batch();
+      let fixedCount = 0;
+
+      for (const conversationDoc of conversationsSnapshot.docs) {
+        const conversationData = conversationDoc.data();
+        const participants = conversationData.participants || [];
+        
+        if (participants.length === 0) continue;
+
+        // Získame všetky neprečítané správy v konverzácii
+        const messagesSnapshot = await db
+          .collection('conversations')
+          .doc(conversationDoc.id)
+          .collection('messages')
+          .where('read', '==', false)
+          .get();
+
+        // Spočítame neprečítané správy pre každého používateľa
+        const correctUnreadMessages: { [userId: string]: number } = {};
+        
+        participants.forEach((participantId: string) => {
+          const unreadMessagesForUser = messagesSnapshot.docs.filter(
+            doc => doc.data().senderId !== participantId
+          );
+          correctUnreadMessages[participantId] = unreadMessagesForUser.length;
+        });
+
+        // Porovnáme s aktuálnymi hodnotami
+        const currentUnreadMessages = conversationData.unreadMessages || {};
+        let needsUpdate = false;
+
+        for (const participantId of participants) {
+          if (currentUnreadMessages[participantId] !== correctUnreadMessages[participantId]) {
+            needsUpdate = true;
+            break;
+          }
+        }
+
+        if (needsUpdate) {
+          batch.update(conversationDoc.ref, {
+            unreadMessages: correctUnreadMessages
+          });
+          fixedCount++;
+          console.log(`Opravujeme konverzáciu ${conversationDoc.id}:`, {
+            old: currentUnreadMessages,
+            new: correctUnreadMessages
+          });
+        }
+      }
+
+      await batch.commit();
+      
+      return { 
+        success: true, 
+        message: `Opravených ${fixedCount} konverzácií`,
+        fixedCount 
+      };
+    } catch (error) {
+      console.error('Chyba pri oprave unreadMessages:', error);
+      throw new functions.https.HttpsError(
+        'internal',
+        'Nastala chyba pri oprave počítadiel'
       );
     }
   }

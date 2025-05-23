@@ -1,10 +1,12 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { 
-  collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, 
-  updateDoc, doc, getDoc, getDocs, Timestamp, limit
+  collection, query, where, orderBy, onSnapshot, 
+  updateDoc, doc, getDoc, Timestamp
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../firebase';
 import { useAuth } from './AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
 
 // Definícia typov
 export interface Message {
@@ -32,6 +34,9 @@ export interface Conversation {
     timestamp: Timestamp;
     senderId: string;
   };
+  // Nová štruktúra: objekt s počtom neprečítaných správ pre každého používateľa
+  unreadMessages?: { [userId: string]: number };
+  // Backward compatibility - ak ešte existuje starý unreadCount
   unreadCount?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -76,6 +81,7 @@ export const useChat = (): ChatContextType => {
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userData } = useAuth();
+  const { showNotification, updatePageTitle } = useNotifications();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -85,16 +91,53 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [unreadConversationsCount, setUnreadConversationsCount] = useState(0);
   const [hasNewMessages, setHasNewMessages] = useState(false);
 
+  // Pomocná funkcia na získanie počtu neprečítaných správ pre aktuálneho používateľa
+  const getUnreadCountForUser = useCallback((conversation: Conversation, userId: string): number => {
+    // Ak je to naša vlastná posledná správa, nemáme žiadne neprečítané správy
+    if (conversation.lastMessage?.senderId === userId) {
+      return 0;
+    }
+    
+    // Nová štruktúra: unreadMessages objektu
+    if (conversation.unreadMessages && typeof conversation.unreadMessages === 'object') {
+      const count = conversation.unreadMessages[userId] || 0;
+      return count;
+    }
+    
+    // Backward compatibility: starý unreadCount (ak je posledná správa nie od nás)
+    if (conversation.unreadCount && 
+        conversation.lastMessage && 
+        conversation.lastMessage.senderId !== userId) {
+      return conversation.unreadCount;
+    }
+    
+    return 0;
+  }, []);
+
   // Označenie konverzácie ako prečítanej
   const markConversationAsRead = useCallback(async (conversationId: string): Promise<void> => {
     if (!userData?.uid) return;
     
     try {
-      // Okamžite aktualizujeme lokálne pre rýchlu spätnú väzbu používateľovi
+      console.log(`Označujem konverzáciu ${conversationId} ako prečítanú pre používateľa ${userData.uid}`);
+      
+      // Volanie nového Firebase Cloud Function
+      const markMessagesAsReadFunction = httpsCallable(functions, 'markMessagesAsRead');
+      await markMessagesAsReadFunction({ conversationId });
+      
+      // Okamžite aktualizujeme lokálny stav pre rýchlu spätnú väzbu
       setConversations(prev => 
         prev.map(conv => 
           conv.id === conversationId 
-            ? { ...conv, unreadCount: 0 } 
+            ? { 
+                ...conv, 
+                unreadMessages: {
+                  ...conv.unreadMessages,
+                  [userData.uid]: 0
+                },
+                // Aj backward compatibility
+                unreadCount: 0
+              } 
             : conv
         )
       );
@@ -102,32 +145,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Aktualizujeme aj current conversation, ak je to tá istá
       setCurrentConversation(prev => 
         prev && prev.id === conversationId 
-          ? { ...prev, unreadCount: 0 } 
+          ? { 
+              ...prev, 
+              unreadMessages: {
+                ...prev.unreadMessages,
+                [userData.uid]: 0
+              },
+              unreadCount: 0
+            } 
           : prev
       );
       
-      // Aktualizujeme Firestore
-      await updateDoc(doc(db, 'conversations', conversationId), {
-        unreadCount: 0
-      });
-      
-      // Označíme aj všetky správy v konverzácii ako prečítané
-      const messagesQuery = query(
-        collection(db, 'conversations', conversationId, 'messages'),
-        where('senderId', '!=', userData.uid),
-        where('read', '==', false)
-      );
-      
-      const messagesSnapshot = await getDocs(messagesQuery);
-      const updatePromises = messagesSnapshot.docs.map(doc => 
-        updateDoc(doc.ref, { read: true })
-      );
-      
-      await Promise.all(updatePromises);
     } catch (error) {
       console.error('Chyba pri označovaní konverzácie ako prečítanej:', error);
     }
-  }, [userData?.uid]); // Odstránené currentConversation zo závislostí
+  }, [userData?.uid]);
 
   // Funkcia na aktualizáciu informácií o používateľoch v konverzácii
   const updateConversationUsersInfo = useCallback(async (conversationId: string, conversation: Conversation): Promise<void> => {
@@ -169,40 +201,37 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Chyba pri aktualizovaní informácií používateľov v konverzácii:', error);
     }
-  }, [userData]); // Zjednodušené dependencies - len userData
+  }, [userData]);
 
   // Výber konverzácie
   const selectConversation = useCallback((conversationId: string): void => {
-    // Používame setter function, aby sme mali prístup k aktuálnemu stavu
     setConversations(currentConversations => {
       const conversation = currentConversations.find(c => c.id === conversationId);
       if (conversation) {
+        // Okamžite vyčistíme staré správy a nastavíme loading
+        setMessages([]);
+        setLoadingMessages(true);
+        
         setCurrentConversation(conversation);
         
-        // Ak je posledná správa od druhého používateľa, označíme konverzáciu ako prečítanú
-        if (
-          conversation.lastMessage && 
-          conversation.lastMessage.senderId !== userData?.uid &&
-          conversation.unreadCount && 
-          conversation.unreadCount > 0
-        ) {
-          // Volanie markConversationAsRead asynchrónne, aby sme neblokovali UI
+        // Ak má používateľ neprečítané správy, označíme konverzáciu ako prečítanú
+        const unreadCount = getUnreadCountForUser(conversation, userData?.uid || '');
+        if (unreadCount > 0) {
           setTimeout(() => {
             markConversationAsRead(conversationId).catch(console.error);
           }, 0);
         }
         
-        // Aktualizujeme údaje o používateľoch v konverzácii (najmä názov firmy)
-        // Robíme to asynchrónne, aby sme neblokovali UI
+        // Aktualizujeme údaje o používateľoch v konverzácii
         setTimeout(() => {
           updateConversationUsersInfo(conversationId, conversation).catch(error => 
             console.error('Chyba pri aktualizovaní informácií používateľov v konverzácii:', error)
           );
         }, 0);
       }
-      return currentConversations; // Vrátime nezmenený stav konverzácií
+      return currentConversations;
     });
-  }, [userData?.uid, markConversationAsRead, updateConversationUsersInfo]);
+  }, [userData?.uid, markConversationAsRead, updateConversationUsersInfo, getUnreadCountForUser]);
 
   // Kontrola povolení pre notifikácie v prehliadači
   useEffect(() => {
@@ -220,29 +249,24 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedConversations = [...conversationsData];
 
     try {
-      // Pre každú konverzáciu skontrolujeme všetkých účastníkov
       for (let i = 0; i < updatedConversations.length; i++) {
         const conversation = updatedConversations[i];
         let needsLocalUpdate = false;
 
-        // Získame informácie o aktuálnom používateľovi (ak ešte nie sú aktuálne)
         const currentUserInfo = conversation.participantsInfo?.[userData.uid];
         if (
           currentUserInfo &&
           (currentUserInfo.companyName === 'Nezadaná firma' || !currentUserInfo.companyName) &&
           userData.companyName
         ) {
-          // Aktualizujeme len lokálnu kópiu, nebudeme robiť updateDoc hneď
           if (!conversation.participantsInfo) conversation.participantsInfo = {};
           if (!conversation.participantsInfo[userData.uid]) conversation.participantsInfo[userData.uid] = {} as any;
           conversation.participantsInfo[userData.uid].companyName = userData.companyName;
           needsLocalUpdate = true;
         }
 
-        // Skontrolujeme ostatných účastníkov - ale len ak konverzácia nemá aktuálne údaje
-        // Optimalizujeme: načítame informácie len raz pre účastníkov, ktorí ich nemajú
         const participantsNeedingInfo = conversation.participants.filter(id => {
-          if (id === userData.uid) return false; // Preskočíme seba
+          if (id === userData.uid) return false;
           const info = conversation.participantsInfo?.[id];
           return !info || !info.companyName || info.companyName === 'Nezadaná firma';
         });
@@ -255,7 +279,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const userDataFromDb = userDoc.data();
                 let companyName = '';
                 
-                // Skúsime získať názov firmy z kolekcie companies
                 if (userDataFromDb.companyID) {
                   try {
                     const companyDoc = await getDoc(doc(db, 'companies', userDataFromDb.companyID));
@@ -270,7 +293,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   }
                 }
 
-                // Aktualizujeme len lokálnu kópiu
                 if (companyName) {
                   if (!conversation.participantsInfo) conversation.participantsInfo = {};
                   if (!conversation.participantsInfo[participantId]) {
@@ -292,9 +314,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        // Firebase update robíme asynchrónne, aby sme neblokovali UI a nespôsobili nové snapshots hneď
         if (needsLocalUpdate && conversation.id) {
-          // Používame setTimeout, aby sa Firebase update vykonal mimo snapshot callback
           setTimeout(async () => {
             try {
               await updateDoc(doc(db, 'conversations', conversation.id), {
@@ -303,7 +323,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } catch (error) {
               console.error('Chyba pri aktualizovaní informácií v konverzácii:', error);
             }
-          }, 100); // Krátke oneskorenie, aby sa UI aktualizoval najprv
+          }, 100);
         }
       }
 
@@ -312,7 +332,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Chyba v loadUserCompanyInfo:', error);
       return conversationsData;
     }
-  }, [userData?.uid, userData?.companyName]); // Pridaná závislosť na userData.companyName
+  }, [userData?.uid, userData?.companyName]);
 
   // Načítanie konverzácií pre prihláseného používateľa
   useEffect(() => {
@@ -326,74 +346,70 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-      // Mapovanie dát zo snapshotu na pole konverzácií
       const initialConversationsData: Conversation[] = querySnapshot.docs.map(doc => ({
          id: doc.id,
          ...doc.data() as Omit<Conversation, 'id'>
       } as Conversation));
 
-      // Načítame údaje o firmách pre tieto konverzácie a počkáme na dokončenie
       const conversationsWithInfo = await loadUserCompanyInfo(initialConversationsData);
 
       let unreadCount = 0;
       let hasUnread = false;
 
-      // Teraz spracujeme dáta s informáciami o firmách
       conversationsWithInfo.forEach((conversation) => {
-        // Počítame neprečítané konverzácie (kde posledná správa nie je od nás a nebola prečítaná)
-        if (
-          conversation.lastMessage &&
-          conversation.lastMessage.senderId !== userData?.uid &&
-          conversation.unreadCount &&
-          conversation.unreadCount > 0
-        ) {
+        // Použijeme novú funkciu na získanie počtu neprečítaných správ
+        const userUnreadCount = getUnreadCountForUser(conversation, userData.uid);
+        
+        if (userUnreadCount > 0) {
           unreadCount++;
           hasUnread = true;
 
-          // Kontrola, či potrebujeme zobraziť notifikáciu pre novú správu
-          const lastMessageTime = conversation.lastMessage.timestamp;
-          if (lastMessageTime) {
-            const messageDate = lastMessageTime instanceof Date ?
-              lastMessageTime :
-              lastMessageTime.toDate();
+          // Vylepšené notifikácie pre nové správy
+          if (conversation.lastMessage) {
+            const lastMessageTime = conversation.lastMessage.timestamp;
+            if (lastMessageTime) {
+              const messageDate = lastMessageTime instanceof Date ?
+                lastMessageTime :
+                lastMessageTime.toDate();
 
-            // Notifikácia na systémovej úrovni pre nové správy
-            try {
-              // Pokiaľ je podporovaná notifikácia v prehliadači a používateľ má povolenia
-              if ("Notification" in window && Notification.permission === "granted") {
-                // Použijeme informácie o odosielateľovi priamo z conversation.participantsInfo, ak sú dostupné
+              // Zobrazíme notifikáciu len pre správy mladšie ako 30 sekúnd
+              if (Date.now() - messageDate.getTime() < 30000) {
                 const senderName = conversation.participantsInfo?.[conversation.lastMessage.senderId]?.name || 'Používateľ';
-                const notificationTitle = `Nová správa od ${senderName}`;
-                const notificationOptions = {
+                const senderCompany = conversation.participantsInfo?.[conversation.lastMessage.senderId]?.companyName;
+                
+                let notificationTitle = `Nová správa od ${senderName}`;
+                if (senderCompany && senderCompany !== 'Nezadaná firma') {
+                  notificationTitle += ` (${senderCompany})`;
+                }
+
+                showNotification({
+                  title: notificationTitle,
                   body: conversation.lastMessage.text,
                   icon: '/favicon.png',
-                  badge: '/favicon.png',
-                  tag: 'chat-message',
-                  requireInteraction: true,
-                  vibrate: [200, 100, 200]
-                };
-
-                // Zobrazíme notifikáciu, len ak správa prišla v posledných 30 sekundách
-                if (Date.now() - messageDate.getTime() < 30000) {
-                  const notification = new Notification(notificationTitle, notificationOptions);
-
-                  // Pridáme event listener pre kliknutie na notifikáciu
-                  notification.onclick = () => {
-                    window.focus();
-                    // Volanie selectConversation priamo, nie cez závislosť
+                  tag: `chat-${conversation.id}`,
+                  playSound: true,
+                  data: { conversationId: conversation.id },
+                  onClick: () => {
+                    // Otvoríme správnu konverzáciu pri kliknutí na notifikáciu
                     const conv = conversationsWithInfo.find(c => c.id === conversation.id);
                     if (conv) {
                       setCurrentConversation(conv);
+                      // Ak máme ChatDrawer komponent, môžeme ho otvoriť
+                      // Tu môžeme pridať logiku na otvorenie chat drawer-a
+                      window.dispatchEvent(new CustomEvent('openChatDrawer', { 
+                        detail: { conversationId: conversation.id } 
+                      }));
                     }
-                  };
-                }
+                  }
+                });
               }
-            } catch (error) {
-              console.error('Chyba pri zobrazovaní notifikácie', error);
             }
           }
         }
       });
+
+      // Aktualizujeme počet neprečítaných správ v title stránky
+      updatePageTitle(unreadCount);
 
       setUnreadConversationsCount(unreadCount);
       setHasNewMessages(hasUnread);
@@ -402,7 +418,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [userData?.uid, loadUserCompanyInfo]);
+  }, [userData?.uid, loadUserCompanyInfo, getUnreadCountForUser, showNotification, updatePageTitle]);
 
   // Načítanie správ pre aktuálnu konverzáciu
   useEffect(() => {
@@ -412,7 +428,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    setLoadingMessages(true);
+    // Loading stav sa už nastavuje v selectConversation
     const q = query(
       collection(db, 'conversations', currentConversation.id, 'messages'),
       orderBy('timestamp', 'asc')
@@ -427,14 +443,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } as Message;
         messagesData.push(message);
       });
+      
+      // Nastavíme správy a vždy vypneme loading
       setMessages(messagesData);
+      setLoadingMessages(false);
+    }, (error) => {
+      console.error('Chyba pri načítavaní správ:', error);
       setLoadingMessages(false);
     });
 
     return () => unsubscribe();
   }, [currentConversation]);
 
-  // Vyhľadávanie používateľov podľa mena
+  // Vyhľadávanie používateľov podľa mena - teraz používa Firebase Cloud Function
   const searchUsersByName = async (searchQuery: string): Promise<void> => {
     if (!searchQuery || searchQuery.length < 2 || !userData?.uid) {
       setSearchedUsers([]);
@@ -442,211 +463,84 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // Odstránime diakritiku a prevedieme na malé písmená
-      const normalizedQuery = searchQuery.toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .trim();
-
-      console.log('Vyhľadávam používateľov podľa: ', normalizedQuery);
-
-      // Získame všetkých používateľov (s limitom)
-      const usersQuery = query(
-        collection(db, 'users'),
-        limit(100)
-      );
-
-      const usersSnapshot = await getDocs(usersQuery);
+      const searchUsersFunction = httpsCallable(functions, 'searchUsers');
+      const result = await searchUsersFunction({ query: searchQuery, limit: 10 });
       
-      // Filtrovanie používateľov v kóde namiesto v databáze
-      const results: ChatUser[] = [];
-      
-      usersSnapshot.forEach(doc => {
-        if (doc.id === userData?.uid) return; // Preskočíme seba samého
-        
-        const userInfo = doc.data();
-        
-        // Normalizované verzie pre vyhľadávanie
-        const firstName = (userInfo.firstName || '')
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase();
-        const lastName = (userInfo.lastName || '')
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase();
-        const email = (userInfo.email || '')
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase();
-        
-        // Hľadáme zhodu v rôznych poliach
-        if (firstName.includes(normalizedQuery) || 
-            lastName.includes(normalizedQuery) ||
-            email.includes(normalizedQuery) ||
-            `${firstName} ${lastName}`.includes(normalizedQuery)) {
-          
-          results.push({
-            uid: doc.id,
-            firstName: userInfo.firstName || '',
-            lastName: userInfo.lastName || '',
-            email: userInfo.email || '',
-            photoURL: userInfo.photoURL,
-            companyName: userInfo.companyName
-          });
-        }
-      });
-      
-      console.log('Výsledky vyhľadávania:', results);
-      setSearchedUsers(results);
+      // @ts-ignore
+      const users = result.data.users || [];
+      setSearchedUsers(users);
     } catch (error) {
       console.error('Chyba pri vyhľadávaní používateľov:', error);
       setSearchedUsers([]);
     }
   };
 
-  // Vyhľadávanie používateľov podľa emailu (budeme používať rovnakú metódu)
+  // Vyhľadávanie používateľov podľa emailu
   const searchUsersByEmail = searchUsersByName;
 
-  // Vytvorenie novej konverzácie
+  // Vytvorenie novej konverzácie - teraz používa Firebase Cloud Function
   const createConversation = async (userId: string): Promise<string> => {
     if (!userData?.uid) throw new Error('Používateľ nie je prihlásený');
     if (userData.uid === userId) throw new Error('Nemôžete začať konverzáciu sami so sebou');
 
-    // Najprv skontrolujeme, či už konverzácia existuje
-    const existingConversationQuery = query(
-      collection(db, 'conversations'),
-      where('participants', 'array-contains', userData.uid)
-    );
-
-    const querySnapshot = await getDocs(existingConversationQuery);
-    
-    // Kontrolujeme, či existuje konverzácia s týmto používateľom
-    for (const doc of querySnapshot.docs) {
-      const data = doc.data();
-      if (data.participants && Array.isArray(data.participants) && data.participants.includes(userId)) {
-        // Konverzácia už existuje
-        const conversationId = doc.id;
-        selectConversation(conversationId);
-        return conversationId;
+    try {
+      // Získame informácie o druhom používateľovi
+      const otherUserDoc = await getDoc(doc(db, 'users', userId));
+      if (!otherUserDoc.exists()) {
+        throw new Error('Používateľ neexistuje');
       }
-    }
+      
+      const otherUserData = otherUserDoc.data();
 
-    // Ak sme tu, konverzácia neexistuje a musíme ju vytvoriť
-    // Získame informácie o druhom používateľovi
-    const otherUserDoc = await getDoc(doc(db, 'users', userId));
-    if (!otherUserDoc.exists()) {
-      throw new Error('Používateľ neexistuje');
-    }
-    
-    const otherUserData = otherUserDoc.data();
-
-    // Získame názov spoločnosti pre aktuálneho používateľa
-    let currentUserCompanyName = userData.companyName || '';
-    if (userData.companyID) {
-      try {
-        const companyDoc = await getDoc(doc(db, 'companies', userData.companyID));
-        if (companyDoc.exists()) {
-          const companyData = companyDoc.data();
-          if (companyData.companyName) {
-            currentUserCompanyName = companyData.companyName;
-          }
+      // Pripravíme údaje o účastníkoch
+      const participants = [userData.uid, userId];
+      const participantsInfo = {
+        [userData.uid]: {
+          name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+          email: userData.email || '',
+          photoURL: userData.photoURL || '',
+          companyName: userData.companyName || ''
+        },
+        [userId]: {
+          name: `${otherUserData.firstName || ''} ${otherUserData.lastName || ''}`.trim(),
+          email: otherUserData.email || '',
+          photoURL: otherUserData.photoURL || '',
+          companyName: otherUserData.companyName || ''
         }
-      } catch (error) {
-        console.error('Chyba pri získavaní názvu spoločnosti aktuálneho používateľa:', error);
-      }
-    }
+      };
 
-    // Získame názov spoločnosti pre druhého používateľa
-    let otherUserCompanyName = otherUserData.companyName || '';
-    if (otherUserData.companyID) {
-      try {
-        const companyDoc = await getDoc(doc(db, 'companies', otherUserData.companyID));
-        if (companyDoc.exists()) {
-          const companyData = companyDoc.data();
-          if (companyData.companyName) {
-            otherUserCompanyName = companyData.companyName;
-          }
-        }
-      } catch (error) {
-        console.error('Chyba pri získavaní názvu spoločnosti druhého používateľa:', error);
-      }
+      // Volanie Firebase Cloud Function
+      const createConversationFunction = httpsCallable(functions, 'createConversation');
+      const result = await createConversationFunction({ participants, participantsInfo });
+      
+      // @ts-ignore
+      const conversationId = result.data.conversationId;
+      
+      selectConversation(conversationId);
+      return conversationId;
+    } catch (error) {
+      console.error('Chyba pri vytváraní konverzácie:', error);
+      throw new Error('Nepodarilo sa vytvoriť konverzáciu');
     }
-    // Ak sme nenašli spoločnosť pomocou companyID, skúsime companyId (malé 'd')
-    if (otherUserCompanyName === '' && otherUserData.companyId && otherUserData.companyId !== otherUserData.companyID) {
-      try {
-        const companyDoc = await getDoc(doc(db, 'companies', otherUserData.companyId));
-        if (companyDoc.exists()) {
-          const companyData = companyDoc.data();
-          if (companyData.companyName) {
-            otherUserCompanyName = companyData.companyName;
-          }
-        }
-      } catch (error) {
-        console.error('Chyba pri získavaní názvu spoločnosti druhého používateľa cez companyId:', error);
-      }
-    }
-    
-    // Vytvoríme novú konverzáciu
-    const timestamp = serverTimestamp();
-    const participantsInfo = {
-      [userData.uid]: {
-        name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-        email: userData.email || '',
-        photoURL: userData.photoURL || '',
-        companyName: currentUserCompanyName
-      },
-      [userId]: {
-        name: `${otherUserData.firstName || ''} ${otherUserData.lastName || ''}`.trim(),
-        email: otherUserData.email || '',
-        photoURL: otherUserData.photoURL || '',
-        companyName: otherUserCompanyName
-      }
-    };
-    
-    const newConversationRef = await addDoc(collection(db, 'conversations'), {
-      participants: [userData.uid, userId],
-      participantsInfo,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      unreadCount: 0
-    });
-    
-    selectConversation(newConversationRef.id);
-    return newConversationRef.id;
   };
 
-  // Odoslanie novej správy
+  // Odoslanie novej správy - teraz len lokálne pridanie, backend sa rieši cez Firebase Functions
   const sendMessage = async (text: string): Promise<void> => {
     if (!text.trim() || !currentConversation || !userData?.uid) return;
 
     try {
-      const timestamp = serverTimestamp();
-      const senderName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+      console.log(`Odosielam správu do konverzácie ${currentConversation.id}: "${text}"`);
       
-      // Pridáme správu do podkolekcie messages v aktuálnej konverzácii
-      await addDoc(collection(db, 'conversations', currentConversation.id, 'messages'), {
-        text,
-        senderId: userData.uid,
-        senderName,
-        timestamp,
-        read: false
+      // Volanie Firebase Cloud Function pre odoslanie správy
+      const sendMessageFunction = httpsCallable(functions, 'sendMessage');
+      await sendMessageFunction({ 
+        conversationId: currentConversation.id, 
+        text: text.trim() 
       });
       
-      // Aktualizujeme informácie o poslednej správe v konverzácii
-      const otherParticipantId = currentConversation.participants.find(id => id !== userData.uid);
+      console.log('Správa úspešne odoslaná cez Firebase Function');
       
-      if (!otherParticipantId) {
-        throw new Error('Druhý účastník konverzácie nenájdený');
-      }
-      
-      await updateDoc(doc(db, 'conversations', currentConversation.id), {
-        lastMessage: {
-          text,
-          timestamp,
-          senderId: userData.uid
-        },
-        updatedAt: timestamp,
-        // Zvýšime počet neprečítaných správ pre druhého účastníka
-        unreadCount: 1,
-      });
-      
+      // Lokálny stav sa aktualizuje automaticky cez onSnapshot listenery
     } catch (error) {
       console.error('Chyba pri odosielaní správy:', error);
       throw new Error('Nepodarilo sa odoslať správu');
@@ -657,6 +551,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const closeConversation = (): void => {
     setCurrentConversation(null);
     setMessages([]);
+    setLoadingMessages(false); // Vynulujeme loading stav
   };
 
   const value = {

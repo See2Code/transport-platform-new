@@ -93,18 +93,19 @@ const ChatHeader = styled(Box, {
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
   margin: 0,
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+  flexShrink: 0,
 }));
 
 const MessageContainer = styled(Box)(({ _theme }) => ({
   flexGrow: 1,
-  overflow: 'auto',
+  overflow: 'hidden',
   overflowY: 'auto',
   padding: '16px',
   display: 'flex',
   flexDirection: 'column',
   position: 'relative',
-  height: 'calc(100% - 112px)', // odpočítame výšku header-u a input-u
-  minHeight: '300px', // minimálna výška
+  minHeight: '200px',
+  height: '100%',
   '&::-webkit-scrollbar': {
     width: '6px',
     backgroundColor: 'transparent',
@@ -118,6 +119,14 @@ const MessageContainer = styled(Box)(({ _theme }) => ({
   },
   '&::-webkit-scrollbar-thumb:hover': {
     background: 'rgba(255, 159, 67, 0.5)',
+  },
+  '@media (max-width: 600px)': {
+    paddingBottom: '100px',
+    paddingTop: '16px',
+    maxHeight: 'calc(100dvh - 200px)',
+    overflowX: 'hidden',
+    overflowY: 'auto',
+    '-webkit-overflow-scrolling': 'touch',
   }
 }));
 
@@ -144,14 +153,27 @@ const InputContainer = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode',
 })<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '16px',
-  borderTop: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
   display: 'flex',
   alignItems: 'center',
-  position: 'sticky',
-  bottom: 0,
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
-  zIndex: 1,
-  width: '100%'
+  zIndex: 1000,
+  width: '100%',
+  flexShrink: 0,
+  '@media (max-width: 600px)': {
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: '12px 16px',
+    borderTop: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+    paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
+    zIndex: 1001,
+    backdropFilter: 'blur(10px)',
+    transform: 'translateZ(0)',
+    boxShadow: isDarkMode 
+      ? '0 -2px 20px rgba(0, 0, 0, 0.3)' 
+      : '0 -2px 20px rgba(0, 0, 0, 0.1)',
+  }
 }));
 
 const EmptyStateContainer = styled(Box)(({ _theme }) => ({
@@ -198,7 +220,8 @@ const ChatDrawer = styled(Drawer)(({ theme }) => ({
       left: 0,
       right: 0,
       width: '100%',
-      height: '100vh',
+      height: '100dvh',
+      minHeight: '100vh',
     }
   },
   '&.MuiDrawer-root': {
@@ -241,27 +264,146 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
     sendMessage,
     selectConversation,
     closeConversation,
-    markConversationAsRead,
+    markConversationAsRead
   } = useChat();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
+  const [_isOpenFromNotification, setIsOpenFromNotification] = useState(false);
+  const [_isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageContainerRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Zjednodušená funkcia pre scrollovanie
+  const scrollToBottom = (force: boolean = false) => {
+    // Zrušíme predchádzajúce timeout-y
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      if (!messagesEndRef.current || !messageContainerRef.current) return;
+      
+      const container = messageContainerRef.current;
+      const scrollEnd = messagesEndRef.current;
+      
+      // Kontrolujeme či je kontajner viditeľný a má správnu výšku
+      if (container.offsetHeight === 0 || container.scrollHeight === 0) return;
+      
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      
+      if (force || isNearBottom) {
+        scrollEnd.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        });
+      }
+    }, force ? 20 : 50); // Kratšie timeout-y pre rýchlejšiu odozvu
+  };
 
   // Reset search term when drawer is closed
   useEffect(() => {
     if (!open) {
-      // Vynulujeme vyhľadávacie pole pri zatvorení chatu
       setTimeout(() => {
         setSearchTerm('');
-      }, 300); // Po dokončení animácie
+      }, 300);
     }
   }, [open]);
 
-  // Scroll down when new messages arrive
+  // Zjednodušené scrollovanie - jeden centrálny useEffect
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // Scrollujeme len ak je chat otvorený, máme konverzáciu a správy sú načítané (nie loading)
+    if (!open || !currentConversation || loadingMessages) {
+      return;
+    }
+
+    // Ak máme správy, scrollneme
+    if (messages.length > 0) {
+      scrollToBottom(true); // Vždy vynútime scroll pri načítaní nových správ
+    }
+  }, [messages, open, currentConversation, loadingMessages]);
+
+  // Cleanup timeout pri unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Vylepšené mobile viewport handling pre klávesnicu
+  useEffect(() => {
+    if (typeof window !== 'undefined' && open) {
+      let initialHeight = window.visualViewport?.height || window.innerHeight;
+      let isInputFocused = false;
+      
+      const handleViewportChange = () => {
+        const currentHeight = window.visualViewport?.height || window.innerHeight;
+        const heightDiff = initialHeight - currentHeight;
+        
+        // Klávesnica je zobrazená ak sa výška zmenila o viac ako 150px
+        const keyboardVisible = heightDiff > 150;
+        setIsKeyboardVisible(keyboardVisible);
+        
+        if (keyboardVisible && currentConversation) {
+          // Klávesnica sa zobrazila - scroll na spodok s miernym oneskorením
+          setTimeout(() => {
+            scrollToBottom(true);
+            // Ak je input fokusovaný, zabezpečíme že je viditeľný
+            if (isInputFocused && inputRef.current) {
+              inputRef.current.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'nearest' 
+              });
+            }
+          }, 100);
+        }
+      };
+
+      const handleInputFocus = () => {
+        isInputFocused = true;
+        // Na iOS môže trvať chvíľu kým sa klávesnica zobrazí
+        setTimeout(() => {
+          scrollToBottom(true);
+        }, 300);
+      };
+
+      const handleInputBlur = () => {
+        isInputFocused = false;
+      };
+
+      // Pridáme event listenery
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleViewportChange);
+      } else {
+        window.addEventListener('resize', handleViewportChange);
+      }
+
+      const inputElement = inputRef.current;
+      if (inputElement) {
+        inputElement.addEventListener('focus', handleInputFocus);
+        inputElement.addEventListener('blur', handleInputBlur);
+      }
+
+      return () => {
+        // Cleanup
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handleViewportChange);
+        } else {
+          window.removeEventListener('resize', handleViewportChange);
+        }
+        
+        if (inputElement) {
+          inputElement.removeEventListener('focus', handleInputFocus);
+          inputElement.removeEventListener('blur', handleInputBlur);
+        }
+      };
+    }
+  }, [open, currentConversation]);
 
   // Handle search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -292,6 +434,8 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
     try {
       await sendMessage(messageText);
       setMessageText('');
+      // Vždy scrollneme na spodok po odoslaní vlastnej správy
+      scrollToBottom(true);
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -370,6 +514,36 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
     };
   };
 
+  // Event listener pre otvorenie chatu z notifikácie
+  useEffect(() => {
+    const handleOpenChatDrawer = (event: CustomEvent) => {
+      const { conversationId } = event.detail;
+      if (conversationId) {
+        setIsOpenFromNotification(true);
+        selectConversation(conversationId);
+        
+        // Ak drawer nie je otvorený, môžeme poslať event na jeho otvorenie
+        if (!open) {
+          // Tu by sme mohli volať parent funkciu na otvorenie drawer-a
+          // Ale keďže nemáme prístup k nej, použijeme state
+          window.dispatchEvent(new CustomEvent('forceOpenChatDrawer'));
+        }
+      }
+    };
+
+    window.addEventListener('openChatDrawer', handleOpenChatDrawer as EventListener);
+    return () => {
+      window.removeEventListener('openChatDrawer', handleOpenChatDrawer as EventListener);
+    };
+  }, [open, selectConversation]);
+
+  // Reset isOpenFromNotification keď sa drawer zatvorí
+  useEffect(() => {
+    if (!open) {
+      setIsOpenFromNotification(false);
+    }
+  }, [open]);
+
   return (
     <ChatDrawer
       anchor="right"
@@ -381,12 +555,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
           transition: `all ${TRANSITION_DURATION} ease-in-out`,
           opacity: open ? 1 : 0,
           visibility: open ? 'visible' : 'hidden',
-          display: open ? 'block' : 'none',
-          animation: open ? `fadeIn ${TRANSITION_DURATION} ease-in-out` : 'none'
-        },
-        '@keyframes fadeIn': {
-          '0%': { opacity: 0 },
-          '100%': { opacity: 1 }
+          display: open ? 'block' : 'none'
         }
       }}
     >
@@ -421,40 +590,69 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
               </IconButton>
             </ChatHeader>
             
-            <MessageContainer>
-              {loadingMessages ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                  <CircularProgress size={32} />
-                </Box>
-              ) : messages.length === 0 ? (
-                <EmptyStateContainer>
-                  <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
-                    Ešte tu nie sú žiadne správy. Napíšte prvú správu a začnite konverzáciu.
-                  </Typography>
-                </EmptyStateContainer>
-              ) : (
-                messages.map((message) => (
-                  <MessageBubble 
-                    key={message.id} 
-                    isOwn={message.senderId === userData?.uid}
-                    isDarkMode={isDarkMode}
+            <MessageContainer ref={messageContainerRef}>
+              <Box 
+                sx={{ 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  position: 'relative'
+                }}
+              >
+                {/* Loading overlay - zobrazuje sa len keď skutočne načítavame */}
+                {loadingMessages && (
+                  <Box 
+                    sx={{ 
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center',
+                      backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+                      zIndex: 10,
+                      backdropFilter: 'blur(2px)'
+                    }}
                   >
-                    <Typography variant="body1">{message.text}</Typography>
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        display: 'block', 
-                        mt: 0.5, 
-                        textAlign: message.senderId === userData?.uid ? 'right' : 'left',
-                        opacity: 0.7 
-                      }}
-                    >
-                      {formatTime(message.timestamp)}
+                    <CircularProgress size={32} />
+                  </Box>
+                )}
+
+                {/* Obsah správ - zobrazuje sa vždy */}
+                {!loadingMessages && messages.length === 0 ? (
+                  <EmptyStateContainer>
+                    <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+                      Ešte tu nie sú žiadne správy. Napíšte prvú správu a začnite konverzáciu.
                     </Typography>
-                  </MessageBubble>
-                ))
-              )}
-              <div ref={messagesEndRef} />
+                  </EmptyStateContainer>
+                ) : !loadingMessages && messages.length > 0 ? (
+                  <>
+                    {messages.map((message) => (
+                      <MessageBubble 
+                        key={message.id} 
+                        isOwn={message.senderId === userData?.uid}
+                        isDarkMode={isDarkMode}
+                      >
+                        <Typography variant="body1">{message.text}</Typography>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block', 
+                            mt: 0.5, 
+                            textAlign: message.senderId === userData?.uid ? 'right' : 'left',
+                            opacity: 0.7 
+                          }}
+                        >
+                          {formatTime(message.timestamp)}
+                        </Typography>
+                      </MessageBubble>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </>
+                ) : null}
+              </Box>
             </MessageContainer>
             
             <InputContainer isDarkMode={isDarkMode}>
@@ -467,19 +665,97 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                 onKeyPress={handleKeyPress}
                 multiline
                 maxRows={4}
+                inputRef={inputRef}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '24px',
-                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                    borderRadius: '24px !important',
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05) !important' : 'rgba(0,0,0,0.03) !important',
+                    border: 'none !important',
+                    outline: 'none !important',
+                    boxShadow: 'none !important',
+                    overflow: 'hidden !important',
+                    '& fieldset': {
+                      border: 'none !important',
+                      outline: 'none !important',
+                      display: 'none !important',
+                    },
+                    '&:hover fieldset': {
+                      border: 'none !important',
+                      outline: 'none !important',
+                      display: 'none !important',
+                    },
+                    '&.Mui-focused fieldset': {
+                      border: `2px solid ${isDarkMode ? '#ff9f43' : '#6366f1'} !important`,
+                      outline: 'none !important',
+                      display: 'block !important',
+                      borderRadius: '24px !important',
+                      boxShadow: `0 0 8px ${isDarkMode ? 'rgba(255, 159, 67, 0.3)' : 'rgba(99, 102, 241, 0.3)'} !important`,
+                    },
+                    '&.Mui-focused': {
+                      border: 'none !important',
+                      '& fieldset': {
+                        border: `2px solid ${isDarkMode ? '#ff9f43' : '#6366f1'} !important`,
+                        borderRadius: '24px !important',
+                        display: 'block !important',
+                      }
+                    }
                   },
+                  '& .MuiInputBase-root': {
+                    border: 'none !important',
+                    outline: 'none !important',
+                    borderRadius: '24px !important',
+                    backgroundColor: 'transparent !important',
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: 'none !important',
+                    display: 'none !important',
+                  },
+                  '& .MuiInputBase-input': {
+                    borderRadius: '24px !important',
+                    backgroundColor: 'transparent !important',
+                  }
                 }}
                 InputProps={{
+                  sx: {
+                    border: 'none !important',
+                    outline: 'none !important',
+                    borderRadius: '24px !important',
+                    backgroundColor: 'transparent !important',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      border: 'none !important',
+                      display: 'none !important',
+                    },
+                    '&.Mui-focused': {
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        border: `2px solid ${isDarkMode ? '#ff9f43' : '#6366f1'} !important`,
+                        borderRadius: '24px !important',
+                        display: 'block !important',
+                        boxShadow: `0 0 8px ${isDarkMode ? 'rgba(255, 159, 67, 0.3)' : 'rgba(99, 102, 241, 0.3)'} !important`,
+                      }
+                    }
+                  },
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton 
                         onClick={handleSendMessage}
                         disabled={!messageText.trim()}
                         color="primary"
+                        sx={{
+                          backgroundColor: messageText.trim() ? (isDarkMode ? '#ff9f43' : '#6366f1') : 'transparent',
+                          color: messageText.trim() ? '#ffffff' : 'inherit',
+                          borderRadius: '50%',
+                          width: '40px',
+                          height: '40px',
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            backgroundColor: messageText.trim() ? (isDarkMode ? '#f7b067' : '#5a5fcf') : 'transparent',
+                            transform: messageText.trim() ? 'scale(1.1)' : 'none',
+                          },
+                          '&.Mui-disabled': {
+                            backgroundColor: 'transparent',
+                            color: 'rgba(255, 255, 255, 0.3)',
+                          },
+                        }}
                       >
                         <SendIcon />
                       </IconButton>
@@ -620,10 +896,26 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
               <ConversationList sx={{ flexGrow: 1 }}>
                 {conversations.map((conversation) => {
                   const { name, photoURL, companyName } = getOtherUserInfo(conversation);
-                  const hasUnread = 
-                    conversation.lastMessage?.senderId !== userData?.uid && 
-                    conversation.unreadCount && 
-                    conversation.unreadCount > 0;
+                  
+                  // Použijeme novú logiku pre získanie počtu neprečítaných správ
+                  const userUnreadCount = userData?.uid ? (
+                    // Ak je to naša vlastná posledná správa, nemáme žiadne neprečítané správy
+                    conversation.lastMessage?.senderId === userData.uid ? 0 : (
+                      // Nová štruktúra: unreadMessages objektu
+                      (conversation.unreadMessages && typeof conversation.unreadMessages === 'object') 
+                        ? (conversation.unreadMessages[userData.uid] || 0)
+                        : (
+                            // Backward compatibility: starý unreadCount (ak je posledná správa nie od nás)
+                            (conversation.unreadCount && 
+                             conversation.lastMessage && 
+                             conversation.lastMessage.senderId !== userData.uid) 
+                              ? conversation.unreadCount 
+                              : 0
+                          )
+                    )
+                  ) : 0;
+                  
+                  const hasUnread = userUnreadCount > 0;
                   
                   return (
                     <ListItem
@@ -631,7 +923,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                       key={conversation.id}
                       onClick={() => {
                         selectConversation(conversation.id);
-                        if (conversation.unreadCount && conversation.unreadCount > 0) {
+                        if (hasUnread) {
                           markConversationAsRead(conversation.id);
                         }
                       }}
@@ -645,7 +937,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                       <ListItemAvatar>
                         <Badge
                           color="primary"
-                          badgeContent={conversation.unreadCount && conversation.unreadCount > 0 ? conversation.unreadCount : undefined}
+                          badgeContent={hasUnread ? userUnreadCount : undefined}
                           overlap="circular"
                           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
                         >

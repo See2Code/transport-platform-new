@@ -736,10 +736,10 @@ export const sendMessage = chatFunctions.sendMessage;
 export const markMessagesAsRead = chatFunctions.markMessagesAsRead;
 export const searchUsers = chatFunctions.searchUsers;
 export const updateUserProfileInConversations = chatFunctions.updateUserProfileInConversations;
-export const updateUnreadCounts = chatFunctions.updateUnreadCounts;
 export const getUserConversations = chatFunctions.getUserConversations;
 export const getConversationMessages = chatFunctions.getConversationMessages;
 export const deleteConversation = chatFunctions.deleteConversation;
+export const fixUnreadCounts = chatFunctions.fixUnreadCounts;
 
 // Prípadné ďalšie funkcie
 // export const otherApiProxy = apiProxy.otherApiProxy;
@@ -1322,4 +1322,4 @@ function generateOrderHtml(orderData: any, settings: any): string {
     </body>
     </html>
   `;
-} 
+}

@@ -65,6 +65,7 @@ import { OrderFormData, LoadingPlace, UnloadingPlace, GoodsItem } from '../../ty
 import { Customer } from '../../types/customers';
 import { Carrier } from '../../types/carriers';
 import { countries } from '../../constants/countries';
+import CustomerForm, { CustomerData } from '../management/CustomerForm';
 
 // Custom styled components
 const StyledStepper = styled(Stepper)(({ theme }) => ({
@@ -263,9 +264,11 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         return {
           id: doc.id,
           ...data,
-          // Map companyName to company for compatibility with Customer type
+          // Mapujeme správne názvy polí
           company: data.companyName || data.company || '',
-          email: data.contactEmail || data.email || ''
+          email: data.contactEmail || data.email || '',
+          phone: data.contactPhone || data.phone || '',
+          vatId: data.icDph || data.vatId || ''
         };
       }) as Customer[];
       setCustomerOptions(customersData);
@@ -416,17 +419,18 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     setFormData(prev => ({
       ...prev,
       zakaznikData: customer,
-             zakaznik: customer?.company || '',
+      zakaznik: customer?.company || '',
       kontaktnaOsoba: customer ? `${customer.contactName} ${customer.contactSurname}`.trim() : '',
       customerVatId: customer?.vatId || '',
       customerStreet: customer?.street || '',
       customerCity: customer?.city || '',
       customerZip: customer?.zip || '',
-      customerCountry: customer?.country || '',
+      customerCountry: customer?.country || 'Slovensko',
       customerContactName: customer?.contactName || '',
       customerContactSurname: customer?.contactSurname || '',
       customerEmail: customer?.email || '',
       customerPhone: customer?.phone || '',
+      customerCompany: customer?.company || '',
     }));
   };
 
@@ -1647,18 +1651,64 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         </DialogActions>
       </Box>
 
-      {/* Customer Dialog - placeholder for now */}
-      <Dialog open={newCustomerDialog} onClose={() => setNewCustomerDialog(false)}>
-        <DialogTitle>Pridať nového zákazníka</DialogTitle>
-        <DialogContent>
-          <Alert severity="info">
-            Funkcia pridania nového zákazníka bude implementovaná v ďalšej verzii.
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewCustomerDialog(false)}>Zavrieť</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Customer Form Dialog */}
+      <CustomerForm
+        open={newCustomerDialog}
+        onClose={() => setNewCustomerDialog(false)}
+        onSubmit={async (customerData: CustomerData) => {
+          try {
+            if (!userData?.companyID) {
+              alert("Chyba: Nemáte priradenú firmu.");
+              return;
+            }
+            
+            // Uložíme nového zákazníka do databázy
+            const customerRef = collection(db, 'customers');
+            const newCustomer = {
+              companyName: customerData.companyName,
+              street: customerData.street,
+              city: customerData.city,
+              zip: customerData.zip,
+              country: customerData.country,
+              contactName: customerData.contactName,
+              contactSurname: customerData.contactSurname,
+              contactEmail: customerData.contactEmail,
+              ico: customerData.ico || '',
+              dic: customerData.dic || '',
+              icDph: customerData.icDph || '',
+              companyID: userData.companyID,
+              createdAt: Timestamp.fromDate(new Date())
+            };
+            
+            const docRef = await addDoc(customerRef, newCustomer);
+            
+            // Vytvoríme Customer objekt pre select
+            const newCustomerOption: Customer = {
+              id: docRef.id,
+              company: customerData.companyName,
+              street: customerData.street,
+              city: customerData.city,
+              zip: customerData.zip,
+              country: customerData.country,
+              contactName: customerData.contactName,
+              contactSurname: customerData.contactSurname,
+              email: customerData.contactEmail,
+              phone: '', // CustomerData nemá phone field
+              vatId: customerData.icDph || '',
+              companyID: userData.companyID
+            };
+            
+            // Pridáme ho do zoznamu a vyberieme
+            setCustomerOptions(prev => [...prev, newCustomerOption]);
+            handleCustomerChange(newCustomerOption);
+            setNewCustomerDialog(false);
+            
+          } catch (error) {
+            console.error('Chyba pri ukladaní zákazníka:', error);
+            alert('Nastala chyba pri ukladaní zákazníka: ' + (error as Error).message);
+          }
+        }}
+      />
 
       {/* Carrier Dialog - placeholder for now */}
       <Dialog open={newCarrierDialog} onClose={() => setNewCarrierDialog(false)}>

@@ -32,6 +32,7 @@ import {
   Tab,
   DialogContentText,
   Divider,
+  Chip,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../../contexts/ThemeContext';
@@ -351,6 +352,9 @@ const OrdersList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [dispatcherFilter, setDispatcherFilter] = useState<'all' | 'thisMonth' | 'thisYear' | 'custom'>('all');
+  const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
+  const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showNewOrderWizard, setShowNewOrderWizard] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Record<string, any>>({});
@@ -402,6 +406,15 @@ const OrdersList: React.FC = () => {
   const [_orderToDelete, _setOrderToDelete] = useState<string>('');
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [_deleteDialogOpen, _setDeleteDialogOpen] = useState(false);
+
+  // State pre Miesta
+  const [locations, setLocations] = useState<any[]>([]);
+  const [locationSearchQuery, setLocationSearchQuery] = useState('');
+  const [_showLocationForm, setShowLocationForm] = useState(false);
+
+  // State pre Špeditéri (dispatchers)
+  const [dispatchers, setDispatchers] = useState<any[]>([]);
+  const [dispatcherSearchQuery, setDispatcherSearchQuery] = useState('');
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   
@@ -536,6 +549,197 @@ const OrdersList: React.FC = () => {
     finally { setLoading(false); }
   }, [userData, startDate, endDate, teamMembers]);
 
+  const fetchLocations = useCallback(async () => {
+    if (!userData?.companyID) {
+      setLocations([]);
+      return;
+    }
+    try {
+      // Načítame všetky objednávky a extrahujeme z nich miesta
+      const ordersRef = collection(db, 'orders');
+      const q = query(ordersRef, where('companyID', '==', userData.companyID));
+      const querySnapshot = await getDocs(q);
+      
+      const locationsSet = new Set<string>();
+      const locationsData: any[] = [];
+      
+      querySnapshot.docs.forEach(doc => {
+        const orderData = doc.data();
+        
+        // Spracujeme miesta nakládky
+        (orderData.loadingPlaces || []).forEach((place: any) => {
+          if (place.city) {
+            const locationKey = `${place.city}-${place.street || ''}-${place.zip || ''}`;
+            if (!locationsSet.has(locationKey)) {
+              locationsSet.add(locationKey);
+              locationsData.push({
+                id: crypto.randomUUID(),
+                type: 'loading',
+                city: place.city,
+                street: place.street || '',
+                zip: place.zip || '',
+                country: place.country || '',
+                contactPerson: place.contactPerson || '',
+                usageCount: 1
+              });
+            }
+          }
+        });
+        
+        // Spracujeme miesta vykládky
+        (orderData.unloadingPlaces || []).forEach((place: any) => {
+          if (place.city) {
+            const locationKey = `${place.city}-${place.street || ''}-${place.zip || ''}`;
+            if (!locationsSet.has(locationKey)) {
+              locationsSet.add(locationKey);
+              locationsData.push({
+                id: crypto.randomUUID(),
+                type: 'unloading',
+                city: place.city,
+                street: place.street || '',
+                zip: place.zip || '',
+                country: place.country || '',
+                contactPerson: place.contactPerson || '',
+                usageCount: 1
+              });
+            }
+          }
+        });
+      });
+      
+      setLocations(locationsData);
+    } catch (error) {
+      console.error('Chyba pri načítaní miest:', error);
+    }
+  }, [userData]);
+
+  const fetchDispatchers = useCallback(async () => {
+    if (!userData?.companyID) {
+      setDispatchers([]);
+      return;
+    }
+    try {
+      console.log('📊 Načítavam špeditérov s filtrom:', dispatcherFilter);
+      
+      // Načítame všetky objednávky a spočítame zisky pre každého špeditéra
+      const ordersRef = collection(db, 'orders');
+      let whereClause = [where('companyID', '==', userData.companyID)];
+      
+      // Vytvoríme dátumy pre filtre
+      let startFilterDate: Date | null = null;
+      let endFilterDate: Date | null = null;
+      
+      if (dispatcherFilter === 'thisMonth') {
+        const now = new Date();
+        startFilterDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endFilterDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        console.log('📅 Filter TENTO MESIAC:', {
+          startFilterDate: startFilterDate.toLocaleDateString('sk-SK'),
+          endFilterDate: endFilterDate.toLocaleDateString('sk-SK')
+        });
+      } else if (dispatcherFilter === 'thisYear') {
+        const now = new Date();
+        startFilterDate = new Date(now.getFullYear(), 0, 1);
+        endFilterDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        console.log('📅 Filter TENTO ROK:', {
+          startFilterDate: startFilterDate.toLocaleDateString('sk-SK'),
+          endFilterDate: endFilterDate.toLocaleDateString('sk-SK')
+        });
+      } else if (dispatcherFilter === 'custom' && customStartDate && customEndDate) {
+        startFilterDate = new Date(customStartDate);
+        startFilterDate.setHours(0, 0, 0, 0);
+        endFilterDate = new Date(customEndDate);
+        endFilterDate.setHours(23, 59, 59, 999);
+        console.log('📅 Filter VLASTNÝ ROZSAH:', {
+          startFilterDate: startFilterDate.toLocaleDateString('sk-SK'),
+          endFilterDate: endFilterDate.toLocaleDateString('sk-SK')
+        });
+      }
+      
+      // Pridáme časové filtre do where klauzúl
+      if (startFilterDate && endFilterDate) {
+        whereClause.push(where('createdAt', '>=', Timestamp.fromDate(startFilterDate)));
+        whereClause.push(where('createdAt', '<=', Timestamp.fromDate(endFilterDate)));
+      }
+      
+      // Vytvoríme query s všetkými where podmienkami naraz
+      const q = query(ordersRef, ...whereClause, orderBy('createdAt', 'desc'));
+      console.log('🔍 Spúšťam query s', whereClause.length, 'podmienkami');
+      
+      const querySnapshot = await getDocs(q);
+      console.log('📦 Nájdené objednávky:', querySnapshot.docs.length);
+      
+      const dispatcherStats: { [key: string]: any } = {};
+      
+      querySnapshot.docs.forEach(doc => {
+        const orderData = doc.data();
+        const createdBy = orderData.createdBy;
+        const customerPrice = parseFloat(orderData.suma || orderData.customerPrice || '0');
+        const carrierPrice = parseFloat(orderData.carrierPrice || '0');
+        const profit = customerPrice - carrierPrice;
+        const profitMargin = customerPrice > 0 ? ((profit / customerPrice) * 100) : 0;
+        
+        // Debug informácie pre každú objednávku
+        const orderDate = orderData.createdAt instanceof Timestamp 
+          ? orderData.createdAt.toDate() 
+          : new Date(orderData.createdAt);
+        console.log('📋 Spracovávam objednávku:', {
+          id: doc.id.substring(0, 8),
+          createdBy: orderData.createdByName || createdBy,
+          date: orderDate.toLocaleDateString('sk-SK'),
+          customerPrice,
+          carrierPrice,
+          profit
+        });
+        
+        if (createdBy && !isNaN(profit)) {
+          if (!dispatcherStats[createdBy]) {
+            dispatcherStats[createdBy] = {
+              id: createdBy,
+              name: (orderData.createdBy && teamMembers[orderData.createdBy]?.name) || orderData.createdByName || 'Neznámy',
+              email: teamMembers[createdBy]?.email || '',
+              totalOrders: 0,
+              totalRevenue: 0,
+              totalCosts: 0,
+              totalProfit: 0,
+              avgProfit: 0,
+              avgProfitMargin: 0,
+              orders: []
+            };
+          }
+          
+          dispatcherStats[createdBy].totalOrders += 1;
+          dispatcherStats[createdBy].totalRevenue += customerPrice;
+          dispatcherStats[createdBy].totalCosts += carrierPrice;
+          dispatcherStats[createdBy].totalProfit += profit;
+          dispatcherStats[createdBy].orders.push({
+            id: doc.id,
+            customerPrice,
+            carrierPrice,
+            profit,
+            profitMargin,
+            date: orderData.createdAt
+          });
+        }
+      });
+      
+      // Vypočítame priemerný zisk a priemerná marža
+      Object.values(dispatcherStats).forEach((dispatcher: any) => {
+        dispatcher.avgProfit = dispatcher.totalOrders > 0 
+          ? dispatcher.totalProfit / dispatcher.totalOrders 
+          : 0;
+        dispatcher.avgProfitMargin = dispatcher.totalRevenue > 0 
+          ? ((dispatcher.totalProfit / dispatcher.totalRevenue) * 100) 
+          : 0;
+      });
+      
+      console.log('👥 Finálne štatistiky špeditérov:', Object.values(dispatcherStats).length, 'špeditérov');
+      setDispatchers(Object.values(dispatcherStats));
+    } catch (error) {
+      console.error('❌ Chyba pri načítaní špeditérov:', error);
+    }
+  }, [userData, teamMembers, dispatcherFilter, customStartDate, customEndDate]);
+
   // --- useEffect HOOKY (teraz sú definované PO fetch funkciách) ---
 
   useEffect(() => {
@@ -547,6 +751,8 @@ const OrdersList: React.FC = () => {
     fetchCustomers(); 
     fetchCarriers();
     fetchOrders();
+    fetchLocations();
+    fetchDispatchers();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -554,8 +760,10 @@ const OrdersList: React.FC = () => {
     if (userData) { 
       console.log("Running data fetch due to user change.");
       // Funkcie sa zavolajú automaticky vďaka závislosti na userData v ich useCallback
+      fetchLocations();
+      fetchDispatchers();
     }
-  }, [userData]);
+  }, [userData, fetchLocations, fetchDispatchers]);
 
   useEffect(() => {
     console.log("Running fetchOrders due to filter change (startDate, endDate).");
@@ -563,6 +771,12 @@ const OrdersList: React.FC = () => {
     fetchOrders(); 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (userData?.companyID) {
+      fetchDispatchers();
+    }
+  }, [fetchDispatchers, dispatcherFilter, customStartDate, customEndDate]);
 
   // --- OSTATNÉ FUNKCIE --- 
 
@@ -1085,6 +1299,8 @@ const OrdersList: React.FC = () => {
               <Tab label={t('orders.allOrders')} />
               <Tab label={t('orders.customers')} />
               <Tab label={t('orders.carriers')} />
+              <Tab label={t('orders.locations') || 'Miesta'} />
+              <Tab label={t('orders.dispatchers') || 'Špeditéri'} />
             </Tabs>
           </Box>
 
@@ -1263,7 +1479,7 @@ const OrdersList: React.FC = () => {
                           'Neznámy'
                         }
                       </StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy') : 'N/A'}</StyledTableCell>
+                      <StyledTableCell isDarkMode={isDarkMode}>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}</StyledTableCell>
                       <StyledTableCell isDarkMode={isDarkMode}> {/* Akcie */} 
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <Tooltip title={t('orders.edit')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></Tooltip>
@@ -1567,6 +1783,524 @@ const OrdersList: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
+            </Box>
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={3}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Button 
+                    variant="contained" 
+                    startIcon={<AddIcon />}
+                    onClick={() => setShowLocationForm(true)}
+                    sx={{
+                      backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.8)' : '#ff9f43',
+                      color: '#ffffff',
+                      fontWeight: 500,
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.9)' : '#f7b067',
+                      }
+                    }}
+                  >
+                    {t('orders.addLocation') || 'Pridať miesto'}
+                  </Button>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                  <TextField
+                    id="search-location"
+                    name="searchLocation"
+                    label={t('orders.searchLocation') || 'Hľadať miesto'}
+                    variant="outlined"
+                    size="small"
+                    value={locationSearchQuery}
+                    onChange={(e) => setLocationSearchQuery(e.target.value)}
+                    sx={{ flexGrow: 1, minWidth: '250px', maxWidth: '500px' }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              <TableContainer 
+                component={Paper} 
+                sx={{
+                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                    borderRadius: '20px',
+                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                    '& .MuiTableCell-root': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      padding: '16px',
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      fontWeight: 600,
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    },
+                    '& .MuiTableBody-root .MuiTableRow-root': {
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }
+                    }
+                  }}
+              >
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t('orders.type') || 'Typ'}</TableCell>
+                      <TableCell>{t('orders.city') || 'Mesto'}</TableCell>
+                      <TableCell>{t('orders.street') || 'Ulica'}</TableCell>
+                      <TableCell>{t('orders.zipCode') || 'PSČ'}</TableCell>
+                      <TableCell>{t('orders.country') || 'Krajina'}</TableCell>
+                      <TableCell>{t('orders.contactPerson') || 'Kontaktná osoba'}</TableCell>
+                      <TableCell>{t('orders.usageCount') || 'Počet použití'}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {locations
+                      .filter(location => {
+                        const searchLower = locationSearchQuery.toLowerCase();
+                        return (
+                          location.city?.toLowerCase().includes(searchLower) ||
+                          location.street?.toLowerCase().includes(searchLower) ||
+                          location.contactPerson?.toLowerCase().includes(searchLower)
+                        );
+                      })
+                      .map((location) => (
+                        <TableRow key={location.id}>
+                          <TableCell>
+                            <Chip 
+                              label={location.type === 'loading' ? 'Nakládka' : 'Vykládka'} 
+                              color={location.type === 'loading' ? 'success' : 'info'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>{location.city}</TableCell>
+                          <TableCell>{location.street || '-'}</TableCell>
+                          <TableCell>{location.zip || '-'}</TableCell>
+                          <TableCell>{location.country || '-'}</TableCell>
+                          <TableCell>{location.contactPerson || '-'}</TableCell>
+                          <TableCell>{location.usageCount}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={4}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                <Typography variant="h6" sx={{ color: '#ff9f43', fontWeight: 600 }}>
+                  {t('orders.dispatcherStats') || 'Štatistiky špeditérov'}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                  <TextField
+                    id="search-dispatcher"
+                    name="searchDispatcher"
+                    label={t('orders.searchDispatcher') || 'Hľadať špeditéra'}
+                    variant="outlined"
+                    size="small"
+                    value={dispatcherSearchQuery}
+                    onChange={(e) => setDispatcherSearchQuery(e.target.value)}
+                    sx={{ flexGrow: 1, minWidth: '250px', maxWidth: '500px' }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              {/* Filtre pre časové obdobie */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Button
+                  variant={dispatcherFilter === 'all' ? 'contained' : 'outlined'}
+                  onClick={() => setDispatcherFilter('all')}
+                  sx={{
+                    backgroundColor: dispatcherFilter === 'all' ? '#ff9f43' : 'transparent',
+                    borderColor: '#ff9f43',
+                    color: dispatcherFilter === 'all' ? '#ffffff' : '#ff9f43',
+                    '&:hover': {
+                      backgroundColor: dispatcherFilter === 'all' ? '#f7b067' : 'rgba(255, 159, 67, 0.1)',
+                    }
+                  }}
+                >
+                  {t('common.allOrders')}
+                </Button>
+                
+                <Button
+                  variant={dispatcherFilter === 'thisMonth' ? 'contained' : 'outlined'}
+                  onClick={() => setDispatcherFilter('thisMonth')}
+                  sx={{
+                    backgroundColor: dispatcherFilter === 'thisMonth' ? '#ff9f43' : 'transparent',
+                    borderColor: '#ff9f43',
+                    color: dispatcherFilter === 'thisMonth' ? '#ffffff' : '#ff9f43',
+                    '&:hover': {
+                      backgroundColor: dispatcherFilter === 'thisMonth' ? '#f7b067' : 'rgba(255, 159, 67, 0.1)',
+                    }
+                  }}
+                >
+                  {t('common.thisMonth')}
+                </Button>
+                
+                <Button
+                  variant={dispatcherFilter === 'thisYear' ? 'contained' : 'outlined'}
+                  onClick={() => setDispatcherFilter('thisYear')}
+                  sx={{
+                    backgroundColor: dispatcherFilter === 'thisYear' ? '#ff9f43' : 'transparent',
+                    borderColor: '#ff9f43',
+                    color: dispatcherFilter === 'thisYear' ? '#ffffff' : '#ff9f43',
+                    '&:hover': {
+                      backgroundColor: dispatcherFilter === 'thisYear' ? '#f7b067' : 'rgba(255, 159, 67, 0.1)',
+                    }
+                  }}
+                >
+                  {t('common.thisYear')}
+                </Button>
+                
+                <Button
+                  variant={dispatcherFilter === 'custom' ? 'contained' : 'outlined'}
+                  onClick={() => setDispatcherFilter('custom')}
+                  sx={{
+                    backgroundColor: dispatcherFilter === 'custom' ? '#ff9f43' : 'transparent',
+                    borderColor: '#ff9f43',
+                    color: dispatcherFilter === 'custom' ? '#ffffff' : '#ff9f43',
+                    '&:hover': {
+                      backgroundColor: dispatcherFilter === 'custom' ? '#f7b067' : 'rgba(255, 159, 67, 0.1)',
+                    }
+                  }}
+                >
+                  Vlastný rozsah
+                </Button>
+
+                <Button 
+                  onClick={() => { 
+                    setDispatcherFilter('all'); 
+                    setCustomStartDate(null); 
+                    setCustomEndDate(null); 
+                  }}
+                  size="small"
+                  sx={{ 
+                    color: '#ff9f43',
+                    '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
+                  }}
+                >
+                  {t('common.clearFilter')}
+                </Button>
+
+                {dispatcherFilter === 'custom' && (
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                      <DatePicker
+                        label={t('common.from')}
+                        value={customStartDate}
+                        onChange={(newValue) => setCustomStartDate(newValue)}
+                        slotProps={{ 
+                          textField: { 
+                            size: 'small',
+                            sx: { minWidth: 150 }
+                          }
+                        }}
+                      />
+                      <DatePicker
+                        label={t('common.to')}
+                        value={customEndDate}
+                        onChange={(newValue) => setCustomEndDate(newValue)}
+                        slotProps={{ 
+                          textField: { 
+                            size: 'small',
+                            sx: { minWidth: 150 }
+                          }
+                        }}
+                      />
+                    </LocalizationProvider>
+                  </Box>
+                )}
+              </Box>
+
+              <TableContainer 
+                component={Paper} 
+                sx={{
+                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                    borderRadius: '20px',
+                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                    '& .MuiTableCell-root': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      padding: '16px',
+                      fontSize: '0.9rem',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      fontWeight: 600,
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    },
+                    '& .MuiTableBody-root .MuiTableRow-root': {
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }
+                    }
+                  }}
+              >
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{t('orders.dispatcherName') || 'Meno špeditéra'}</TableCell>
+                      <TableCell>{t('orders.email') || 'Email'}</TableCell>
+                      <TableCell>{t('orders.totalOrders') || 'Celkom objednávok'}</TableCell>
+                      <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{t('orders.totalRevenue') || 'Celkové príjmy'}</TableCell>
+                      <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>{t('orders.totalCosts') || 'Celkové náklady'}</TableCell>
+                      <TableCell sx={{ color: '#2ecc71', fontWeight: 'bold' }}>{t('orders.totalProfit') || 'Celkový zisk'}</TableCell>
+                      <TableCell sx={{ color: '#9c27b0', fontWeight: 'bold' }}>{t('orders.avgProfit') || 'Priemerný zisk'}</TableCell>
+                      <TableCell sx={{ color: '#e74c3c', fontWeight: 'bold' }}>{t('orders.avgProfitMargin') || 'Priemerná marža'}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dispatchers
+                      .filter(dispatcher => {
+                        const searchLower = dispatcherSearchQuery.toLowerCase();
+                        return (
+                          dispatcher.name?.toLowerCase().includes(searchLower) ||
+                          dispatcher.email?.toLowerCase().includes(searchLower)
+                        );
+                      })
+                      .sort((a, b) => b.totalProfit - a.totalProfit) // Zoradenie podľa zisku
+                      .map((dispatcher) => (
+                        <TableRow key={dispatcher.id}>
+                          <TableCell>{dispatcher.name}</TableCell>
+                          <TableCell>{dispatcher.email || '-'}</TableCell>
+                          <TableCell>{dispatcher.totalOrders}</TableCell>
+                          <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>
+                            {`${dispatcher.totalRevenue.toFixed(2)} €`}
+                          </TableCell>
+                          <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                            {`${dispatcher.totalCosts.toFixed(2)} €`}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            color: dispatcher.totalProfit >= 0 ? '#2ecc71' : '#e74c3c', 
+                            fontWeight: 'bold' 
+                          }}>
+                            {`${dispatcher.totalProfit.toFixed(2)} €`}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            color: dispatcher.avgProfit >= 0 ? '#9c27b0' : '#e74c3c', 
+                            fontWeight: 'bold' 
+                          }}>
+                            {`${dispatcher.avgProfit.toFixed(2)} €`}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            color: dispatcher.avgProfitMargin >= 0 ? '#e74c3c' : '#2ecc71', 
+                            fontWeight: 'bold' 
+                          }}>
+                            {`${dispatcher.avgProfitMargin.toFixed(2)} %`}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Motivačný graf špeditérov */}
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" sx={{ mb: 3, color: '#ff9f43', fontWeight: 600, textAlign: 'center' }}>
+                  🏆 Výkonnostný rebríček špeditérov
+                </Typography>
+                
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: 2, 
+                  justifyContent: 'center',
+                  alignItems: 'flex-end',
+                  minHeight: '200px',
+                  p: 2,
+                  background: isDarkMode 
+                    ? 'linear-gradient(135deg, rgba(28, 28, 45, 0.6) 0%, rgba(40, 40, 65, 0.8) 100%)'
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 240, 255, 0.9) 100%)',
+                  borderRadius: '20px',
+                  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                  backdropFilter: 'blur(10px)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  {/* Pozadie s dekoratívnymi prvkami */}
+                  <Box sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: `radial-gradient(circle at 20% 50%, rgba(255, 159, 67, 0.1) 0%, transparent 50%), 
+                                radial-gradient(circle at 80% 20%, rgba(46, 204, 113, 0.1) 0%, transparent 50%),
+                                radial-gradient(circle at 40% 80%, rgba(52, 152, 219, 0.1) 0%, transparent 50%)`,
+                    zIndex: 0
+                  }} />
+                  
+                  {dispatchers
+                    .filter(dispatcher => {
+                      const searchLower = dispatcherSearchQuery.toLowerCase();
+                      return (
+                        dispatcher.name?.toLowerCase().includes(searchLower) ||
+                        dispatcher.email?.toLowerCase().includes(searchLower)
+                      );
+                    })
+                    .sort((a, b) => b.totalProfit - a.totalProfit)
+                    .map((dispatcher, index) => {
+                      // Vypočítame veľkosť karty na základe zisku (relatívne k najlepšiemu)
+                      const maxProfit = Math.max(...dispatchers.map(d => d.totalProfit));
+                      const minProfit = Math.min(...dispatchers.map(d => d.totalProfit));
+                      const profitRange = maxProfit - minProfit;
+                      
+                      // Veľkosť od 80px do 160px
+                      const minSize = 80;
+                      const maxSize = 160;
+                      const cardSize = profitRange > 0 
+                        ? minSize + ((dispatcher.totalProfit - minProfit) / profitRange) * (maxSize - minSize)
+                        : minSize;
+                      
+                      // Farby podľa pozície
+                      const getCardColor = (index: number) => {
+                        if (index === 0) return { bg: '#ffd700', text: '#000', emoji: '🥇' }; // Zlato
+                        if (index === 1) return { bg: '#c0c0c0', text: '#000', emoji: '🥈' }; // Striebro  
+                        if (index === 2) return { bg: '#cd7f32', text: '#fff', emoji: '🥉' }; // Bronz
+                        return { bg: '#ff9f43', text: '#fff', emoji: '💼' }; // Ostatní
+                      };
+                      
+                      const cardStyle = getCardColor(index);
+                      
+                      return (
+                        <Box
+                          key={dispatcher.id}
+                          sx={{
+                            width: `${cardSize}px`,
+                            height: `${cardSize}px`,
+                            borderRadius: '20px',
+                            background: `linear-gradient(135deg, ${cardStyle.bg} 0%, ${cardStyle.bg}dd 100%)`,
+                            boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            position: 'relative',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            zIndex: 1,
+                            '&:hover': {
+                              transform: 'translateY(-8px) scale(1.05)',
+                              boxShadow: '0 15px 35px rgba(0, 0, 0, 0.25)',
+                              zIndex: 10
+                            }
+                          }}
+                        >
+                          {/* Pozícia badge */}
+                          <Box sx={{
+                            position: 'absolute',
+                            top: '-8px',
+                            right: '-8px',
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: isDarkMode ? 'rgba(28, 28, 45, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            color: isDarkMode ? '#ffffff' : '#000000',
+                            border: `2px solid ${cardStyle.bg}`
+                          }}>
+                            #{index + 1}
+                          </Box>
+                          
+                          {/* Emoji a meno */}
+                          <Box sx={{ textAlign: 'center', color: cardStyle.text }}>
+                            <Typography sx={{ fontSize: `${Math.max(20, cardSize * 0.15)}px`, mb: 0.5 }}>
+                              {cardStyle.emoji}
+                            </Typography>
+                            <Typography sx={{ 
+                              fontSize: `${Math.max(10, cardSize * 0.08)}px`, 
+                              fontWeight: 'bold',
+                              lineHeight: 1.2,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: `${cardSize - 20}px`
+                            }}>
+                              {dispatcher.name}
+                            </Typography>
+                            
+                            {/* Zisk */}
+                            <Typography sx={{ 
+                              fontSize: `${Math.max(8, cardSize * 0.06)}px`, 
+                              fontWeight: 600,
+                              mt: 0.5,
+                              opacity: 0.9
+                            }}>
+                              {dispatcher.totalProfit.toFixed(0)} €
+                            </Typography>
+                            
+                            {/* Marža */}
+                            <Typography sx={{ 
+                              fontSize: `${Math.max(6, cardSize * 0.05)}px`, 
+                              fontWeight: 500,
+                              opacity: 0.8
+                            }}>
+                              {dispatcher.avgProfitMargin.toFixed(1)}%
+                            </Typography>
+                          </Box>
+                          
+                          {/* Efekt lesku */}
+                          <Box sx={{
+                            position: 'absolute',
+                            top: '10%',
+                            left: '10%',
+                            right: '60%',
+                            bottom: '60%',
+                            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%)',
+                            borderRadius: '20px',
+                            pointerEvents: 'none'
+                          }} />
+                        </Box>
+                      );
+                    })}
+                </Box>
+                
+                {/* Legenda */}
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <Typography variant="body2" sx={{ 
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                    fontSize: '0.75rem'
+                  }}>
+                    💡 Veľkosť karty = výška zisku | Pozícia = celkový výkon | Hover pre detail
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
           </TabPanel>
         </Box>

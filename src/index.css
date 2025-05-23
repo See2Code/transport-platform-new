@@ -28,6 +28,14 @@
   --transition-normal: 0.3s ease-in-out;
 }
 
+/* Mobile viewport optimalizácie */
+html {
+  /* Zabráni zoom pri touch na iOS */
+  -webkit-text-size-adjust: 100%;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -36,6 +44,60 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color var(--transition-normal), color var(--transition-normal);
+  /* Mobile optimalizácie */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Zabráni bounce efektu na iOS */
+  overscroll-behavior-y: none;
+}
+
+/* Povoliť výber textu pre input polia a content oblasti */
+input, textarea, [contenteditable="true"], .selectable {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Mobile klávesnica optimalizácie */
+@media (max-width: 600px) {
+  /* Zabráni zoom pri focus na input */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+    /* Minimálna veľkosť pre zabránenie zoom na iOS */
+  }
+  
+  /* Viewport handling pre mobile */
+  html, body {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height */
+    overflow-x: hidden;
+  }
+  
+  /* Chat mobile optimalizácie */
+  .MuiDrawer-root {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 9999 !important;
+  }
 }
 
 body[data-theme="dark"] {

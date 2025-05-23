@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateOrderPdf = exports.deleteConversation = exports.getConversationMessages = exports.getUserConversations = exports.updateUnreadCounts = exports.updateUserProfileInConversations = exports.searchUsers = exports.markMessagesAsRead = exports.sendMessage = exports.createConversation = exports.googleMapsProxy = exports.sendTestReminder = exports.updateLastLogin = exports.initializeLastLogin = exports.logFunctionMetrics = exports.checkTransportNotifications = exports.checkBusinessCaseReminders = exports.sendInvitationEmail = exports.clearDatabase = void 0;
+exports.generateOrderPdf = exports.fixUnreadCounts = exports.deleteConversation = exports.getConversationMessages = exports.getUserConversations = exports.updateUserProfileInConversations = exports.searchUsers = exports.markMessagesAsRead = exports.sendMessage = exports.createConversation = exports.googleMapsProxy = exports.sendTestReminder = exports.updateLastLogin = exports.initializeLastLogin = exports.logFunctionMetrics = exports.checkTransportNotifications = exports.checkBusinessCaseReminders = exports.sendInvitationEmail = exports.clearDatabase = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const nodemailer = __importStar(require("nodemailer"));
@@ -687,10 +687,10 @@ exports.sendMessage = chatFunctions.sendMessage;
 exports.markMessagesAsRead = chatFunctions.markMessagesAsRead;
 exports.searchUsers = chatFunctions.searchUsers;
 exports.updateUserProfileInConversations = chatFunctions.updateUserProfileInConversations;
-exports.updateUnreadCounts = chatFunctions.updateUnreadCounts;
 exports.getUserConversations = chatFunctions.getUserConversations;
 exports.getConversationMessages = chatFunctions.getConversationMessages;
 exports.deleteConversation = chatFunctions.deleteConversation;
+exports.fixUnreadCounts = chatFunctions.fixUnreadCounts;
 // Prípadné ďalšie funkcie
 // export const otherApiProxy = apiProxy.otherApiProxy;
 // TODO: Implementovať generovanie PDF na serveri

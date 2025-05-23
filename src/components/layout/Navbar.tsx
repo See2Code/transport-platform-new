@@ -933,18 +933,7 @@ const Navbar: FC = () => {
                 },
               }}
             >
-              <Badge
-                badgeContent={unreadConversationsCount || undefined}
-                color="error"
-                sx={{
-                  '& .MuiBadge-badge': {
-                    backgroundColor: '#ff4444',
-                    color: '#ffffff',
-                  },
-                }}
-              >
-                <NotificationsIcon />
-              </Badge>
+              <NotificationsIcon />
             </IconButton>
             
             <BareTooltip title={t('common.chat')} placement="bottom">
@@ -953,7 +942,22 @@ const Navbar: FC = () => {
                 onClick={toggleChat}
                 sx={{ ml: 1 }}
               >
-                <ChatIcon />
+                <Badge 
+                  badgeContent={unreadConversationsCount} 
+                  color="error"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      backgroundColor: '#ff9f43',
+                      color: '#ffffff',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      minWidth: '18px',
+                      height: '18px',
+                    },
+                  }}
+                >
+                  <ChatIcon />
+                </Badge>
               </IconButton>
             </BareTooltip>
             
