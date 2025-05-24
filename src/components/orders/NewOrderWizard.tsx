@@ -52,6 +52,9 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import BusinessIcon from '@mui/icons-material/Business';
 import PhoneIcon from '@mui/icons-material/Phone';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import CheckIcon from '@mui/icons-material/Check';
 
 // Firebase imports
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, Timestamp, orderBy } from 'firebase/firestore';
@@ -374,13 +377,15 @@ interface NewOrderWizardProps {
   onClose: () => void;
   isEdit?: boolean;
   orderData?: Partial<OrderFormData>;
+  onOrderSaved?: () => void; // Callback pre obnovenie dát po uložení
 }
 
 const NewOrderWizard: React.FC<NewOrderWizardProps> = ({ 
   open, 
   onClose, 
   isEdit = false, 
-  orderData = {} 
+  orderData = {}, 
+  onOrderSaved
 }) => {
   const { t } = useTranslation();
   const { userData } = useAuth();
@@ -426,6 +431,12 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const [expandedLocationCards, setExpandedLocationCards] = useState<{ [key: string]: boolean }>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showValidationAlert, setShowValidationAlert] = useState(false);
+
+  // Team members and dispatcher states
+  const [teamMembers, setTeamMembers] = useState<{[id: string]: {name: string, email: string}}>({});
+  const [isEditingDispatcher, setIsEditingDispatcher] = useState(false);
+  const [originalDispatcher, setOriginalDispatcher] = useState<{id: string, name: string} | null>(null);
+  const [editedDispatcher, setEditedDispatcher] = useState<{id: string, name: string} | null>(null);
 
   // Steps configuration
   const steps = [
@@ -568,6 +579,65 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     }
   }, [userData?.companyID]);
 
+  const fetchTeamMembers = useCallback(async () => {
+    if (!userData?.companyID) return;
+    try {
+      const usersQuery = query(collection(db, 'users'), where('companyID', '==', userData.companyID));
+      const usersSnapshot = await getDocs(usersQuery);
+      const usersData: {[id: string]: {name: string, email: string}} = {};
+      
+      usersSnapshot.docs.forEach(doc => {
+        const userDoc = doc.data();
+        let userName = '';
+        if (userDoc.firstName || userDoc.lastName) {
+          userName = `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim();
+        }
+        if (!userName && userDoc.displayName) userName = userDoc.displayName;
+        if (!userName && userDoc.email) {
+          const emailParts = userDoc.email.split('@');
+          if (emailParts.length > 0) {
+            const nameParts = emailParts[0].split(/[._-]/);
+            userName = nameParts.map((part: string) => 
+              part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
+          }
+        }
+        if (!userName) userName = userDoc.email ? userDoc.email.split('@')[0] : 'Používateľ';
+        
+        usersData[doc.id] = { 
+          name: userName, 
+          email: userDoc.email || '' 
+        };
+      });
+      
+      // Pridaj aktuálneho používateľa ak nie je v zozname
+      if (userData.uid && !usersData[userData.uid]) {
+        let currentUserName = '';
+        if ((userData as any).firstName || (userData as any).lastName) {
+          currentUserName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
+        }
+        if (!currentUserName && (userData as any).displayName) currentUserName = (userData as any).displayName;
+        if (!currentUserName && userData.email) {
+          const emailParts = userData.email.split('@');
+          if (emailParts.length > 0) {
+            const nameParts = emailParts[0].split(/[._-]/);
+            currentUserName = nameParts.map(part => 
+              part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
+          }
+        }
+        if (!currentUserName) currentUserName = userData.email ? userData.email.split('@')[0] : 'Aktuálny používateľ';
+        
+        usersData[userData.uid] = { 
+          name: currentUserName, 
+          email: userData.email || '' 
+        };
+      }
+      
+      setTeamMembers(usersData);
+    } catch (error) {
+      console.error('Chyba pri načítaní členov tímu:', error);
+    }
+  }, [userData]);
+
   // Initialize data
   useEffect(() => {
     console.log('🚀 NewOrderWizard useEffect triggered:', { 
@@ -581,6 +651,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       fetchCustomers();
       fetchCarriers();
       fetchSavedData();
+      fetchTeamMembers();
     } else {
       console.log('❌ Conditions NOT met:', {
         open,
@@ -588,7 +659,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         userData: userData
       });
     }
-  }, [open, userData?.companyID, fetchCustomers, fetchCarriers, fetchSavedData]);
+  }, [open, userData?.companyID, fetchCustomers, fetchCarriers, fetchSavedData, fetchTeamMembers]);
 
   // Load edit data
   useEffect(() => {
@@ -635,6 +706,25 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     }
   }, [isEdit, orderData, open, customerOptions]); // Pridávame customerOptions do závislostí
 
+  // Set original dispatcher when editing
+  useEffect(() => {
+    if (isEdit && orderData && Object.keys(teamMembers).length > 0) {
+      const createdBy = orderData.createdBy || (orderData as any).createdBy;
+      const createdByName = (orderData as any).createdByName || 
+                           (createdBy && teamMembers[createdBy]?.name) || 
+                           'Neznámy';
+      
+      if (createdBy) {
+        const originalDisp = {
+          id: createdBy,
+          name: createdByName
+        };
+        setOriginalDispatcher(originalDisp);
+        setEditedDispatcher(originalDisp);
+      }
+    }
+  }, [isEdit, orderData, teamMembers]);
+
   // Handle functions
   const handleNext = () => {
     const validation = validateStep(activeStep);
@@ -677,6 +767,10 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       carrierVehicleReg: '',
       carrierPrice: '',
     });
+    // Reset dispatcher editing states
+    setIsEditingDispatcher(false);
+    setOriginalDispatcher(null);
+    setEditedDispatcher(null);
   };
 
   const handleInputChange = (field: keyof OrderFormData) => (
@@ -911,50 +1005,100 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     
     setIsSubmitting(true);
     try {
-      // Generate order number
-      const orderYear = new Date().getFullYear().toString();
-      const orderMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
-      
-      const orderNumberQuery = query(
-        collection(db, 'orders'),
-        where('companyID', '==', userData.companyID),
-        where('orderYear', '==', orderYear),
-        where('orderMonth', '==', orderMonth)
-      );
-      
-      const orderSnapshot = await getDocs(orderNumberQuery);
-      const orderNumber = (orderSnapshot.size + 1).toString().padStart(3, '0');
-      const orderNumberFormatted = `${orderYear}${orderMonth}${orderNumber}`;
+      let orderNumber = '';
+      let orderNumberFormatted = '';
+      let orderYear = '';
+      let orderMonth = '';
 
-      const orderData = {
+      // Generujeme číslo objednávky len pre nové objednávky
+      if (!isEdit) {
+        // Generate order number
+        orderYear = new Date().getFullYear().toString();
+        orderMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+        
+        const orderNumberQuery = query(
+          collection(db, 'orders'),
+          where('companyID', '==', userData.companyID),
+          where('orderYear', '==', orderYear),
+          where('orderMonth', '==', orderMonth)
+        );
+        
+        const orderSnapshot = await getDocs(orderNumberQuery);
+        orderNumber = (orderSnapshot.size + 1).toString().padStart(3, '0');
+        orderNumberFormatted = `${orderYear}${orderMonth}${orderNumber}`;
+      }
+
+      // Debug logy pre špeditera
+      console.log('🔍 Ukladanie objednávky - špediter info:', {
+        isEdit,
+        originalDispatcher,
+        editedDispatcher,
+        orderDataCreatedBy: orderData.createdBy,
+        orderDataCreatedByName: (orderData as any).createdByName
+      });
+
+      // Určenie správneho špeditera
+      let finalCreatedBy = userData.uid;
+      let finalCreatedByName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+
+      if (isEdit) {
+        if (editedDispatcher) {
+          // Použijeme editovaného špeditera
+          finalCreatedBy = editedDispatcher.id;
+          finalCreatedByName = editedDispatcher.name;
+          console.log('✅ Používam editovaného špeditera:', editedDispatcher);
+        } else if (originalDispatcher) {
+          // Žiadna zmena, použijeme pôvodného špeditera
+          finalCreatedBy = originalDispatcher.id;
+          finalCreatedByName = originalDispatcher.name;
+          console.log('✅ Používam pôvodného špeditera:', originalDispatcher);
+        } else {
+          // Fallback na pôvodné dáta z objednávky
+          finalCreatedBy = orderData.createdBy || userData.uid;
+          finalCreatedByName = (orderData as any).createdByName || finalCreatedByName;
+          console.log('✅ Používam fallback špeditera z orderData');
+        }
+      }
+
+      console.log('💾 Finálny špediter pre uloženie:', {
+        finalCreatedBy,
+        finalCreatedByName
+      });
+
+      const dataToSave = {
         ...formData,
         companyID: userData.companyID,
-        createdBy: userData.uid,
-        createdByName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-        createdAt: Timestamp.now(),
+        createdBy: finalCreatedBy,
+        createdByName: finalCreatedByName,
+        createdAt: isEdit ? orderData.createdAt : Timestamp.now(),
         updatedAt: Timestamp.now(),
-        orderNumber,
-        orderNumberFormatted,
-        orderYear,
-        orderMonth,
+        updatedBy: isEdit ? userData.uid : undefined,
+        // Generujeme číslo objednávky len pre nové objednávky
+        ...(isEdit ? {} : {
+          orderNumber,
+          orderNumberFormatted,
+          orderYear,
+          orderMonth,
+        }),
         customerCompany: formData.zakaznik,
         customerPrice: formData.suma,
       };
 
+      console.log('💾 Kompletné dáta na uloženie:', dataToSave);
+
       if (isEdit && orderData.id) {
-        await updateDoc(doc(db, 'orders', orderData.id), {
-          ...orderData,
-          updatedAt: Timestamp.now(),
-          updatedBy: userData.uid,
-        });
+        await updateDoc(doc(db, 'orders', orderData.id), dataToSave);
+        console.log('✅ Objednávka úspešne aktualizovaná');
       } else {
-        await addDoc(collection(db, 'orders'), orderData);
+        await addDoc(collection(db, 'orders'), dataToSave);
+        console.log('✅ Nová objednávka úspešne vytvorená');
       }
 
       handleReset();
       onClose();
+      onOrderSaved?.();
     } catch (error) {
-      console.error('Chyba pri ukladaní objednávky:', error);
+      console.error('❌ Chyba pri ukladaní objednávky:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -1816,6 +1960,34 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     );
   };
 
+  // Dispatcher editing functions
+  const handleStartEditDispatcher = () => {
+    // Len admin môže editovať
+    if (userData?.role !== 'admin') return;
+    setIsEditingDispatcher(true);
+  };
+
+  const handleCancelEditDispatcher = () => {
+    setIsEditingDispatcher(false);
+    setEditedDispatcher(originalDispatcher);
+  };
+
+  const handleSaveDispatcher = () => {
+    setIsEditingDispatcher(false);
+    // Aktualizujeme aj formData ak potrebujeme
+    if (editedDispatcher) {
+      setFormData(prev => ({
+        ...prev,
+        createdBy: editedDispatcher.id,
+        createdByName: editedDispatcher.name
+      }));
+    }
+  };
+
+  const handleDispatcherChange = (newDispatcher: {id: string, name: string} | null) => {
+    setEditedDispatcher(newDispatcher);
+  };
+
   return (
     <Dialog
       open={open}
@@ -1877,6 +2049,100 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Typography variant="body2" color="text.secondary">
                 {steps[activeStep].description}
               </Typography>
+              {/* Zobrazenie pôvodného špeditéra pre edit mode */}
+              {isEdit && originalDispatcher && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1, 
+                  mt: 1,
+                  p: 1,
+                  backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.1)' : 'rgba(255, 159, 67, 0.1)',
+                  borderRadius: 1,
+                  border: `1px solid ${isDarkMode ? 'rgba(255, 159, 67, 0.3)' : 'rgba(255, 159, 67, 0.3)'}`
+                }}>
+                  <AccountCircleIcon sx={{ fontSize: '1rem', color: '#ff9f43' }} />
+                  <Typography variant="caption" sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
+                    Vytvoril: 
+                  </Typography>
+                  {isEditingDispatcher ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Autocomplete
+                        size="small"
+                        value={editedDispatcher}
+                        onChange={(event, newValue) => handleDispatcherChange(newValue)}
+                        options={Object.entries(teamMembers).map(([id, member]) => ({
+                          id,
+                          name: member.name
+                        }))}
+                        getOptionLabel={(option) => option.name}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        renderInput={(params) => (
+                          <TextField 
+                            {...params} 
+                            variant="outlined" 
+                            size="small"
+                            sx={{ minWidth: 250 }}
+                          />
+                        )}
+                        sx={{
+                          '& .MuiAutocomplete-input': {
+                            fontSize: '0.75rem',
+                            padding: '2px 4px !important'
+                          }
+                        }}
+                      />
+                      <BareTooltip title="Uložiť">
+                        <IconButton 
+                          size="small" 
+                          onClick={handleSaveDispatcher}
+                          sx={{ 
+                            color: '#4caf50',
+                            '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' }
+                          }}
+                        >
+                          <CheckIcon sx={{ fontSize: '0.875rem' }} />
+                        </IconButton>
+                      </BareTooltip>
+                      <BareTooltip title="Zrušiť">
+                        <IconButton 
+                          size="small" 
+                          onClick={handleCancelEditDispatcher}
+                          sx={{ 
+                            color: '#f44336',
+                            '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' }
+                          }}
+                        >
+                          <CloseIcon sx={{ fontSize: '0.875rem' }} />
+                        </IconButton>
+                      </BareTooltip>
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant="caption" sx={{ 
+                        fontWeight: 600, 
+                        color: '#ff9f43'
+                      }}>
+                        {editedDispatcher?.name || originalDispatcher.name}
+                      </Typography>
+                      {userData?.role === 'admin' && (
+                        <BareTooltip title="Upraviť špeditéra">
+                          <IconButton 
+                            size="small" 
+                            onClick={handleStartEditDispatcher}
+                            sx={{ 
+                              color: '#ff9f43',
+                              '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.1)' }
+                            }}
+                          >
+                            <EditIcon sx={{ fontSize: '0.75rem' }} />
+                          </IconButton>
+                        </BareTooltip>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              )}
             </Box>
           </Box>
           <IconButton 

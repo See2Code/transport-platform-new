@@ -26,7 +26,8 @@ import {
   AccessTime as AccessTimeIcon,
   LocationOn as LocationOnIcon,
   Euro as EuroIcon,
-  Notes as NotesIcon
+  Notes as NotesIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import { Timestamp } from 'firebase/firestore';
@@ -483,12 +484,25 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                   </InfoValue>
                 </InfoItem>
                 {order.updatedAt && (
-                  <InfoItem>
-                    <InfoLabel isDarkMode={isDarkMode}>Aktualizovaná:</InfoLabel>
-                    <InfoValue isDarkMode={isDarkMode}>
-                      {format(order.updatedAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk })}
-                    </InfoValue>
-                  </InfoItem>
+                  <>
+                    <InfoItem>
+                      <InfoLabel isDarkMode={isDarkMode}>Aktualizovaná:</InfoLabel>
+                      <InfoValue isDarkMode={isDarkMode}>
+                        {format(order.updatedAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk })}
+                      </InfoValue>
+                    </InfoItem>
+                    {order.updatedBy && (
+                      <InfoItem>
+                        <InfoLabel isDarkMode={isDarkMode}>Upravil:</InfoLabel>
+                        <InfoValue isDarkMode={isDarkMode}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <EditIcon sx={{ fontSize: '1rem', color: '#1976d2' }} />
+                            ID: {order.updatedBy}
+                          </Box>
+                        </InfoValue>
+                      </InfoItem>
+                    )}
+                  </>
                 )}
               </Box>
             </InfoSection>

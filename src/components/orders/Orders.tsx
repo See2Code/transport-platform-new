@@ -361,7 +361,22 @@ const OrderRow = React.memo<OrderRowProps>(({
       <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.goods?.[0]?.name || '-'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{`${(order as any).suma || order.customerPrice || '0'} €`}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#1976d2', fontWeight: 'bold' }}>{`${order.carrierPrice || '0'} €`}</StyledTableCell>
-      <StyledTableCell isDarkMode={isDarkMode} sx={{ fontWeight: 'bold' }}>{`${(order as any).suma || order.customerPrice || '0'} €`}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode} sx={{ 
+        fontWeight: 'bold',
+        color: (() => {
+          const customerPrice = parseFloat((order as any).suma || order.customerPrice || '0');
+          const carrierPrice = parseFloat(order.carrierPrice || '0');
+          const profit = customerPrice - carrierPrice;
+          return profit > 0 ? '#2ecc71' : profit < 0 ? '#e74c3c' : (isDarkMode ? '#ffffff' : '#000000');
+        })()
+      }}>
+        {(() => {
+          const customerPrice = parseFloat((order as any).suma || order.customerPrice || '0');
+          const carrierPrice = parseFloat(order.carrierPrice || '0');
+          const profit = customerPrice - carrierPrice;
+          return `${profit.toFixed(2)} €`;
+        })()}
+      </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>
         {
           // Logika na zobrazenie mena namiesto emailu v tabuľke

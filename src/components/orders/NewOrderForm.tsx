@@ -474,10 +474,12 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             const orderDataToSave = {
                 ...formData,
                 companyID: userData.companyID,
-                createdBy: userData.uid, 
-                createdByName: createdByNameToSave,
-                createdAt: isEdit ? orderData?.createdAt : Timestamp.now(),
+                // Pri editácii zachovávame pôvodné údaje o vytvorení
+                createdBy: isEdit ? (orderData as any)?.createdBy : userData.uid,
+                createdByName: isEdit ? (orderData as any)?.createdByName : createdByNameToSave,
+                createdAt: isEdit ? (orderData as any)?.createdAt : Timestamp.now(),
                 updatedAt: Timestamp.now(), // Pridáme informáciu o aktualizácii
+                updatedBy: isEdit ? userData.uid : undefined, // Pridáme informáciu o tom, kto upravil
                 datumPrijatia: formData.datumPrijatia ? Timestamp.fromDate(formData.datumPrijatia as Date) : Timestamp.now(),
                 loadingPlaces: formData.loadingPlaces?.map(p => ({...p, dateTime: p.dateTime ? Timestamp.fromDate(p.dateTime as Date) : null })),
                 unloadingPlaces: formData.unloadingPlaces?.map(p => ({...p, dateTime: p.dateTime ? Timestamp.fromDate(p.dateTime as Date) : null })),
@@ -509,13 +511,11 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             console.log("Kontaktná osoba rozdelená:", kontaktMeno, kontaktPriezvisko);
 
             if (isEdit && orderData?.id) {
-                // Editácia existujúcej objednávky
+                // Editácia existujúcej objednávky - zachovávame pôvodné údaje o vytvorení
                 const orderRef = doc(db, 'orders', orderData.id);
                 await updateDoc(orderRef, {
                     ...finalOrder,
-                    companyID: userData?.companyID || '',
-                    createdBy: (orderData as any)?.createdBy || userData?.uid || '',
-                    createdByName: (orderData as any)?.createdByName || createdByNameToSave,
+                    // Neprepisujeme createdBy, createdByName ani createdAt - sú už správne v finalOrder
                     updatedBy: userData?.uid || '',
                     updatedAt: Timestamp.now(),
                 });

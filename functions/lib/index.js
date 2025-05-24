@@ -815,6 +815,24 @@ exports.generateOrderPdf = functions
                 console.error('Chyba pri načítaní údajov o dopravcu:', error);
             }
         }
+        // Načítanie údajov o špeditérovi (používateľovi, ktorý vytvoril objednávku)
+        let dispatcherData = null;
+        if (orderData.createdBy) {
+            try {
+                console.log(`Načítavam údaje o špeditérovi s ID: ${orderData.createdBy}`);
+                const dispatcherDoc = await admin.firestore().collection('users').doc(orderData.createdBy).get();
+                if (dispatcherDoc.exists) {
+                    dispatcherData = Object.assign({ id: dispatcherDoc.id }, dispatcherDoc.data());
+                    console.log(`Špeditér nájdený: ${dispatcherData.email}`);
+                }
+                else {
+                    console.log(`Špeditér s ID "${orderData.createdBy}" nebol nájdený`);
+                }
+            }
+            catch (error) {
+                console.error('Chyba pri načítaní údajov o špeditérovi:', error);
+            }
+        }
         // Získanie nastavení spoločnosti (logo, farby, atď.)
         let companySettings = {};
         try {
@@ -895,8 +913,8 @@ exports.generateOrderPdf = functions
         catch (error) {
             console.error('Chyba pri načítaní nastavení spoločnosti:', error);
         }
-        // Generovanie HTML pre PDF s údajmi o dopravcu
-        const htmlContent = generateOrderHtml(orderData, companySettings, carrierData);
+        // Generovanie kompletného HTML pre PDF - verzia pre dopravcu
+        const htmlContent = generateOrderHtml(orderData, companySettings, carrierData, dispatcherData);
         console.log('Spustenie prehliadača pomocou chrome-aws-lambda');
         // Generovanie PDF pomocou chrome-aws-lambda a puppeteer
         const browser = await puppeteer_core_1.default.launch({
@@ -934,7 +952,7 @@ exports.generateOrderPdf = functions
     }
 });
 // Funkcia pre generovanie HTML šablóny objednávky
-function generateOrderHtml(orderData, settings, carrierData) {
+function generateOrderHtml(orderData, settings, carrierData, dispatcherData) {
     var _a;
     const orderNumber = orderData.orderNumberFormatted || (((_a = orderData.id) === null || _a === void 0 ? void 0 : _a.substring(0, 8)) || 'N/A');
     const createdAtDate = formatDate(orderData.createdAt);
@@ -963,6 +981,8 @@ function generateOrderHtml(orderData, settings, carrierData) {
     const companyVatID = (settings === null || settings === void 0 ? void 0 : settings.vatID) || 'SK2121966220';
     // Kontakt špeditéra ktorý vytvoril objednávku
     const dispatcherContact = orderData.createdByName || 'N/A';
+    const dispatcherPhone = (dispatcherData === null || dispatcherData === void 0 ? void 0 : dispatcherData.phone) || 'N/A';
+    const dispatcherEmail = (dispatcherData === null || dispatcherData === void 0 ? void 0 : dispatcherData.email) || 'N/A';
     // ŠPZ vozidla
     const vehicleRegistration = orderData.carrierVehicleReg || 'N/A';
     // Generovanie sekcií pre miesta nakládky - kompaktnejšie
@@ -1252,6 +1272,8 @@ function generateOrderHtml(orderData, settings, carrierData) {
             <p>IČO: ${safeText(companyID)}</p>
             <p>DIČ: ${safeText(companyVatID)}</p>
             <p><strong>Kontakt:</strong> ${safeText(dispatcherContact)}</p>
+            ${dispatcherPhone ? `<p><strong>Telefón:</strong> ${safeText(dispatcherPhone)}</p>` : ''}
+            ${dispatcherEmail ? `<p><strong>E-mail:</strong> ${safeText(dispatcherEmail)}</p>` : ''}
           </div>
         </div>
 
