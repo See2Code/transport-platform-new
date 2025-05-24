@@ -1164,6 +1164,12 @@ const OrdersList: React.FC = () => {
     setSelectedOrder(null);
     setIsEditMode(false);
     // fetchOrders(); // Odstránené - real-time listener automaticky aktualizuje
+    
+    // Obnovíme štatistiky špeditérov po uložení/úprave objednávky
+    if (userData?.companyID && Object.keys(teamMembers).length > 0) {
+      console.log("📊 Obnova štatistík špeditérov po uložení objednávky");
+      fetchDispatchers();
+    }
   };
 
   // Upravená funkcia pre náhľad PDF
@@ -3414,6 +3420,13 @@ const OrdersList: React.FC = () => {
       onClose={handleCloseNewOrderForm}
       isEdit={isEditMode}
       orderData={selectedOrder || undefined}
+      onOrderSaved={() => {
+        // Callback po úspešnom uložení objednávky
+        if (userData?.companyID && Object.keys(teamMembers).length > 0) {
+          console.log("📊 Callback: Obnova štatistík špeditérov po uložení");
+          fetchDispatchers();
+        }
+      }}
     />
 
     <LocationForm
