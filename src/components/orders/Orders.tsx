@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, useEffect, useCallback, useRef } from 'react';
+import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
 import { OrderFormData as BaseOrderFormData, LoadingPlace, UnloadingPlace, } from '../../types/orders';
 import { countries } from '../../constants/countries';
 import { useTranslation } from 'react-i18next';
@@ -56,203 +56,16 @@ import { format } from 'date-fns';
 import NewOrderWizard from './NewOrderWizard';
 import CloseIcon from '@mui/icons-material/Close';
 import CustomerForm, { CustomerData } from '../management/CustomerForm';
+import LocationForm, { LocationData } from '../management/LocationForm';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../firebase';
 import MobileOrderCard from './MobileOrderCard'; // Import nového komponentu
 import OrderDetail from './OrderDetail';
+import DocumentManager from './DocumentManager';
+import DocumentsIndicator from './DocumentsIndicator';
+import BareTooltip from '../common/BareTooltip';
 
-import { createPortal } from 'react-dom';
 
-// BareTooltip komponent - presun z Navbar pre konzistentnosť
-interface BareTooltipProps {
-  title: React.ReactNode;
-  children: React.ReactElement;
-  placement?: 'top' | 'bottom' | 'left' | 'right';
-  enterDelay?: number;
-  leaveDelay?: number;
-}
-
-const BareTooltip: React.FC<BareTooltipProps> = ({ 
-  title, 
-  children, 
-  placement = 'bottom',
-  enterDelay = 300,
-  leaveDelay = 200
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const childRef = useRef<HTMLElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const enterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isHoveringRef = useRef(false);
-  
-  const { isDarkMode } = useThemeMode();
-
-  // Prida globálne štýly
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes fadeInTooltip {
-        from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-        to { opacity: 1; transform: translateX(-50%) translateY(0); }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
-  // Sledovanie dokumentu na strate fokusu/prekliknutí na inú aplikáciu
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Skryť tooltip, keď je okno neaktívne
-        setIsVisible(false);
-        if (enterTimeoutRef.current) {
-          clearTimeout(enterTimeoutRef.current);
-          enterTimeoutRef.current = null;
-        }
-        if (leaveTimeoutRef.current) {
-          clearTimeout(leaveTimeoutRef.current);
-          leaveTimeoutRef.current = null;
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  const updateTooltipPosition = useCallback(() => {
-    if (!childRef.current || !isHoveringRef.current) return;
-    
-    const rect = childRef.current.getBoundingClientRect();
-    let top = 0;
-    let left = 0;
-    
-    switch (placement) {
-      case 'top':
-        top = rect.top - (tooltipRef.current?.offsetHeight || 0) - 10;
-        left = rect.left + rect.width / 2;
-        break;
-      case 'bottom':
-        top = rect.bottom + 10;
-        left = rect.left + rect.width / 2;
-        break;
-      case 'left':
-        top = rect.top + rect.height / 2;
-        left = rect.left - (tooltipRef.current?.offsetWidth || 0) - 10;
-        break;
-      case 'right':
-        top = rect.top + rect.height / 2;
-        left = rect.right + 10;
-        break;
-    }
-    
-    setPosition({ top, left });
-  }, [placement]);
-
-  const handleMouseEnter = useCallback(() => {
-    isHoveringRef.current = true;
-    
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current);
-      leaveTimeoutRef.current = null;
-    }
-    
-    // Ak je tooltip už zobrazený, netreba čakať
-    if (isVisible) {
-      updateTooltipPosition();
-      return;
-    }
-    
-    if (enterTimeoutRef.current) return;
-    
-    enterTimeoutRef.current = setTimeout(() => {
-      updateTooltipPosition();
-      setIsVisible(true);
-      enterTimeoutRef.current = null;
-    }, enterDelay);
-  }, [enterDelay, isVisible, updateTooltipPosition]);
-
-  const handleMouseLeave = useCallback(() => {
-    isHoveringRef.current = false;
-    
-    if (enterTimeoutRef.current) {
-      clearTimeout(enterTimeoutRef.current);
-      enterTimeoutRef.current = null;
-    }
-    
-    if (leaveTimeoutRef.current) return;
-    
-    leaveTimeoutRef.current = setTimeout(() => {
-      setIsVisible(false);
-      leaveTimeoutRef.current = null;
-    }, leaveDelay);
-  }, [leaveDelay]);
-
-  // Čistenie timeoutov pri unmount
-  useEffect(() => {
-    return () => {
-      if (enterTimeoutRef.current) clearTimeout(enterTimeoutRef.current);
-      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
-    };
-  }, []);
-
-  // Pridávame event handlery pre hover a focus
-  const child = React.cloneElement(children, {
-    ref: childRef,
-    onMouseEnter: handleMouseEnter,
-    onMouseLeave: handleMouseLeave,
-    onFocus: handleMouseEnter,
-    onBlur: handleMouseLeave,
-  });
-
-  return (
-    <>
-      {child}
-      {isVisible && createPortal(
-        <div
-          ref={tooltipRef}
-          style={{
-            position: 'fixed',
-            top: position.top,
-            left: position.left,
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            padding: '10px 16px',
-            backgroundColor: isDarkMode 
-              ? 'rgba(15, 23, 42, 0.85)'
-              : 'rgba(255, 255, 255, 0.92)',
-            color: isDarkMode ? '#ffffff' : '#0f172a',
-            borderRadius: '12px',
-            fontSize: '0.85rem',
-            fontWeight: 500,
-            letterSpacing: '0.2px',
-            boxShadow: isDarkMode
-              ? '0 16px 24px -6px rgba(0, 0, 0, 0.3), 0 4px 10px -3px rgba(0, 0, 0, 0.25)'
-              : '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            backdropFilter: 'blur(12px)',
-            pointerEvents: 'none', // Aby tooltip nereagoval na mouse eventy
-            animationName: 'fadeInTooltip',
-            animationDuration: '0.2s',
-            animationFillMode: 'forwards',
-            willChange: 'transform, opacity', // Optimalizácia pre GPU
-          }}
-        >
-          {title}
-        </div>,
-        document.body
-      )}
-    </>
-  );
-};
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -383,6 +196,8 @@ const _emptyLoadingPlace: LoadingPlace = {
   country: 'Slovensko',
   dateTime: null,
   contactPerson: '',
+  contactPersonName: '',
+  contactPersonPhone: '',
   goods: []
 };
 
@@ -395,6 +210,8 @@ const _emptyUnloadingPlace: UnloadingPlace = {
   country: 'Slovensko',
   dateTime: null,
   contactPerson: '',
+  contactPersonName: '',
+  contactPersonPhone: '',
   goods: []
 };
 
@@ -475,9 +292,10 @@ const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }
 }));
 
 const StyledTableRow = styled(TableRow, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode?: boolean }>(({ isDarkMode = false }) => ({
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   transition: 'all 0.2s ease-in-out',
+  cursor: 'pointer',
   '&:hover': {
     backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
     transform: 'translateY(-2px)',
@@ -486,14 +304,106 @@ const StyledTableRow = styled(TableRow, {
 }));
 
 const StyledTableCell = styled(TableCell, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode?: boolean }>(({ isDarkMode = false }) => ({
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
   padding: '16px',
   fontSize: '0.9rem',
   whiteSpace: 'nowrap'
 }));
+
+// Optimalizovaný OrderRow komponent s React.memo
+interface OrderRowProps {
+  order: OrderFormData;
+  isDarkMode: boolean;
+  teamMembers: any;
+  onRowClick: (order: OrderFormData) => void;
+  onEditOrder: (order: OrderFormData) => void;
+  onPreviewPDF: (order: OrderFormData) => void;
+  onDownloadPDF: (order: OrderFormData) => void;
+  onDeleteOrder: (id: string) => void;
+  t: any;
+}
+
+const OrderRow = React.memo<OrderRowProps>(({ 
+  order, 
+  isDarkMode, 
+  teamMembers, 
+  onRowClick, 
+  onEditOrder, 
+  onPreviewPDF, 
+  onDownloadPDF, 
+  onDeleteOrder,
+  t 
+}) => {
+  return (
+    <StyledTableRow 
+      isDarkMode={isDarkMode} 
+      onClick={() => onRowClick(order)}
+    >
+      <StyledTableCell isDarkMode={isDarkMode}>{(order as any).orderNumberFormatted || 'N/A'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>
+        <Box 
+          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        >
+          <DocumentsIndicator orderId={order.id || ''} />
+          <DocumentManager orderId={order.id || ''} />
+        </Box>
+      </StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>{(order as any).zakaznik || order.customerCompany || '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>{(order as any).kontaktnaOsoba || '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.city || '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.dateTime ? format(convertToDate(order.loadingPlaces[0].dateTime)!, 'dd.MM HH:mm') : '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>{order.unloadingPlaces?.[0]?.city || '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>{order.unloadingPlaces?.[0]?.dateTime ? format(convertToDate(order.unloadingPlaces[0].dateTime)!, 'dd.MM HH:mm') : '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.goods?.[0]?.name || '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{`${(order as any).suma || order.customerPrice || '0'} €`}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#1976d2', fontWeight: 'bold' }}>{`${order.carrierPrice || '0'} €`}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode} sx={{ fontWeight: 'bold' }}>{`${(order as any).suma || order.customerPrice || '0'} €`}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>
+        {
+          // Logika na zobrazenie mena namiesto emailu v tabuľke
+          (order.createdBy && teamMembers[order.createdBy]?.name) ||
+          ((order as any).createdByName && !(order as any).createdByName.includes('@') ? (order as any).createdByName : null) ||
+          ((order as any).createdByName && (order as any).createdByName.includes('@') ? (order as any).createdByName.split('@')[0] : null) || // Fallback na časť emailu pred @
+          'Neznámy'
+        }
+      </StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}> {/* Akcie */} 
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <BareTooltip title={t('orders.edit')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></BareTooltip>
+          <BareTooltip title={t('orders.previewPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onPreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></BareTooltip>
+          <BareTooltip title={t('orders.downloadPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></BareTooltip>
+          <BareTooltip title={t('orders.delete')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDeleteOrder(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></BareTooltip>
+        </Box>
+      </StyledTableCell>
+    </StyledTableRow>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison funkcia pre hlbšie porovnanie
+  if (prevProps.isDarkMode !== nextProps.isDarkMode) return false;
+  if (prevProps.order.id !== nextProps.order.id) return false;
+  
+  // Porovnaj kľúčové vlastnosti objednávky
+  const prevOrder = prevProps.order;
+  const nextOrder = nextProps.order;
+  
+  return (
+    prevOrder.customerCompany === nextOrder.customerCompany &&
+    prevOrder.customerPrice === nextOrder.customerPrice &&
+    prevOrder.carrierPrice === nextOrder.carrierPrice &&
+    (prevOrder as any).orderNumberFormatted === (nextOrder as any).orderNumberFormatted &&
+    (prevOrder as any).zakaznik === (nextOrder as any).zakaznik &&
+    (prevOrder as any).kontaktnaOsoba === (nextOrder as any).kontaktnaOsoba &&
+    prevOrder.loadingPlaces?.[0]?.city === nextOrder.loadingPlaces?.[0]?.city &&
+    prevOrder.unloadingPlaces?.[0]?.city === nextOrder.unloadingPlaces?.[0]?.city &&
+    prevOrder.loadingPlaces?.[0]?.goods?.[0]?.name === nextOrder.loadingPlaces?.[0]?.goods?.[0]?.name &&
+    (prevOrder as any).createdByName === (nextOrder as any).createdByName
+  );
+});
 
 interface Customer {
   id: string;
@@ -542,6 +452,15 @@ const OrdersList: React.FC = () => {
   const [orders, setOrders] = useState<OrderFormData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Špecifické loading states pre jednotlivé tabuľky
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
+  const [isLoadingCarriers, setIsLoadingCarriers] = useState(true);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(true);
+  const [isLoadingDispatchers, setIsLoadingDispatchers] = useState(true);
+  const [isLoadingTeamMembers, setIsLoadingTeamMembers] = useState(true);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -604,7 +523,10 @@ const OrdersList: React.FC = () => {
   // State pre Miesta
   const [locations, setLocations] = useState<any[]>([]);
   const [locationSearchQuery, setLocationSearchQuery] = useState('');
-  const [_showLocationForm, setShowLocationForm] = useState(false);
+  const [showLocationForm, setShowLocationForm] = useState(false);
+  const [selectedLocationForEdit, setSelectedLocationForEdit] = useState<LocationData | null>(null);
+  const [showLocationDeleteConfirm, setShowLocationDeleteConfirm] = useState(false);
+  const [locationToDelete, setLocationToDelete] = useState<string>('');
 
   // State pre Špeditéri (dispatchers)
   const [dispatchers, setDispatchers] = useState<any[]>([]);
@@ -614,6 +536,7 @@ const OrdersList: React.FC = () => {
   
   const fetchTeamMembers = useCallback(async () => {
     if (!userData?.companyID) return;
+    setIsLoadingTeamMembers(true);
     try {
       const usersQuery = query(collection(db, 'users'), where('companyID', '==', userData.companyID));
       const usersSnapshot = await getDocs(usersQuery);
@@ -648,7 +571,11 @@ const OrdersList: React.FC = () => {
         usersData[userData.uid] = { name: currentUserName, email: userData.email || '' };
       }
       setTeamMembers(usersData);
-    } catch (err) { console.error('Chyba pri načítaní členov tímu:', err); }
+    } catch (err) { 
+      console.error('Chyba pri načítaní členov tímu:', err); 
+    } finally {
+      setIsLoadingTeamMembers(false);
+    }
   }, [userData]);
 
   const fetchCustomers = useCallback(() => {
@@ -656,9 +583,11 @@ const OrdersList: React.FC = () => {
     if (!userData?.companyID) {
       console.log("Fetch Customers: No companyID found.");
       setCustomers([]);
+      setIsLoadingCustomers(false);
       return () => {}; // Return empty cleanup function
     } 
     
+    setIsLoadingCustomers(true);
     try {
       const customersRef = collection(db, 'customers');
       const q = query(
@@ -682,13 +611,16 @@ const OrdersList: React.FC = () => {
         
         console.log(`Fetched ${customersData.length} customers for company ${userData.companyID}.`); // Log výsledku
         setCustomers(customersData);
+        setIsLoadingCustomers(false);
       }, (error) => {
         console.error('Fetch Customers Error:', error); // Log chyby
+        setIsLoadingCustomers(false);
       });
       
       return unsubscribe; // Return cleanup function
     } catch (error) {
       console.error('Error setting up customers listener:', error);
+      setIsLoadingCustomers(false);
       return () => {}; // Return empty cleanup function
     }
   }, [userData]);
@@ -697,10 +629,12 @@ const OrdersList: React.FC = () => {
     console.log("Attempting to fetch carriers..."); // Log začiatku
     if (!userData?.companyID) {
       console.log("Fetch Carriers: No companyID found.");
-      setCarriers([]); 
+      setCarriers([]);
+      setIsLoadingCarriers(false);
       return () => {}; // Return empty cleanup function
     }
     
+    setIsLoadingCarriers(true);
     try {
       const carriersRef = collection(db, 'carriers');
       const q = query(
@@ -726,13 +660,16 @@ const OrdersList: React.FC = () => {
         
         console.log(`Fetched ${carriersData.length} carriers for company ${userData.companyID}.`); 
         setCarriers(carriersData);
+        setIsLoadingCarriers(false);
       }, (error) => {
         console.error('Fetch Carriers Error:', error); 
+        setIsLoadingCarriers(false);
       });
       
       return unsubscribe; // Return cleanup function
     } catch (error) {
       console.error('Error setting up carriers listener:', error);
+      setIsLoadingCarriers(false);
       return () => {}; // Return empty cleanup function
     }
   }, [userData]);
@@ -741,11 +678,13 @@ const OrdersList: React.FC = () => {
     if (!userData?.companyID) { 
       setOrders([]); 
       setLoading(false); 
+      setIsLoadingOrders(false);
       setError('Nemáte priradenú firmu.'); 
       return () => {}; // Return empty cleanup function
     }
     
     setLoading(true); 
+    setIsLoadingOrders(true);
     setError(null);
     
     try {
@@ -763,7 +702,7 @@ const OrdersList: React.FC = () => {
       
       ordersQuery = query(ordersQuery, orderBy('createdAt', 'desc'));
       
-      // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
+      // Používama onSnapshot namiesto getDocs pre real-time aktualizácie
       const unsubscribe = onSnapshot(ordersQuery, (querySnapshot) => {
         console.log('🔄 Real-time aktualizácia objednávok - počet dokumentov:', querySnapshot.docs.length);
         
@@ -814,12 +753,49 @@ const OrdersList: React.FC = () => {
           return order;
         });
         
-        setOrders(ordersData);
+        // Optimalizácia: Porovnaj nové orders s existujúcimi
+        setOrders(prevOrders => {
+          // Ak je rovnaký počet objednávok a rovnaké ID, nepotrebujeme update
+          if (prevOrders.length === ordersData.length) {
+            const prevIds = prevOrders.map(o => o.id).sort();
+            const newIds = ordersData.map(o => o.id).sort();
+            
+            // Porovnaj ID objednávok
+            const idsAreSame = prevIds.length === newIds.length && 
+                              prevIds.every((id, index) => id === newIds[index]);
+            
+            if (idsAreSame) {
+              // Skontroluj či sa zmenili hodnoty (porovnaj key properties)
+              const hasChanges = ordersData.some((newOrder, index) => {
+                const prevOrder = prevOrders[index];
+                return (
+                  prevOrder.customerCompany !== newOrder.customerCompany ||
+                  prevOrder.customerPrice !== newOrder.customerPrice ||
+                  prevOrder.carrierPrice !== newOrder.carrierPrice ||
+                  (prevOrder as any).orderNumberFormatted !== (newOrder as any).orderNumberFormatted ||
+                  prevOrder.loadingPlaces?.[0]?.city !== newOrder.loadingPlaces?.[0]?.city ||
+                  prevOrder.unloadingPlaces?.[0]?.city !== newOrder.unloadingPlaces?.[0]?.city
+                );
+              });
+              
+              if (!hasChanges) {
+                console.log('⚡ Žiadne zmeny v orders - preskakujem update');
+                return prevOrders; // Vráť existujúce orders bez zmeny
+              }
+            }
+          }
+          
+          console.log('📋 Aktualizujem orders - nájdené zmeny');
+          return ordersData;
+        });
+        
         setLoading(false);
+        setIsLoadingOrders(false);
       }, (err) => { 
         console.error('Chyba pri real-time načítaní objednávok:', err); 
         setError('Nastala chyba pri načítaní objednávok');
         setLoading(false);
+        setIsLoadingOrders(false);
       });
       
       return unsubscribe; // Return cleanup function
@@ -827,6 +803,7 @@ const OrdersList: React.FC = () => {
       console.error('Chyba pri nastavovaní real-time listenera objednávok:', err); 
       setError('Nastala chyba pri načítaní objednávok');
       setLoading(false);
+      setIsLoadingOrders(false);
       return () => {}; // Return empty cleanup function
     }
   }, [userData, startDate, endDate, teamMembers]);
@@ -834,114 +811,82 @@ const OrdersList: React.FC = () => {
   const fetchLocations = useCallback(async () => {
     if (!userData?.companyID) {
       setLocations([]);
-      return;
+      setIsLoadingLocations(false);
+      return () => {}; // Return empty cleanup function
     }
+    
+    setIsLoadingLocations(true);
     try {
-      // Načítame všetky objednávky a extrahujeme z nich miesta
-      const ordersRef = collection(db, 'orders');
-      const q = query(ordersRef, where('companyID', '==', userData.companyID));
-      const querySnapshot = await getDocs(q);
+      // Načítame miesta z dedikovanej kolekcie
+      const locationsRef = collection(db, 'locations');
+      const q = query(
+        locationsRef, 
+        where('companyID', '==', userData.companyID),
+        orderBy('createdAt', 'desc')
+      );
       
-      const locationsSet = new Set<string>();
-      const locationsData: any[] = [];
-      
-      querySnapshot.docs.forEach(doc => {
-        const orderData = doc.data();
+      // Používame onSnapshot pre real-time aktualizácie
+      const unsubscribeLocations = onSnapshot(q, (querySnapshot) => {
+        console.log('🔄 Real-time aktualizácia miest - počet dokumentov:', querySnapshot.docs.length);
         
-        // Spracujeme miesta nakládky
-        (orderData.loadingPlaces || []).forEach((place: any) => {
-          if (place.city) {
-            const locationKey = `${place.city}-${place.street || ''}-${place.zip || ''}`;
-            if (!locationsSet.has(locationKey)) {
-              locationsSet.add(locationKey);
-              locationsData.push({
-                id: crypto.randomUUID(),
-                type: 'loading',
-                city: place.city,
-                street: place.street || '',
-                zip: place.zip || '',
-                country: place.country || '',
-                contactPerson: place.contactPerson || '',
-                usageCount: 1
-              });
-            }
-          }
+        const locationsData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
+          };
         });
         
-        // Spracujeme miesta vykládky
-        (orderData.unloadingPlaces || []).forEach((place: any) => {
-          if (place.city) {
-            const locationKey = `${place.city}-${place.street || ''}-${place.zip || ''}`;
-            if (!locationsSet.has(locationKey)) {
-              locationsSet.add(locationKey);
-              locationsData.push({
-                id: crypto.randomUUID(),
-                type: 'unloading',
-                city: place.city,
-                street: place.street || '',
-                zip: place.zip || '',
-                country: place.country || '',
-                contactPerson: place.contactPerson || '',
-                usageCount: 1
-              });
-            }
-          }
-        });
+        console.log(`Načítané ${locationsData.length} miest pre firmu ${userData.companyID}.`);
+        setLocations(locationsData);
+        setIsLoadingLocations(false);
+      }, (error) => {
+        console.error('Chyba pri načítaní miest:', error);
+        setIsLoadingLocations(false);
       });
       
-      setLocations(locationsData);
+      return unsubscribeLocations;
     } catch (error) {
-      console.error('Chyba pri načítaní miest:', error);
+      console.error('Chyba pri nastavovaní real-time listenera miest:', error);
+      setIsLoadingLocations(false);
+      return () => {};
     }
   }, [userData]);
 
   const fetchDispatchers = useCallback(async () => {
     if (!userData?.companyID) {
-      setDispatchers([]);
+      setIsLoadingDispatchers(false);
       return;
     }
+    
+    setIsLoadingDispatchers(true);
     try {
-      console.log('📊 Načítavam špeditérov s filtrom:', dispatcherFilter);
-      
-      // Načítame všetky objednávky a spočítame zisky pre každého špeditéra
       const ordersRef = collection(db, 'orders');
-      let whereClause = [where('companyID', '==', userData.companyID)];
       
-      // Vytvoríme dátumy pre filtre
-      let startFilterDate: Date | null = null;
-      let endFilterDate: Date | null = null;
+      // Základná podmienka pre firmu
+      const whereClause = [where('companyID', '==', userData.companyID)];
       
+      // Dátumové filtre
       if (dispatcherFilter === 'thisMonth') {
         const now = new Date();
-        startFilterDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endFilterDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        console.log('📅 Filter TENTO MESIAC:', {
-          startFilterDate: startFilterDate.toLocaleDateString('sk-SK'),
-          endFilterDate: endFilterDate.toLocaleDateString('sk-SK')
-        });
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        whereClause.push(where('createdAt', '>=', Timestamp.fromDate(startOfMonth)));
+        whereClause.push(where('createdAt', '<=', Timestamp.fromDate(endOfMonth)));
       } else if (dispatcherFilter === 'thisYear') {
         const now = new Date();
-        startFilterDate = new Date(now.getFullYear(), 0, 1);
-        endFilterDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-        console.log('📅 Filter TENTO ROK:', {
-          startFilterDate: startFilterDate.toLocaleDateString('sk-SK'),
-          endFilterDate: endFilterDate.toLocaleDateString('sk-SK')
-        });
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        whereClause.push(where('createdAt', '>=', Timestamp.fromDate(startOfYear)));
+        whereClause.push(where('createdAt', '<=', Timestamp.fromDate(endOfYear)));
       } else if (dispatcherFilter === 'custom' && customStartDate && customEndDate) {
-        startFilterDate = new Date(customStartDate);
-        startFilterDate.setHours(0, 0, 0, 0);
-        endFilterDate = new Date(customEndDate);
-        endFilterDate.setHours(23, 59, 59, 999);
-        console.log('📅 Filter VLASTNÝ ROZSAH:', {
-          startFilterDate: startFilterDate.toLocaleDateString('sk-SK'),
-          endFilterDate: endFilterDate.toLocaleDateString('sk-SK')
-        });
-      }
-      
-      // Pridáme časové filtre do where klauzúl
-      if (startFilterDate && endFilterDate) {
-        whereClause.push(where('createdAt', '>=', Timestamp.fromDate(startFilterDate)));
-        whereClause.push(where('createdAt', '<=', Timestamp.fromDate(endFilterDate)));
+        const startDate = new Date(customStartDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(customEndDate);
+        endDate.setHours(23, 59, 59, 999);
+        whereClause.push(where('createdAt', '>=', Timestamp.fromDate(startDate)));
+        whereClause.push(where('createdAt', '<=', Timestamp.fromDate(endDate)));
       }
       
       // Vytvoríme query s všetkými where podmienkami naraz
@@ -1019,8 +964,10 @@ const OrdersList: React.FC = () => {
       setDispatchers(Object.values(dispatcherStats));
     } catch (error) {
       console.error('❌ Chyba pri načítaní špeditérov:', error);
+    } finally {
+      setIsLoadingDispatchers(false);
     }
-  }, [userData, teamMembers, dispatcherFilter, customStartDate, customEndDate]);
+  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]);
 
   // --- useEffect HOOKY (teraz sú definované PO fetch funkciách) ---
 
@@ -1036,7 +983,12 @@ const OrdersList: React.FC = () => {
     const unsubscribeCarriers = fetchCarriers();
     const unsubscribeOrders = fetchOrders();
     
-    fetchLocations();
+    // Osobitne spracujeme async fetchLocations
+    let unsubscribeLocations: (() => void) | undefined;
+    fetchLocations().then(unsubscribe => {
+      unsubscribeLocations = unsubscribe;
+    });
+    
     fetchDispatchers();
     
     // Cleanup funkcie pre všetky real-time listenery
@@ -1050,6 +1002,9 @@ const OrdersList: React.FC = () => {
       if (typeof unsubscribeOrders === 'function') {
         unsubscribeOrders();
       }
+      if (typeof unsubscribeLocations === 'function') {
+        unsubscribeLocations();
+      }
     };
   }, [fetchCustomers, fetchCarriers, fetchOrders, fetchLocations, fetchDispatchers]);
 
@@ -1057,10 +1012,9 @@ const OrdersList: React.FC = () => {
     if (userData) { 
       console.log("Running data fetch due to user change.");
       // Funkcie sa zavolajú automaticky vďaka závislosti na userData v ich useCallback
-      fetchLocations();
       fetchDispatchers();
     }
-  }, [userData, fetchLocations, fetchDispatchers]);
+  }, [userData, fetchDispatchers]);
 
   useEffect(() => {
     console.log("Running fetchOrders due to filter change (startDate, endDate).");
@@ -1074,7 +1028,7 @@ const OrdersList: React.FC = () => {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, userData, teamMembers]);
+  }, [startDate, endDate, userData?.companyID]);
 
   useEffect(() => {
     if (userData?.companyID) {
@@ -1112,7 +1066,15 @@ const OrdersList: React.FC = () => {
       orderNumber.toLowerCase().includes(searchTermLower) ||
       order.customerVatId?.toLowerCase().includes(searchTermLower) ||
       order.loadingPlaces?.[0]?.city?.toLowerCase().includes(searchTermLower) ||
+      order.loadingPlaces?.some(place => 
+        place.contactPersonName?.toLowerCase().includes(searchTermLower) ||
+        place.contactPersonPhone?.toLowerCase().includes(searchTermLower)
+      ) ||
       order.unloadingPlaces?.[0]?.city?.toLowerCase().includes(searchTermLower) ||
+      order.unloadingPlaces?.some(place => 
+        place.contactPersonName?.toLowerCase().includes(searchTermLower) ||
+        place.contactPersonPhone?.toLowerCase().includes(searchTermLower)
+      ) ||
       order.id?.toLowerCase().includes(searchTermLower);
       
     return matchesSearch;
@@ -1565,6 +1527,106 @@ const OrdersList: React.FC = () => {
     setDetailDialogOpen(false);
   };
 
+  // Funkcie pre správu miest
+  const handleAddLocation = () => {
+    setSelectedLocationForEdit(null);
+    setShowLocationForm(true);
+  };
+
+  const handleLocationSubmit = async (locationData: LocationData) => {
+    if (!userData?.companyID) {
+      alert("Chyba: Nemáte priradenú firmu.");
+      return;
+    }
+    try {
+      console.log('Začínam ukladanie miesta:', locationData);
+      
+      const locationDataToSave = {
+        type: locationData.type,
+        companyName: locationData.companyName,
+        city: locationData.city,
+        street: locationData.street,
+        zip: locationData.zip,
+        country: locationData.country,
+        contactPersonName: locationData.contactPersonName,
+        contactPersonPhone: locationData.contactPersonPhone,
+        companyID: userData.companyID,
+        createdAt: Timestamp.fromDate(new Date()),
+        usageCount: 0 // Počiatočný počet použití
+      };
+
+      if (selectedLocationForEdit) {
+        // Editácia existujúceho miesta
+        const locationRef = doc(db, 'locations', (selectedLocationForEdit as any).id);
+        await updateDoc(locationRef, {
+          ...locationDataToSave,
+          updatedAt: Timestamp.fromDate(new Date())
+        });
+        console.log('Miesto bolo úspešne aktualizované');
+      } else {
+        // Pridanie nového miesta
+        const locationsRef = collection(db, 'locations');
+        const docRef = await addDoc(locationsRef, locationDataToSave);
+        console.log('Miesto bolo úspešne uložené s ID:', docRef.id);
+      }
+      
+      // Real-time listener automaticky aktualizuje zoznam miest
+      console.log("Real-time listener automaticky aktualizuje miesta");
+      
+      // Resetujeme stav editácie a zatvoríme formulár
+      setSelectedLocationForEdit(null);
+      setShowLocationForm(false);
+    } catch (error) {
+      console.error('Chyba pri ukladaní miesta:', error);
+      alert('Nastala chyba pri ukladaní miesta: ' + (error as Error).message);
+    }
+  };
+
+  const handleEditLocation = (location: any) => {
+    const locationForEdit: LocationData = {
+      type: location.type,
+      companyName: location.companyName,
+      city: location.city,
+      street: location.street,
+      zip: location.zip,
+      country: location.country,
+      contactPersonName: location.contactPersonName,
+      contactPersonPhone: location.contactPersonPhone
+    };
+    setSelectedLocationForEdit({ ...locationForEdit, id: location.id } as any);
+    setShowLocationForm(true);
+  };
+
+  const handleDeleteLocation = async (id: string) => {
+    try {
+      const locationRef = doc(db, 'locations', id);
+      await deleteDoc(locationRef);
+      console.log('Miesto bolo úspešne vymazané');
+      // Real-time listener automaticky aktualizuje zoznam
+    } catch (error) {
+      console.error('Chyba pri vymazávaní miesta:', error);
+      alert('Nastala chyba pri vymazávaní miesta: ' + (error as Error).message);
+    }
+  };
+
+  const openLocationDeleteConfirmation = (id: string) => {
+    setLocationToDelete(id);
+    setShowLocationDeleteConfirm(true);
+  };
+
+  const handleLocationDeleteConfirmed = async () => {
+    if (locationToDelete) {
+      await handleDeleteLocation(locationToDelete);
+      setShowLocationDeleteConfirm(false);
+      setLocationToDelete('');
+    }
+  };
+
+  const handleLocationDeleteCancel = () => {
+    setShowLocationDeleteConfirm(false);
+    setLocationToDelete('');
+  };
+
   return (
     <PageWrapper>
       <DialogGlobalStyles open={showNewOrderWizard || showCustomerForm || showCarrierForm || showDeleteConfirm || showCustomerDeleteConfirm || showCarrierDeleteConfirm} />
@@ -1677,9 +1739,12 @@ const OrdersList: React.FC = () => {
               </Box>
           </Collapse>
           
-          {loading ? (
+          {isLoadingOrders ? (
             <Box display="flex" justifyContent="center" mt={4}>
               <CircularProgress />
+              <Typography variant="body2" sx={{ ml: 2 }}>
+                Načítavam objednávky...
+              </Typography>
             </Box>
           ) : error ? (
             <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
@@ -1737,6 +1802,7 @@ const OrdersList: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.orderNumber')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.documents') || 'Dokumenty'}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.customer')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.contactPerson')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.loading')}</StyledTableCell>
@@ -1754,50 +1820,26 @@ const OrdersList: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {getFilteredCustomerOrders().map((order) => (
-                    <StyledTableRow 
-                      isDarkMode={isDarkMode} 
+                    <OrderRow
                       key={order.id}
-                      onClick={() => handleRowClick(order)}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <StyledTableCell isDarkMode={isDarkMode}>{(order as any).orderNumberFormatted || 'N/A'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{(order as any).zakaznik || order.customerCompany || '-'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{(order as any).kontaktnaOsoba || '-'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.city || '-'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.dateTime ? format(convertToDate(order.loadingPlaces[0].dateTime)!, 'dd.MM HH:mm') : '-'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{order.unloadingPlaces?.[0]?.city || '-'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{order.unloadingPlaces?.[0]?.dateTime ? format(convertToDate(order.unloadingPlaces[0].dateTime)!, 'dd.MM HH:mm') : '-'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.goods?.[0]?.name || '-'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{`${(order as any).suma || order.customerPrice || '0'} €`}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#1976d2', fontWeight: 'bold' }}>{`${order.carrierPrice || '0'} €`}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode} sx={{ fontWeight: 'bold' }}>{(() => { const c = parseFloat((order as any).suma || order.customerPrice || '0'); const p = parseFloat(order.carrierPrice || '0'); return !isNaN(c) && !isNaN(p) ? `${(c - p).toFixed(2)} €` : '-'; })()}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>
-                        {
-                          // Logika na zobrazenie mena namiesto emailu v tabuľke
-                          (order.createdBy && teamMembers[order.createdBy]?.name) ||
-                          ((order as any).createdByName && !(order as any).createdByName.includes('@') ? (order as any).createdByName : null) ||
-                          ((order as any).createdByName && (order as any).createdByName.includes('@') ? (order as any).createdByName.split('@')[0] : null) || // Fallback na časť emailu pred @
-                          'Neznámy'
-                        }
-                      </StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}</StyledTableCell>
-                      <StyledTableCell isDarkMode={isDarkMode}> {/* Akcie */} 
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <BareTooltip title={t('orders.edit')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></BareTooltip>
-                          <BareTooltip title={t('orders.previewPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handlePreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></BareTooltip>
-                          <BareTooltip title={t('orders.downloadPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></BareTooltip>
-                          <BareTooltip title={t('orders.delete')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openDeleteConfirmation(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></BareTooltip>
-                        </Box>
-                      </StyledTableCell>
-                    </StyledTableRow>
+                      order={order}
+                      isDarkMode={isDarkMode}
+                      teamMembers={teamMembers}
+                      onRowClick={handleRowClick}
+                      onEditOrder={handleEditOrder}
+                      onPreviewPDF={handlePreviewPDF}
+                      onDownloadPDF={handleDownloadPDF}
+                      onDeleteOrder={openDeleteConfirmation}
+                      t={t}
+                    />
                   ))}
-                                         {getFilteredCustomerOrders().length === 0 && (
-                          <TableRow>
-                              <TableCell colSpan={14} align="center">
-                                  {t('orders.noOrdersFound')}
-                              </TableCell>
-                          </TableRow>
-                       )}
+                  {getFilteredCustomerOrders().length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={15} align="center">
+                        {t('orders.noOrdersFound')}
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -1845,97 +1887,106 @@ const OrdersList: React.FC = () => {
                 </Box>
               </Box>
 
-              <TableContainer 
-                component={Paper} 
-                sx={{ // Tu začína správny sx objekt
-                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                    borderRadius: '20px',
-                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    backdropFilter: 'blur(20px)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                    '& .MuiTableCell-root': {
-                      color: isDarkMode ? '#ffffff' : '#000000',
-                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                      padding: '16px',
-                      fontSize: '0.9rem',
-                      whiteSpace: 'nowrap'
-                    },
-                    '& .MuiTableHead-root .MuiTableCell-root': {
-                      fontWeight: 600,
+              {isLoadingCustomers ? (
+                <Box display="flex" justifyContent="center" alignItems="center" mt={4} p={4}>
+                  <CircularProgress />
+                  <Typography variant="body2" sx={{ ml: 2 }}>
+                    Načítavam zákazníkov...
+                  </Typography>
+                </Box>
+              ) : (
+                <TableContainer 
+                  component={Paper} 
+                  sx={{ // Tu začína správny sx objekt
                       backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    },
-                    '& .MuiTableBody-root .MuiTableRow-root': {
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      borderRadius: '20px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      backdropFilter: 'blur(20px)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                      '& .MuiTableCell-root': {
+                        color: isDarkMode ? '#ffffff' : '#000000',
+                        borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                        padding: '16px',
+                        fontSize: '0.9rem',
+                        whiteSpace: 'nowrap'
+                      },
+                      '& .MuiTableHead-root .MuiTableCell-root': {
+                        fontWeight: 600,
+                        backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      },
+                      '& .MuiTableBody-root .MuiTableRow-root': {
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        }
                       }
-                    }
-                  }} // Tu končí správny sx objekt
-              >
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('orders.companyName')}</TableCell>
-                      <TableCell>{t('orders.contactPerson')}</TableCell>
-                      <TableCell>{t('orders.email')}</TableCell>
-                      <TableCell>{t('orders.ico')}</TableCell>
-                      <TableCell>{t('orders.icDph')}</TableCell>
-                      <TableCell>{t('orders.dic')}</TableCell>
-                      <TableCell>{t('orders.country')}</TableCell>
-                      <TableCell>{t('orders.creationDate')}</TableCell>
-                      <TableCell>{t('orders.actions')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredCustomers.map((customer) => (
-                      <TableRow key={customer.id}>
-                        <TableCell>{customer.companyName || (customer as any)['company'] || (customer as any)['name'] || '-'}</TableCell>
-                        <TableCell>{`${customer.contactName || ''} ${customer.contactSurname || ''}`.trim() || '-'}</TableCell>
-                        <TableCell>{customer.contactEmail || '-'}</TableCell>
-                        <TableCell>{customer.ico || '-'}</TableCell>
-                        <TableCell>{getCustomerVatId(customer)}</TableCell>
-                        <TableCell>{customer.dic || '-'}</TableCell>
-                        <TableCell>{customer.country || '-'}</TableCell>
-                        <TableCell>{customer.createdAt ? customer.createdAt.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <BareTooltip title={t('orders.edit')}>
-                              <IconButton 
-                                onClick={() => handleEditCustomer(customer)}
-                                sx={{ 
-                                  color: '#ff9f43',
-                                  '&:hover': { 
-                                    backgroundColor: 'rgba(255, 159, 67, 0.1)' 
-                                  } 
-                                }}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </BareTooltip>
-                            <BareTooltip title={t('orders.delete')}>
-                              <IconButton 
-                                onClick={() => openCustomerDeleteConfirmation(customer.id)}
-                                sx={{ 
-                                  color: '#ff6b6b',
-                                  '&:hover': { 
-                                    backgroundColor: 'rgba(255, 107, 107, 0.1)' 
-                                  } 
-                                }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </BareTooltip>
-                          </Box>
-                        </TableCell>
+                    }} // Tu končí správny sx objekt
+                >
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t('orders.companyName')}</TableCell>
+                        <TableCell>{t('orders.contactPerson')}</TableCell>
+                        <TableCell>{t('orders.email')}</TableCell>
+                        <TableCell>{t('orders.ico')}</TableCell>
+                        <TableCell>{t('orders.icDph')}</TableCell>
+                        <TableCell>{t('orders.dic')}</TableCell>
+                        <TableCell>{t('orders.country')}</TableCell>
+                        <TableCell>{t('orders.creationDate')}</TableCell>
+                        <TableCell>{t('orders.actions')}</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {filteredCustomers.map((customer) => (
+                        <TableRow key={customer.id}>
+                          <TableCell>{customer.companyName || (customer as any)['company'] || (customer as any)['name'] || '-'}</TableCell>
+                          <TableCell>{`${customer.contactName || ''} ${customer.contactSurname || ''}`.trim() || '-'}</TableCell>
+                          <TableCell>{customer.contactEmail || '-'}</TableCell>
+                          <TableCell>{customer.ico || '-'}</TableCell>
+                          <TableCell>{getCustomerVatId(customer)}</TableCell>
+                          <TableCell>{customer.dic || '-'}</TableCell>
+                          <TableCell>{customer.country || '-'}</TableCell>
+                          <TableCell>{customer.createdAt ? customer.createdAt.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <BareTooltip title={t('orders.edit')}>
+                                <IconButton 
+                                  onClick={() => handleEditCustomer(customer)}
+                                  sx={{ 
+                                    color: '#ff9f43',
+                                    '&:hover': { 
+                                      backgroundColor: 'rgba(255, 159, 67, 0.1)' 
+                                    } 
+                                  }}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              </BareTooltip>
+                              <BareTooltip title={t('orders.delete')}>
+                                <IconButton 
+                                  onClick={() => openCustomerDeleteConfirmation(customer.id)}
+                                  sx={{ 
+                                    color: '#ff6b6b',
+                                    '&:hover': { 
+                                      backgroundColor: 'rgba(255, 107, 107, 0.1)' 
+                                    } 
+                                  }}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </BareTooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Box>
           </TabPanel>
 
@@ -1956,7 +2007,7 @@ const OrdersList: React.FC = () => {
                       }
                     }}
                   >
-{t('orders.addCarrier')}
+                    {t('orders.addCarrier')}
                   </Button>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -1980,123 +2031,132 @@ const OrdersList: React.FC = () => {
                 </Box>
               </Box>
 
-              <TableContainer 
-                component={Paper} 
-                sx={{
-                    // Štýly skopírované z BusinessCases.tsx
-                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                    borderRadius: '20px',
-                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    backdropFilter: 'blur(20px)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                    '& .MuiTableCell-root': {
-                      color: isDarkMode ? '#ffffff' : '#000000',
-                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                      padding: '16px',
-                      fontSize: '0.9rem',
-                      whiteSpace: 'nowrap'
-                    },
-                    '& .MuiTableHead-root .MuiTableCell-root': {
-                      fontWeight: 600,
+              {isLoadingCarriers ? (
+                <Box display="flex" justifyContent="center" alignItems="center" mt={4} p={4}>
+                  <CircularProgress />
+                  <Typography variant="body2" sx={{ ml: 2 }}>
+                    Načítavam dopravcov...
+                  </Typography>
+                </Box>
+              ) : (
+                <TableContainer 
+                  component={Paper} 
+                  sx={{
+                      // Štýly skopírované z BusinessCases.tsx
                       backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    },
-                    '& .MuiTableBody-root .MuiTableRow-root': {
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      borderRadius: '20px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      backdropFilter: 'blur(20px)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                      '& .MuiTableCell-root': {
+                        color: isDarkMode ? '#ffffff' : '#000000',
+                        borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                        padding: '16px',
+                        fontSize: '0.9rem',
+                        whiteSpace: 'nowrap'
+                      },
+                      '& .MuiTableHead-root .MuiTableCell-root': {
+                        fontWeight: 600,
+                        backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      },
+                      '& .MuiTableBody-root .MuiTableRow-root': {
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        }
                       }
-                    }
-                  }}
-              >
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('orders.companyName')}</TableCell>
-                      <TableCell>{t('orders.contactPerson')}</TableCell>
-                      <TableCell>{t('orders.email')}</TableCell>
-                      <TableCell>{t('orders.phone')}</TableCell>
-                      <TableCell>{t('orders.ico')}</TableCell>
-                      <TableCell>{t('orders.icDph')}</TableCell>
-                      <TableCell>{t('orders.dic')}</TableCell>
-                      <TableCell>{t('orders.vehicleTypes')}</TableCell>
-                      <TableCell>{t('orders.paymentTermDays') || 'Splatnosť (dni)'}</TableCell>
-                      <TableCell>{t('orders.country')}</TableCell>
-                      <TableCell>{t('orders.creationDate')}</TableCell>
-                      <TableCell>{t('orders.actions')}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredCarriers.map((carrier) => (
-                      <TableRow key={carrier.id}>
-                        <TableCell>{carrier.companyName}</TableCell>
-                        <TableCell>{`${carrier.contactName} ${carrier.contactSurname}`}</TableCell>
-                        <TableCell>{carrier.contactEmail}</TableCell>
-                        <TableCell>{carrier.contactPhone || '-'}</TableCell>
-                        <TableCell>{carrier.ico || '-'}</TableCell>
-                        <TableCell>{carrier.icDph || '-'}</TableCell>
-                        <TableCell>{carrier.dic || '-'}</TableCell>
-                        <TableCell>{carrier.vehicleTypes?.join(', ') || '-'}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={`${carrier.paymentTermDays || 60} dní`}
-                            color="primary"
-                            size="small"
-                            sx={{ 
-                              backgroundColor: '#ff9f43',
-                              color: '#ffffff',
-                              fontWeight: 'bold'
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>{carrier.country}</TableCell>
-                        <TableCell>
-                          {carrier.createdAt.toLocaleDateString('sk-SK', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <BareTooltip title={t('orders.edit')}>
-                              <IconButton 
-                                onClick={() => handleEditCarrier(carrier)}
-                                sx={{ 
-                                  color: '#ff9f43',
-                                  '&:hover': { 
-                                    backgroundColor: 'rgba(255, 159, 67, 0.1)' 
-                                  } 
-                                }}
-                              >
-                                <EditIcon />
-                              </IconButton>
-                            </BareTooltip>
-                            <BareTooltip title={t('orders.delete')}>
-                              <IconButton 
-                                onClick={() => openCarrierDeleteConfirmation(carrier.id)}
-                                sx={{ 
-                                  color: '#ff6b6b',
-                                  '&:hover': { 
-                                    backgroundColor: 'rgba(255, 107, 107, 0.1)' 
-                                  } 
-                                }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </BareTooltip>
-                          </Box>
-                        </TableCell>
+                    }}
+                >
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t('orders.companyName')}</TableCell>
+                        <TableCell>{t('orders.contactPerson')}</TableCell>
+                        <TableCell>{t('orders.email')}</TableCell>
+                        <TableCell>{t('orders.phone')}</TableCell>
+                        <TableCell>{t('orders.ico')}</TableCell>
+                        <TableCell>{t('orders.icDph')}</TableCell>
+                        <TableCell>{t('orders.dic')}</TableCell>
+                        <TableCell>{t('orders.vehicleTypes')}</TableCell>
+                        <TableCell>{t('orders.paymentTermDays') || 'Splatnosť (dni)'}</TableCell>
+                        <TableCell>{t('orders.country')}</TableCell>
+                        <TableCell>{t('orders.creationDate')}</TableCell>
+                        <TableCell>{t('orders.actions')}</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {filteredCarriers.map((carrier) => (
+                        <TableRow key={carrier.id}>
+                          <TableCell>{carrier.companyName}</TableCell>
+                          <TableCell>{`${carrier.contactName} ${carrier.contactSurname}`}</TableCell>
+                          <TableCell>{carrier.contactEmail}</TableCell>
+                          <TableCell>{carrier.contactPhone || '-'}</TableCell>
+                          <TableCell>{carrier.ico || '-'}</TableCell>
+                          <TableCell>{carrier.icDph || '-'}</TableCell>
+                          <TableCell>{carrier.dic || '-'}</TableCell>
+                          <TableCell>{carrier.vehicleTypes?.join(', ') || '-'}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={`${carrier.paymentTermDays || 60} dní`}
+                              color="primary"
+                              size="small"
+                              sx={{ 
+                                backgroundColor: '#ff9f43',
+                                color: '#ffffff',
+                                fontWeight: 'bold'
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>{carrier.country}</TableCell>
+                          <TableCell>
+                            {carrier.createdAt.toLocaleDateString('sk-SK', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <BareTooltip title={t('orders.edit')}>
+                                <IconButton 
+                                  onClick={() => handleEditCarrier(carrier)}
+                                  sx={{ 
+                                    color: '#ff9f43',
+                                    '&:hover': { 
+                                      backgroundColor: 'rgba(255, 159, 67, 0.1)' 
+                                    } 
+                                  }}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              </BareTooltip>
+                              <BareTooltip title={t('orders.delete')}>
+                                <IconButton 
+                                  onClick={() => openCarrierDeleteConfirmation(carrier.id)}
+                                  sx={{ 
+                                    color: '#ff6b6b',
+                                    '&:hover': { 
+                                      backgroundColor: 'rgba(255, 107, 107, 0.1)' 
+                                    } 
+                                  }}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </BareTooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Box>
           </TabPanel>
 
@@ -2107,7 +2167,7 @@ const OrdersList: React.FC = () => {
                   <Button 
                     variant="contained" 
                     startIcon={<AddIcon />}
-                    onClick={() => setShowLocationForm(true)}
+                    onClick={handleAddLocation}
                     sx={{
                       backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.8)' : '#ff9f43',
                       color: '#ffffff',
@@ -2141,79 +2201,125 @@ const OrdersList: React.FC = () => {
                 </Box>
               </Box>
 
-              <TableContainer 
-                component={Paper} 
-                sx={{
-                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                    borderRadius: '20px',
-                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    backdropFilter: 'blur(20px)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                    '& .MuiTableCell-root': {
-                      color: isDarkMode ? '#ffffff' : '#000000',
-                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                      padding: '16px',
-                      fontSize: '0.9rem',
-                      whiteSpace: 'nowrap'
-                    },
-                    '& .MuiTableHead-root .MuiTableCell-root': {
-                      fontWeight: 600,
+              {isLoadingLocations ? (
+                <Box display="flex" justifyContent="center" alignItems="center" mt={4} p={4}>
+                  <CircularProgress />
+                  <Typography variant="body2" sx={{ ml: 2 }}>
+                    Načítavam miesta...
+                  </Typography>
+                </Box>
+              ) : (
+                <TableContainer 
+                  component={Paper} 
+                  sx={{
                       backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    },
-                    '& .MuiTableBody-root .MuiTableRow-root': {
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      borderRadius: '20px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      backdropFilter: 'blur(20px)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                      '& .MuiTableCell-root': {
+                        color: isDarkMode ? '#ffffff' : '#000000',
+                        borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                        padding: '16px',
+                        fontSize: '0.9rem',
+                        whiteSpace: 'nowrap'
+                      },
+                      '& .MuiTableHead-root .MuiTableCell-root': {
+                        fontWeight: 600,
+                        backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      },
+                      '& .MuiTableBody-root .MuiTableRow-root': {
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        }
                       }
-                    }
-                  }}
-              >
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('orders.type') || 'Typ'}</TableCell>
-                      <TableCell>{t('orders.city') || 'Mesto'}</TableCell>
-                      <TableCell>{t('orders.street') || 'Ulica'}</TableCell>
-                      <TableCell>{t('orders.zipCode') || 'PSČ'}</TableCell>
-                      <TableCell>{t('orders.country') || 'Krajina'}</TableCell>
-                      <TableCell>{t('orders.contactPerson') || 'Kontaktná osoba'}</TableCell>
-                      <TableCell>{t('orders.usageCount') || 'Počet použití'}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {locations
-                      .filter(location => {
-                        const searchLower = locationSearchQuery.toLowerCase();
-                        return (
-                          location.city?.toLowerCase().includes(searchLower) ||
-                          location.street?.toLowerCase().includes(searchLower) ||
-                          location.contactPerson?.toLowerCase().includes(searchLower)
-                        );
-                      })
-                      .map((location) => (
-                        <TableRow key={location.id}>
-                          <TableCell>
-                            <Chip 
-                              label={location.type === 'loading' ? 'Nakládka' : 'Vykládka'} 
-                              color={location.type === 'loading' ? 'success' : 'info'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>{location.city}</TableCell>
-                          <TableCell>{location.street || '-'}</TableCell>
-                          <TableCell>{location.zip || '-'}</TableCell>
-                          <TableCell>{location.country || '-'}</TableCell>
-                          <TableCell>{location.contactPerson || '-'}</TableCell>
-                          <TableCell>{location.usageCount}</TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    }}
+                >
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t('orders.type') || 'Typ'}</TableCell>
+                        <TableCell>{t('orders.companyName') || 'Názov firmy'}</TableCell>
+                        <TableCell>{t('orders.city') || 'Mesto'}</TableCell>
+                        <TableCell>{t('orders.street') || 'Ulica'}</TableCell>
+                        <TableCell>{t('orders.zipCode') || 'PSČ'}</TableCell>
+                        <TableCell>{t('orders.country') || 'Krajina'}</TableCell>
+                        <TableCell>{t('orders.contactPerson') || 'Kontaktná osoba'}</TableCell>
+                        <TableCell>Telefón</TableCell>
+                        <TableCell>{t('orders.usageCount') || 'Počet použití'}</TableCell>
+                        <TableCell>{t('orders.actions')}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {locations
+                        .filter(location => {
+                          const searchLower = locationSearchQuery.toLowerCase();
+                          return (
+                            location.city?.toLowerCase().includes(searchLower) ||
+                            location.street?.toLowerCase().includes(searchLower) ||
+                            (location.contactPersonName || location.contactPerson)?.toLowerCase().includes(searchLower) ||
+                            location.contactPersonPhone?.toLowerCase().includes(searchLower) ||
+                            location.companyName?.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .map((location) => (
+                          <TableRow key={location.id}>
+                            <TableCell>
+                              <Chip 
+                                label={location.type === 'loading' ? 'Nakládka' : 'Vykládka'} 
+                                color={location.type === 'loading' ? 'success' : 'info'}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>{location.companyName || '-'}</TableCell>
+                            <TableCell>{location.city}</TableCell>
+                            <TableCell>{location.street || '-'}</TableCell>
+                            <TableCell>{location.zip || '-'}</TableCell>
+                            <TableCell>{location.country || '-'}</TableCell>
+                            <TableCell>{location.contactPersonName || location.contactPerson || '-'}</TableCell>
+                            <TableCell>{location.contactPersonPhone || '-'}</TableCell>
+                            <TableCell>{location.usageCount || 0}</TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', gap: 1 }}>
+                                <BareTooltip title={t('orders.edit')}>
+                                  <IconButton 
+                                    onClick={() => handleEditLocation(location)}
+                                    sx={{ 
+                                      color: '#ff9f43',
+                                      '&:hover': { 
+                                        backgroundColor: 'rgba(255, 159, 67, 0.1)' 
+                                      } 
+                                    }}
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                </BareTooltip>
+                                <BareTooltip title={t('orders.delete')}>
+                                  <IconButton 
+                                    onClick={() => openLocationDeleteConfirmation(location.id)}
+                                    sx={{ 
+                                      color: '#ff6b6b',
+                                      '&:hover': { 
+                                        backgroundColor: 'rgba(255, 107, 107, 0.1)' 
+                                      } 
+                                    }}
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </BareTooltip>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Box>
           </TabPanel>
 
@@ -2351,270 +2457,281 @@ const OrdersList: React.FC = () => {
                 )}
               </Box>
 
-              <TableContainer 
-                component={Paper} 
-                sx={{
-                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                    borderRadius: '20px',
-                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    backdropFilter: 'blur(20px)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                    '& .MuiTableCell-root': {
-                      color: isDarkMode ? '#ffffff' : '#000000',
-                      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                      padding: '16px',
-                      fontSize: '0.9rem',
-                      whiteSpace: 'nowrap'
-                    },
-                    '& .MuiTableHead-root .MuiTableCell-root': {
-                      fontWeight: 600,
-                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                      borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                    },
-                    '& .MuiTableBody-root .MuiTableRow-root': {
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                      }
-                    }
-                  }}
-              >
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>{t('orders.dispatcherName') || 'Meno špeditéra'}</TableCell>
-                      <TableCell>{t('orders.email') || 'Email'}</TableCell>
-                      <TableCell>{t('orders.totalOrders') || 'Celkom objednávok'}</TableCell>
-                      <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{t('orders.totalRevenue') || 'Celkové príjmy'}</TableCell>
-                      <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>{t('orders.totalCosts') || 'Celkové náklady'}</TableCell>
-                      <TableCell sx={{ color: '#2ecc71', fontWeight: 'bold' }}>{t('orders.totalProfit') || 'Celkový zisk'}</TableCell>
-                      <TableCell sx={{ color: '#9c27b0', fontWeight: 'bold' }}>{t('orders.avgProfit') || 'Priemerný zisk'}</TableCell>
-                      <TableCell sx={{ color: '#e74c3c', fontWeight: 'bold' }}>{t('orders.avgProfitMargin') || 'Priemerná marža'}</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {dispatchers
-                      .filter(dispatcher => {
-                        const searchLower = dispatcherSearchQuery.toLowerCase();
-                        return (
-                          dispatcher.name?.toLowerCase().includes(searchLower) ||
-                          dispatcher.email?.toLowerCase().includes(searchLower)
-                        );
-                      })
-                      .sort((a, b) => b.totalProfit - a.totalProfit) // Zoradenie podľa zisku
-                      .map((dispatcher) => (
-                        <TableRow key={dispatcher.id}>
-                          <TableCell>{dispatcher.name}</TableCell>
-                          <TableCell>{dispatcher.email || '-'}</TableCell>
-                          <TableCell>{dispatcher.totalOrders}</TableCell>
-                          <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>
-                            {`${dispatcher.totalRevenue.toFixed(2)} €`}
-                          </TableCell>
-                          <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>
-                            {`${dispatcher.totalCosts.toFixed(2)} €`}
-                          </TableCell>
-                          <TableCell sx={{ 
-                            color: dispatcher.totalProfit >= 0 ? '#2ecc71' : '#e74c3c', 
-                            fontWeight: 'bold' 
-                          }}>
-                            {`${dispatcher.totalProfit.toFixed(2)} €`}
-                          </TableCell>
-                          <TableCell sx={{ 
-                            color: dispatcher.avgProfit >= 0 ? '#9c27b0' : '#e74c3c', 
-                            fontWeight: 'bold' 
-                          }}>
-                            {`${dispatcher.avgProfit.toFixed(2)} €`}
-                          </TableCell>
-                          <TableCell sx={{ 
-                            color: dispatcher.avgProfitMargin >= 0 ? '#e74c3c' : '#2ecc71', 
-                            fontWeight: 'bold' 
-                          }}>
-                            {`${dispatcher.avgProfitMargin.toFixed(2)} %`}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              {/* Motivačný graf špeditérov */}
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" sx={{ mb: 3, color: '#ff9f43', fontWeight: 600, textAlign: 'center' }}>
-                  🏆 Výkonnostný rebríček špeditérov
-                </Typography>
-                
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: 2, 
-                  justifyContent: 'center',
-                  alignItems: 'flex-end',
-                  minHeight: '200px',
-                  p: 2,
-                  background: isDarkMode 
-                    ? 'linear-gradient(135deg, rgba(28, 28, 45, 0.6) 0%, rgba(40, 40, 65, 0.8) 100%)'
-                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 240, 255, 0.9) 100%)',
-                  borderRadius: '20px',
-                  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                  backdropFilter: 'blur(10px)',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}>
-                  {/* Pozadie s dekoratívnymi prvkami */}
-                  <Box sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: `radial-gradient(circle at 20% 50%, rgba(255, 159, 67, 0.1) 0%, transparent 50%), 
-                                radial-gradient(circle at 80% 20%, rgba(46, 204, 113, 0.1) 0%, transparent 50%),
-                                radial-gradient(circle at 40% 80%, rgba(52, 152, 219, 0.1) 0%, transparent 50%)`,
-                    zIndex: 0
-                  }} />
-                  
-                  {dispatchers
-                    .filter(dispatcher => {
-                      const searchLower = dispatcherSearchQuery.toLowerCase();
-                      return (
-                        dispatcher.name?.toLowerCase().includes(searchLower) ||
-                        dispatcher.email?.toLowerCase().includes(searchLower)
-                      );
-                    })
-                    .sort((a, b) => b.totalProfit - a.totalProfit)
-                    .map((dispatcher, index) => {
-                      // Vypočítame veľkosť karty na základe zisku (relatívne k najlepšiemu)
-                      const maxProfit = Math.max(...dispatchers.map(d => d.totalProfit));
-                      const minProfit = Math.min(...dispatchers.map(d => d.totalProfit));
-                      const profitRange = maxProfit - minProfit;
-                      
-                      // Veľkosť od 80px do 160px
-                      const minSize = 80;
-                      const maxSize = 160;
-                      const cardSize = profitRange > 0 
-                        ? minSize + ((dispatcher.totalProfit - minProfit) / profitRange) * (maxSize - minSize)
-                        : minSize;
-                      
-                      // Farby podľa pozície
-                      const getCardColor = (index: number) => {
-                        if (index === 0) return { bg: '#ffd700', text: '#000', emoji: '🥇' }; // Zlato
-                        if (index === 1) return { bg: '#c0c0c0', text: '#000', emoji: '🥈' }; // Striebro  
-                        if (index === 2) return { bg: '#cd7f32', text: '#fff', emoji: '🥉' }; // Bronz
-                        return { bg: '#ff9f43', text: '#fff', emoji: '💼' }; // Ostatní
-                      };
-                      
-                      const cardStyle = getCardColor(index);
-                      
-                      return (
-                        <Box
-                          key={dispatcher.id}
-                          sx={{
-                            width: `${cardSize}px`,
-                            height: `${cardSize}px`,
-                            borderRadius: '20px',
-                            background: `linear-gradient(135deg, ${cardStyle.bg} 0%, ${cardStyle.bg}dd 100%)`,
-                            boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            position: 'relative',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                            zIndex: 1,
-                            '&:hover': {
-                              transform: 'translateY(-8px) scale(1.05)',
-                              boxShadow: '0 15px 35px rgba(0, 0, 0, 0.25)',
-                              zIndex: 10
-                            }
-                          }}
-                        >
-                          {/* Pozícia badge */}
-                          <Box sx={{
-                            position: 'absolute',
-                            top: '-8px',
-                            right: '-8px',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            background: isDarkMode ? 'rgba(28, 28, 45, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            color: isDarkMode ? '#ffffff' : '#000000',
-                            border: `2px solid ${cardStyle.bg}`
-                          }}>
-                            #{index + 1}
-                          </Box>
-                          
-                          {/* Emoji a meno */}
-                          <Box sx={{ textAlign: 'center', color: cardStyle.text }}>
-                            <Typography sx={{ fontSize: `${Math.max(20, cardSize * 0.15)}px`, mb: 0.5 }}>
-                              {cardStyle.emoji}
-                            </Typography>
-                            <Typography sx={{ 
-                              fontSize: `${Math.max(10, cardSize * 0.08)}px`, 
-                              fontWeight: 'bold',
-                              lineHeight: 1.2,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              maxWidth: `${cardSize - 20}px`
-                            }}>
-                              {dispatcher.name}
-                            </Typography>
-                            
-                            {/* Zisk */}
-                            <Typography sx={{ 
-                              fontSize: `${Math.max(8, cardSize * 0.06)}px`, 
-                              fontWeight: 600,
-                              mt: 0.5,
-                              opacity: 0.9
-                            }}>
-                              {dispatcher.totalProfit.toFixed(0)} €
-                            </Typography>
-                            
-                            {/* Marža */}
-                            <Typography sx={{ 
-                              fontSize: `${Math.max(6, cardSize * 0.05)}px`, 
-                              fontWeight: 500,
-                              opacity: 0.8
-                            }}>
-                              {dispatcher.avgProfitMargin.toFixed(1)}%
-                            </Typography>
-                          </Box>
-                          
-                          {/* Efekt lesku */}
-                          <Box sx={{
-                            position: 'absolute',
-                            top: '10%',
-                            left: '10%',
-                            right: '60%',
-                            bottom: '60%',
-                            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%)',
-                            borderRadius: '20px',
-                            pointerEvents: 'none'
-                          }} />
-                        </Box>
-                      );
-                    })}
-                </Box>
-                
-                {/* Legenda */}
-                <Box sx={{ mt: 2, textAlign: 'center' }}>
-                  <Typography variant="body2" sx={{ 
-                    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
-                    fontSize: '0.75rem'
-                  }}>
-                    💡 Veľkosť karty = výška zisku | Pozícia = celkový výkon | Hover pre detail
+              {isLoadingDispatchers ? (
+                <Box display="flex" justifyContent="center" alignItems="center" mt={4} p={4}>
+                  <CircularProgress />
+                  <Typography variant="body2" sx={{ ml: 2 }}>
+                    Načítavam štatistiky špeditérov...
                   </Typography>
                 </Box>
-              </Box>
+              ) : (
+                <>
+                  <TableContainer 
+                    component={Paper} 
+                    sx={{
+                        backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                        borderRadius: '20px',
+                        border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                        backdropFilter: 'blur(20px)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+                        '& .MuiTableCell-root': {
+                          color: isDarkMode ? '#ffffff' : '#000000',
+                          borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                          padding: '16px',
+                          fontSize: '0.9rem',
+                          whiteSpace: 'nowrap'
+                        },
+                        '& .MuiTableHead-root .MuiTableCell-root': {
+                          fontWeight: 600,
+                          backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                          color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                          borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                        },
+                        '& .MuiTableBody-root .MuiTableRow-root': {
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                          }
+                        }
+                      }}
+                  >
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t('orders.dispatcherName') || 'Meno špeditéra'}</TableCell>
+                          <TableCell>{t('orders.email') || 'Email'}</TableCell>
+                          <TableCell>{t('orders.totalOrders') || 'Celkom objednávok'}</TableCell>
+                          <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{t('orders.totalRevenue') || 'Celkové príjmy'}</TableCell>
+                          <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>{t('orders.totalCosts') || 'Celkové náklady'}</TableCell>
+                          <TableCell sx={{ color: '#2ecc71', fontWeight: 'bold' }}>{t('orders.totalProfit') || 'Celkový zisk'}</TableCell>
+                          <TableCell sx={{ color: '#9c27b0', fontWeight: 'bold' }}>{t('orders.avgProfit') || 'Priemerný zisk'}</TableCell>
+                          <TableCell sx={{ color: '#e74c3c', fontWeight: 'bold' }}>{t('orders.avgProfitMargin') || 'Priemerná marža'}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {dispatchers
+                          .filter(dispatcher => {
+                            const searchLower = dispatcherSearchQuery.toLowerCase();
+                            return (
+                              dispatcher.name?.toLowerCase().includes(searchLower) ||
+                              dispatcher.email?.toLowerCase().includes(searchLower)
+                            );
+                          })
+                          .sort((a, b) => b.totalProfit - a.totalProfit) // Zoradenie podľa zisku
+                          .map((dispatcher) => (
+                            <TableRow key={dispatcher.id}>
+                              <TableCell>{dispatcher.name}</TableCell>
+                              <TableCell>{dispatcher.email || '-'}</TableCell>
+                              <TableCell>{dispatcher.totalOrders}</TableCell>
+                              <TableCell sx={{ color: '#ff9f43', fontWeight: 'bold' }}>
+                                {`${dispatcher.totalRevenue.toFixed(2)} €`}
+                              </TableCell>
+                              <TableCell sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                {`${dispatcher.totalCosts.toFixed(2)} €`}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                color: dispatcher.totalProfit >= 0 ? '#2ecc71' : '#e74c3c', 
+                                fontWeight: 'bold' 
+                              }}>
+                                {`${dispatcher.totalProfit.toFixed(2)} €`}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                color: dispatcher.avgProfit >= 0 ? '#9c27b0' : '#e74c3c', 
+                                fontWeight: 'bold' 
+                              }}>
+                                {`${dispatcher.avgProfit.toFixed(2)} €`}
+                              </TableCell>
+                              <TableCell sx={{ 
+                                color: dispatcher.avgProfitMargin >= 0 ? '#e74c3c' : '#2ecc71', 
+                                fontWeight: 'bold' 
+                              }}>
+                                {`${dispatcher.avgProfitMargin.toFixed(2)} %`}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {/* Motivačný graf špeditérov */}
+                  <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" sx={{ mb: 3, color: '#ff9f43', fontWeight: 600, textAlign: 'center' }}>
+                      🏆 Výkonnostný rebríček špeditérov
+                    </Typography>
+                    
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: 2, 
+                      justifyContent: 'center',
+                      alignItems: 'flex-end',
+                      minHeight: '200px',
+                      p: 2,
+                      background: isDarkMode 
+                        ? 'linear-gradient(135deg, rgba(28, 28, 45, 0.6) 0%, rgba(40, 40, 65, 0.8) 100%)'
+                        : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 240, 255, 0.9) 100%)',
+                      borderRadius: '20px',
+                      border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                      backdropFilter: 'blur(10px)',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      {/* Pozadie s dekoratívnymi prvkami */}
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: `radial-gradient(circle at 20% 50%, rgba(255, 159, 67, 0.1) 0%, transparent 50%), 
+                                    radial-gradient(circle at 80% 20%, rgba(46, 204, 113, 0.1) 0%, transparent 50%),
+                                    radial-gradient(circle at 40% 80%, rgba(52, 152, 219, 0.1) 0%, transparent 50%)`,
+                        zIndex: 0
+                      }} />
+                      
+                      {dispatchers
+                        .filter(dispatcher => {
+                          const searchLower = dispatcherSearchQuery.toLowerCase();
+                          return (
+                            dispatcher.name?.toLowerCase().includes(searchLower) ||
+                            dispatcher.email?.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        .sort((a, b) => b.totalProfit - a.totalProfit)
+                        .map((dispatcher, index) => {
+                          // Vypočítame veľkosť karty na základe zisku (relatívne k najlepšiemu)
+                          const maxProfit = Math.max(...dispatchers.map(d => d.totalProfit));
+                          const minProfit = Math.min(...dispatchers.map(d => d.totalProfit));
+                          const profitRange = maxProfit - minProfit;
+                          
+                          // Veľkosť od 80px do 160px
+                          const minSize = 80;
+                          const maxSize = 160;
+                          const cardSize = profitRange > 0 
+                            ? minSize + ((dispatcher.totalProfit - minProfit) / profitRange) * (maxSize - minSize)
+                            : minSize;
+                          
+                          // Farby podľa pozície
+                          const getCardColor = (index: number) => {
+                            if (index === 0) return { bg: '#ffd700', text: '#000', emoji: '🥇' }; // Zlato
+                            if (index === 1) return { bg: '#c0c0c0', text: '#000', emoji: '🥈' }; // Striebro  
+                            if (index === 2) return { bg: '#cd7f32', text: '#fff', emoji: '🥉' }; // Bronz
+                            return { bg: '#ff9f43', text: '#fff', emoji: '💼' }; // Ostatní
+                          };
+                          
+                          const cardStyle = getCardColor(index);
+                          
+                          return (
+                            <Box
+                              key={dispatcher.id}
+                              sx={{
+                                width: `${cardSize}px`,
+                                height: `${cardSize}px`,
+                                borderRadius: '20px',
+                                background: `linear-gradient(135deg, ${cardStyle.bg} 0%, ${cardStyle.bg}dd 100%)`,
+                                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                position: 'relative',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                zIndex: 1,
+                                '&:hover': {
+                                  transform: 'translateY(-8px) scale(1.05)',
+                                  boxShadow: '0 15px 35px rgba(0, 0, 0, 0.25)',
+                                  zIndex: 10
+                                }
+                              }}
+                            >
+                              {/* Pozícia badge */}
+                              <Box sx={{
+                                position: 'absolute',
+                                top: '-8px',
+                                right: '-8px',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                background: isDarkMode ? 'rgba(28, 28, 45, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                color: isDarkMode ? '#ffffff' : '#000000',
+                                border: `2px solid ${cardStyle.bg}`
+                              }}>
+                                #{index + 1}
+                              </Box>
+                              
+                              {/* Emoji a meno */}
+                              <Box sx={{ textAlign: 'center', color: cardStyle.text }}>
+                                <Typography sx={{ fontSize: `${Math.max(20, cardSize * 0.15)}px`, mb: 0.5 }}>
+                                  {cardStyle.emoji}
+                                </Typography>
+                                <Typography sx={{ 
+                                  fontSize: `${Math.max(10, cardSize * 0.08)}px`, 
+                                  fontWeight: 'bold',
+                                  lineHeight: 1.2,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: `${cardSize - 20}px`
+                                }}>
+                                  {dispatcher.name}
+                                </Typography>
+                                
+                                {/* Zisk */}
+                                <Typography sx={{ 
+                                  fontSize: `${Math.max(8, cardSize * 0.06)}px`, 
+                                  fontWeight: 600,
+                                  mt: 0.5,
+                                  opacity: 0.9
+                                }}>
+                                  {dispatcher.totalProfit.toFixed(0)} €
+                                </Typography>
+                                
+                                {/* Marža */}
+                                <Typography sx={{ 
+                                  fontSize: `${Math.max(6, cardSize * 0.05)}px`, 
+                                  fontWeight: 500,
+                                  opacity: 0.8
+                                }}>
+                                  {dispatcher.avgProfitMargin.toFixed(1)}%
+                                </Typography>
+                              </Box>
+                              
+                              {/* Efekt lesku */}
+                              <Box sx={{
+                                position: 'absolute',
+                                top: '10%',
+                                left: '10%',
+                                right: '60%',
+                                bottom: '60%',
+                                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%)',
+                                borderRadius: '20px',
+                                pointerEvents: 'none'
+                              }} />
+                            </Box>
+                          );
+                        })}
+                    </Box>
+                    
+                    {/* Legenda */}
+                    <Box sx={{ mt: 2, textAlign: 'center' }}>
+                      <Typography variant="body2" sx={{ 
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                        fontSize: '0.75rem'
+                      }}>
+                        💡 Veľkosť karty = výška zisku | Pozícia = celkový výkon | Hover pre detail
+                      </Typography>
+                    </Box>
+                  </Box>
+                </>
+              )}
             </Box>
           </TabPanel>
         </Box>
@@ -3276,6 +3393,54 @@ const OrdersList: React.FC = () => {
       isEdit={isEditMode}
       orderData={selectedOrder || undefined}
     />
+
+    <LocationForm
+      open={showLocationForm}
+      onClose={() => {
+        setShowLocationForm(false);
+        setSelectedLocationForEdit(null);
+      }}
+      onSubmit={handleLocationSubmit}
+      editLocation={selectedLocationForEdit}
+    />
+
+    {/* Potvrdzovací dialóg pre vymazanie MIESTA */}
+    <Dialog
+      open={showLocationDeleteConfirm}
+      onClose={handleLocationDeleteCancel}
+      aria-labelledby="confirm-location-delete-title"
+      aria-describedby="confirm-location-delete-description"
+      PaperProps={{
+        sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '24px' }
+      }}
+      BackdropProps={{
+        sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+      }}
+    >
+      <StyledDialogContent isDarkMode={isDarkMode}>
+        <DialogTitle id="confirm-location-delete-title">{t('common.confirmDelete')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-location-delete-description"> 
+            {t('orders.deleteLocationConfirmation') || 'Ste si istý, že chcete vymazať toto miesto?'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLocationDeleteCancel} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)', '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', } }}>
+            {t('common.cancel')}
+          </Button>
+          <Button 
+            onClick={handleLocationDeleteConfirmed} 
+            variant="contained" 
+            color="error" 
+            disabled={loading} 
+            autoFocus
+            sx={{ color: '#ffffff' }}
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')} 
+          </Button>
+        </DialogActions>
+      </StyledDialogContent>
+    </Dialog>
     </PageWrapper>
   );
 };

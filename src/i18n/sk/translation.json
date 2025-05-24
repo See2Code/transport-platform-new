@@ -171,7 +171,15 @@
     "addNewCarrier": "Pridať nového dopravcu",
     "carrierContact": "Kontakt na dopravcu",
     "vehicleRegistration": "EČV vozidla",
-    "orderSummary": "Súhrn objednávky"
+    "orderSummary": "Súhrn objednávky",
+    "documents": "Dokumenty",
+    "paymentTermDays": "Splatnosť (dni)",
+    "paymentTermDaysHelper": "Počet dní na úhradu faktúry (default: 60)",
+    "deleteLocationConfirmation": "Ste si istý, že chcete vymazať toto miesto?",
+    "locationType": "Typ miesta",
+    "companyInfo": "Informácie o firme",
+    "address": "Adresa",
+    "contactInfo": "Kontaktné údaje"
   },
   "settings": {
     "profileSettings": "Nastavenia profilu",

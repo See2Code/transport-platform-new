@@ -47,6 +47,8 @@ const emptyLoadingPlace: LoadingPlace = {
     country: 'Slovensko',
     dateTime: null,
     contactPerson: '',
+    contactPersonName: '',
+    contactPersonPhone: '',
     goods: [{ ...emptyGoodsItem }]
 };
 
@@ -58,6 +60,8 @@ const emptyUnloadingPlace: UnloadingPlace = {
     country: 'Slovensko',
     dateTime: null,
     contactPerson: '',
+    contactPersonName: '',
+    contactPersonPhone: '',
     goods: [{ ...emptyGoodsItem }]
 };
 
@@ -126,16 +130,6 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
         }
     }, [userData?.companyID]);
 
-    // Pridávam závislosti pre useEffect, ktorý sleduje zmeny formData
-    useEffect(() => {
-        console.log("Form data updated:", formData);
-    }, [formData]);
-
-    // Pridávam závislosti pre useEffect, ktorý sleduje zmeny zakaznika
-    useEffect(() => {
-        console.log("Aktuálna hodnota zakaznik:", formData.zakaznik);
-    }, [formData.zakaznik]);
-
     // Pridávam závislosti pre useEffect, ktorý načítava dáta pre editáciu
     useEffect(() => {
         if (isEdit && orderData) {
@@ -146,19 +140,40 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             const kontaktnaOsobaValue = (orderData as any).kontaktnaOsoba || 
                 `${orderData.customerContactName || ''} ${orderData.customerContactSurname || ''}`.trim();
             
+            // Migrácia starých kontaktných údajov v miestach nakládky a vykládky
+            const migrateContactData = (places: any[]) => {
+                return places?.map(place => ({
+                    ...place,
+                    contactPersonName: place.contactPersonName || place.contactPerson || '',
+                    contactPersonPhone: place.contactPersonPhone || ''
+                })) || [];
+            };
+
+            const migratedLoadingPlaces = migrateContactData(orderData.loadingPlaces || []);
+            const migratedUnloadingPlaces = migrateContactData(orderData.unloadingPlaces || []);
+            
             setFormData(prevData => ({ 
                 ...prevData, 
                 ...orderData,
                 zakaznik: zakaznikValue,
-                kontaktnaOsoba: kontaktnaOsobaValue
+                kontaktnaOsoba: kontaktnaOsobaValue,
+                loadingPlaces: migratedLoadingPlaces,
+                unloadingPlaces: migratedUnloadingPlaces
             }));
             
             console.log('Nastavené hodnoty po načítaní:', {
                 zakaznik: zakaznikValue,
-                kontaktnaOsoba: kontaktnaOsobaValue
+                kontaktnaOsoba: kontaktnaOsobaValue,
+                loadingPlaces: migratedLoadingPlaces,
+                unloadingPlaces: migratedUnloadingPlaces
             });
         }
     }, [isEdit, orderData]);
+
+    // Pridávam závislosti pre useEffect, ktorý sleduje zmeny zakaznika
+    useEffect(() => {
+        console.log("Aktuálna hodnota zakaznik:", formData.zakaznik);
+    }, [formData.zakaznik]);
 
     // Pridávam závislosti pre useEffect, ktorý načítava zákazníkov
     useEffect(() => {
@@ -876,10 +891,11 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                                     </Grid>
                                     <Grid item xs={12} sm={6}>
                                         <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                                            <DateTimePicker label="Dátum a čas nakládky *" value={place.dateTime as Date | null} onChange={handleDateTimeChange('loading', index)} slotProps={{ textField: { fullWidth: true, required: true } }}/>
+                                            <DateTimePicker label="Dátum a čas nakládky *" value={place.dateTime as Date | null} onChange={handleDateTimeChange('loading', index)} slotProps={{ textField: { fullWidth: true, required: true }}}/>
                                         </LocalizationProvider>
                                     </Grid>
-                                    <Grid item xs={12}><TextField fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('loading', index, 'contactPerson')} required /></Grid>
+                                    <Grid item xs={12} sm={6}><TextField fullWidth label="Meno kontaktnej osoby *" value={place.contactPersonName} onChange={handlePlaceInputChange('loading', index, 'contactPersonName')} required /></Grid>
+                                    <Grid item xs={12} sm={6}><TextField fullWidth label="Telefón kontaktnej osoby *" value={place.contactPersonPhone} onChange={handlePlaceInputChange('loading', index, 'contactPersonPhone')} required placeholder="+421 XXX XXX XXX" /></Grid>
                                 </Grid>
                                  {/* Goods Items Section */}
                                 <Box sx={{ mt: 2 }}>
@@ -965,7 +981,8 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                                     <Grid item xs={6} sm={3}><TextField fullWidth label="PSČ *" value={place.zip} onChange={handlePlaceInputChange('unloading', index, 'zip')} required /></Grid>
                                     <Grid item xs={12} sm={6}><Autocomplete options={countries} getOptionLabel={(o) => o.name} value={countries.find(c=>c.name === place.country) || null} onChange={handlePlaceAutocompleteChange('unloading', index, 'country')} renderInput={(params) => <TextField {...params} label="Krajina *" required />} /></Grid>
                                     <Grid item xs={12} sm={6}><LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}><DateTimePicker label="Dátum a čas vykládky *" value={place.dateTime as Date | null} onChange={handleDateTimeChange('unloading', index)} slotProps={{ textField: { fullWidth: true, required: true } }}/></LocalizationProvider></Grid>
-                                    <Grid item xs={12}><TextField fullWidth label="Kontaktná osoba *" value={place.contactPerson} onChange={handlePlaceInputChange('unloading', index, 'contactPerson')} required /></Grid>
+                                    <Grid item xs={12} sm={6}><TextField fullWidth label="Meno kontaktnej osoby *" value={place.contactPersonName} onChange={handlePlaceInputChange('unloading', index, 'contactPersonName')} required /></Grid>
+                                    <Grid item xs={12} sm={6}><TextField fullWidth label="Telefón kontaktnej osoby *" value={place.contactPersonPhone} onChange={handlePlaceInputChange('unloading', index, 'contactPersonPhone')} required placeholder="+421 XXX XXX XXX" /></Grid>
                                 </Grid>
                                  {/* Goods Items Section */} 
                                  <Box sx={{ mt: 2 }}>

@@ -15,23 +15,29 @@ export interface GoodsItem {
 
 export interface LoadingPlace {
   id: string;
+  companyName?: string;
   street: string;
   city: string;
   zip: string;
   country: string;
   dateTime: Date | null;
-  contactPerson: string;
+  contactPerson?: string;
+  contactPersonName: string;
+  contactPersonPhone: string;
   goods: GoodsItem[];
 }
 
 export interface UnloadingPlace {
   id: string;
+  companyName?: string;
   street: string;
   city: string;
   zip: string;
   country: string;
   dateTime: Date | null;
-  contactPerson: string;
+  contactPerson?: string;
+  contactPersonName: string;
+  contactPersonPhone: string;
   goods: GoodsItem[];
 }
 
@@ -43,7 +49,9 @@ export interface SavedPlace {
   city: string;
   zip: string;
   country: string;
-  contactPerson: string;
+  contactPerson?: string;
+  contactPersonName: string;
+  contactPersonPhone: string;
   createdAt: Date;
   updatedAt: Date;
   userId: string;

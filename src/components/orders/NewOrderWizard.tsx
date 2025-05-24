@@ -343,23 +343,29 @@ const emptyGoodsItem: GoodsItem = {
 
 const emptyLoadingPlace: LoadingPlace = {
   id: crypto.randomUUID(),
+  companyName: '',
   street: '',
   city: '',
   zip: '',
   country: 'Slovensko',
   dateTime: null,
-  contactPerson: '',
+  contactPerson: '', // zachováme pre spätnosť
+  contactPersonName: '',
+  contactPersonPhone: '',
   goods: [{ ...emptyGoodsItem }]
 };
 
 const emptyUnloadingPlace: UnloadingPlace = {
   id: crypto.randomUUID(),
+  companyName: '',
   street: '',
   city: '',
   zip: '',
   country: 'Slovensko',
   dateTime: null,
-  contactPerson: '',
+  contactPerson: '', // zachováme pre spätnosť
+  contactPersonName: '',
+  contactPersonPhone: '',
   goods: [{ ...emptyGoodsItem }]
 };
 
@@ -582,7 +588,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         userData: userData
       });
     }
-  }, [open, userData?.companyID, fetchCustomers, fetchCarriers, fetchSavedData, userData]);
+  }, [open, userData?.companyID, fetchCustomers, fetchCarriers, fetchSavedData]);
 
   // Load edit data
   useEffect(() => {
@@ -599,14 +605,33 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       console.log('🎯 Looking for customer:', customerCompanyName);
       console.log('✅ Found matching customer:', matchingCustomer);
       
+      // Migrácia starých kontaktných údajov v miestach nakládky a vykládky
+      const migrateContactData = (places: any[]) => {
+        return places?.map(place => ({
+          ...place,
+          contactPersonName: place.contactPersonName || place.contactPerson || '',
+          contactPersonPhone: place.contactPersonPhone || ''
+        })) || [];
+      };
+
+      const migratedLoadingPlaces = migrateContactData(orderData.loadingPlaces || []);
+      const migratedUnloadingPlaces = migrateContactData(orderData.unloadingPlaces || []);
+      
       setFormData(prev => ({
         ...prev,
         ...orderData,
         zakaznik: customerCompanyName,
         zakaznikData: matchingCustomer || null, // Nastavíme zákazníka objektu pre Autocomplete
         kontaktnaOsoba: (orderData as any).kontaktnaOsoba || 
-          `${orderData.customerContactName || ''} ${orderData.customerContactSurname || ''}`.trim()
+          `${orderData.customerContactName || ''} ${orderData.customerContactSurname || ''}`.trim(),
+        loadingPlaces: migratedLoadingPlaces,
+        unloadingPlaces: migratedUnloadingPlaces
       }));
+      
+      console.log('✅ Migration applied:', {
+        loadingPlaces: migratedLoadingPlaces,
+        unloadingPlaces: migratedUnloadingPlaces
+      });
     }
   }, [isEdit, orderData, open, customerOptions]); // Pridávame customerOptions do závislostí
 
@@ -665,22 +690,37 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   };
 
   const handleCustomerChange = (customer: Customer | null) => {
-    setFormData(prev => ({
-      ...prev,
-      zakaznikData: customer,
-      zakaznik: customer?.company || '',
-      kontaktnaOsoba: customer ? `${customer.contactName} ${customer.contactSurname}`.trim() : '',
-      customerVatId: customer?.vatId || '',
-      customerStreet: customer?.street || '',
-      customerCity: customer?.city || '',
-      customerZip: customer?.zip || '',
-      customerCountry: customer?.country || 'Slovensko',
-      customerContactName: customer?.contactName || '',
-      customerContactSurname: customer?.contactSurname || '',
-      customerEmail: customer?.email || '',
-      customerPhone: customer?.phone || '',
-      customerCompany: customer?.company || '',
-    }));
+    setFormData(prev => {
+      // Aktualizujeme názov firmy vo všetkých miestach nakládky a vykládky
+      const updatedLoadingPlaces = (prev.loadingPlaces || []).map(place => ({
+        ...place,
+        companyName: customer?.company || ''
+      }));
+      
+      const updatedUnloadingPlaces = (prev.unloadingPlaces || []).map(place => ({
+        ...place,
+        companyName: customer?.company || ''
+      }));
+
+      return {
+        ...prev,
+        zakaznikData: customer,
+        zakaznik: customer?.company || '',
+        kontaktnaOsoba: customer ? `${customer.contactName} ${customer.contactSurname}`.trim() : '',
+        customerVatId: customer?.vatId || '',
+        customerStreet: customer?.street || '',
+        customerCity: customer?.city || '',
+        customerZip: customer?.zip || '',
+        customerCountry: customer?.country || 'Slovensko',
+        customerContactName: customer?.contactName || '',
+        customerContactSurname: customer?.contactSurname || '',
+        customerEmail: customer?.email || '',
+        customerPhone: customer?.phone || '',
+        customerCompany: customer?.company || '',
+        loadingPlaces: updatedLoadingPlaces,
+        unloadingPlaces: updatedUnloadingPlaces,
+      };
+    });
   };
 
   const handleCarrierChange = (carrier: Carrier | null) => {
@@ -694,6 +734,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const addLocation = (type: 'loading' | 'unloading') => {
     const newLocation = type === 'loading' ? { ...emptyLoadingPlace } : { ...emptyUnloadingPlace };
     newLocation.id = crypto.randomUUID();
+    // Automaticky vyplníme názov firmy z vybraného zákazníka
+    newLocation.companyName = formData.zakaznikData?.company || '';
     
     setFormData(prev => ({
       ...prev,
@@ -1245,6 +1287,26 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
           <Collapse in={isExpanded} timeout="auto">
             <Grid container spacing={2}>
+              {/* Company Name */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  id={`${type}-company-name-${index}`}
+                  name={`${type}CompanyName${index}`}
+                  label="Názov firmy *"
+                  value={place.companyName || ''}
+                  onChange={(e) => updateLocation(type, index, 'companyName', e.target.value)}
+                  required
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <BusinessIcon sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              
               {/* Location Details */}
               <Grid item xs={12} sm={6}>
                 <StyledAutocomplete
@@ -1321,12 +1383,32 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  id={`${type}-contact-${index}`}
-                  name={`${type}Contact${index}`}
-                  label={t('orders.contactPerson') + ' *'}
-                  value={place.contactPerson}
-                  onChange={(e) => updateLocation(type, index, 'contactPerson', e.target.value)}
+                  id={`${type}-contact-name-${index}`}
+                  name={`${type}ContactName${index}`}
+                  label="Meno kontaktnej osoby *"
+                  value={place.contactPersonName}
+                  onChange={(e) => updateLocation(type, index, 'contactPersonName', e.target.value)}
                   required
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PersonIcon sx={{ color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id={`${type}-contact-phone-${index}`}
+                  name={`${type}ContactPhone${index}`}
+                  label="Telefón kontaktnej osoby *"
+                  value={place.contactPersonPhone}
+                  onChange={(e) => updateLocation(type, index, 'contactPersonPhone', e.target.value)}
+                  required
+                  placeholder="+421 XXX XXX XXX"
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">

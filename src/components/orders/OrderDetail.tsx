@@ -257,6 +257,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Adresa</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Čas nakládky</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Kontaktná osoba</strong></StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}><strong>Telefón</strong></StyledTableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -270,13 +271,16 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                           {formatDate(place.dateTime)}
                         </StyledTableCell>
                         <StyledTableCell isDarkMode={isDarkMode}>
-                          {place.contactPerson || '-'}
+                          {place.contactPersonName || place.contactPerson || '-'}
+                        </StyledTableCell>
+                        <StyledTableCell isDarkMode={isDarkMode}>
+                          {place.contactPersonPhone || '-'}
                         </StyledTableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <StyledTableCell isDarkMode={isDarkMode} colSpan={3}>
+                      <StyledTableCell isDarkMode={isDarkMode} colSpan={4}>
                         Nie sú definované žiadne miesta nakládky
                       </StyledTableCell>
                     </TableRow>
@@ -299,6 +303,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Adresa</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Čas vykládky</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Kontaktná osoba</strong></StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}><strong>Telefón</strong></StyledTableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -312,13 +317,16 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                           {formatDate(place.dateTime)}
                         </StyledTableCell>
                         <StyledTableCell isDarkMode={isDarkMode}>
-                          {place.contactPerson || '-'}
+                          {place.contactPersonName || place.contactPerson || '-'}
+                        </StyledTableCell>
+                        <StyledTableCell isDarkMode={isDarkMode}>
+                          {place.contactPersonPhone || '-'}
                         </StyledTableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <StyledTableCell isDarkMode={isDarkMode} colSpan={3}>
+                      <StyledTableCell isDarkMode={isDarkMode} colSpan={4}>
                         Nie sú definované žiadne miesta vykládky
                       </StyledTableCell>
                     </TableRow>

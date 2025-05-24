@@ -987,7 +987,8 @@ function generateOrderHtml(orderData, settings, carrierData) {
           <p class="place-address">${safeText(formatAddress(place.street, place.city, place.zip, place.country))}</p>
           <div class="place-details">
             <span><strong>Referenčné číslo:</strong> ${safeText(refNumber)}</span>
-            <span><strong>Kontakt:</strong> ${safeText(place.contactPerson)}</span>
+            <span><strong>Kontakt:</strong> ${safeText(place.contactPersonName || place.contactPerson || 'N/A')}</span>
+            <span><strong>Telefón:</strong> ${safeText(place.contactPersonPhone || 'N/A')}</span>
           </div>
           ${goodsHtml}
         </div>
@@ -1019,7 +1020,8 @@ function generateOrderHtml(orderData, settings, carrierData) {
           <p class="place-address">${safeText(formatAddress(place.street, place.city, place.zip, place.country))}</p>
           <div class="place-details">
             <span><strong>Referenčné číslo:</strong> ${safeText(refNumber)}</span>
-            <span><strong>Kontakt:</strong> ${safeText(place.contactPerson)}</span>
+            <span><strong>Kontakt:</strong> ${safeText(place.contactPersonName || place.contactPerson || 'N/A')}</span>
+            <span><strong>Telefón:</strong> ${safeText(place.contactPersonPhone || 'N/A')}</span>
           </div>
           ${goodsHtml}
         </div>
