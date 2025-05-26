@@ -755,31 +755,42 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                         disabled={!messageText.trim() || sendingMessage}
                         color="primary"
                         sx={{
-                          backgroundColor: messageText.trim() && !sendingMessage ? (isDarkMode ? '#ff9f43' : '#6366f1') : 'transparent',
-                          color: messageText.trim() && !sendingMessage ? '#ffffff' : 'inherit',
+                          backgroundColor: messageText.trim() ? (isDarkMode ? '#ff9f43' : '#6366f1') : 'transparent',
+                          color: messageText.trim() ? '#ffffff' : 'inherit',
                           borderRadius: '50%',
                           width: '40px',
                           height: '40px',
+                          position: 'relative',
                           transition: 'all 0.2s ease-in-out',
                           '&:hover': {
-                            backgroundColor: messageText.trim() && !sendingMessage ? (isDarkMode ? '#f7b067' : '#5a5fcf') : 'transparent',
+                            backgroundColor: messageText.trim() && !sendingMessage ? (isDarkMode ? '#f7b067' : '#5a5fcf') : (messageText.trim() ? (isDarkMode ? '#ff9f43' : '#6366f1') : 'transparent'),
                             transform: messageText.trim() && !sendingMessage ? 'scale(1.1)' : 'none',
                           },
                           '&.Mui-disabled': {
-                            backgroundColor: 'transparent',
-                            color: 'rgba(255, 255, 255, 0.3)',
+                            backgroundColor: messageText.trim() ? (isDarkMode ? '#ff9f43' : '#6366f1') : 'transparent',
+                            color: messageText.trim() ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',
                           },
                         }}
                       >
-                        {sendingMessage ? (
+                        <SendIcon 
+                          sx={{
+                            transition: 'all 0.2s ease-in-out',
+                            opacity: sendingMessage ? 0.7 : 1,
+                            transform: sendingMessage ? 'scale(0.9)' : 'scale(1)',
+                          }}
+                        />
+                        {sendingMessage && (
                           <CircularProgress 
-                            size={20} 
+                            size={36} 
+                            thickness={2}
                             sx={{ 
-                              color: isDarkMode ? '#ff9f43' : '#6366f1' 
+                              color: 'rgba(255, 255, 255, 0.8)',
+                              position: 'absolute',
+                              top: '2px',
+                              left: '2px',
+                              zIndex: 1,
                             }} 
                           />
-                        ) : (
-                          <SendIcon />
                         )}
                       </IconButton>
                     </InputAdornment>
