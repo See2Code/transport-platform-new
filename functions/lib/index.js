@@ -1004,6 +1004,7 @@ function generateOrderHtml(orderData, settings, carrierData, dispatcherData) {
             <strong>Nakládka ${index + 1}</strong>
             <span class="place-date">${dateTimeStr} (${timeStr})</span>
           </div>
+          ${place.companyName ? `<p class="place-company"><strong>Spoločnosť:</strong> ${safeText(place.companyName)}</p>` : ''}
           <p class="place-address">${safeText(formatAddress(place.street, place.city, place.zip, place.country))}</p>
           <div class="place-details">
             <span><strong>Referenčné číslo:</strong> ${safeText(refNumber)}</span>
@@ -1037,6 +1038,7 @@ function generateOrderHtml(orderData, settings, carrierData, dispatcherData) {
             <strong>Vykládka ${index + 1}</strong>
             <span class="place-date">${dateTimeStr} (${timeStr})</span>
           </div>
+          ${place.companyName ? `<p class="place-company"><strong>Spoločnosť:</strong> ${safeText(place.companyName)}</p>` : ''}
           <p class="place-address">${safeText(formatAddress(place.street, place.city, place.zip, place.country))}</p>
           <div class="place-details">
             <span><strong>Referenčné číslo:</strong> ${safeText(refNumber)}</span>
@@ -1175,6 +1177,12 @@ function generateOrderHtml(orderData, settings, carrierData, dispatcherData) {
         .place-date {
           color: #666;
           font-size: 9px;
+        }
+        .place-company {
+          margin: 3px 0;
+          font-weight: bold;
+          color: #2c3e50;
+          font-size: 10px;
         }
         .place-address {
           margin: 3px 0;
