@@ -47,28 +47,33 @@ const AcceptInvitation: React.FC = () => {
       }
 
       try {
-        console.log('Načítavam pozvánku s ID:', invitationId);
+        setError(''); // Reset chyby na začiatku načítavania
+        console.log('🔄 Načítavam pozvánku s ID:', invitationId);
+        
         const invitationRef = doc(db, 'invitations', invitationId);
         const invitationDoc = await getDoc(invitationRef);
         
         if (!invitationDoc.exists()) {
-          console.error('Pozvánka neexistuje:', invitationId);
-          setError('Pozvánka nebola nájdená.');
+          console.error('❌ Pozvánka neexistuje:', invitationId);
+          setError('Pozvánka nebola nájdená alebo už nie je platná.');
+          setLoading(false);
           return;
         }
 
         const invitationData = invitationDoc.data();
-        console.log('Načítané dáta pozvánky:', invitationData);
+        console.log('✅ Načítané dáta pozvánky:', invitationData);
 
         if (invitationData.status !== 'pending') {
-          console.error('Pozvánka už nie je aktívna:', invitationData.status);
-          setError('Pozvánka už nie je aktívna.');
+          console.error('❌ Pozvánka už nie je aktívna:', invitationData.status);
+          setError('Pozvánka už nie je aktívna alebo bola použitá.');
+          setLoading(false);
           return;
         }
 
         if (!invitationData.companyID) {
-          console.error('Pozvánka nemá nastavené companyID:', invitationData);
+          console.error('❌ Pozvánka nemá nastavené companyID:', invitationData);
           setError('Chýbajúce údaje pozvánky.');
+          setLoading(false);
           return;
         }
 
@@ -85,15 +90,30 @@ const AcceptInvitation: React.FC = () => {
           invitedAt: invitationData.invitedAt,
           createdAt: invitationData.createdAt?.toDate?.() || new Date()
         });
-        setLoading(false);
+        
+        // Úspešne načítané - reset error stavu
+        setError('');
+        console.log('✅ Pozvánka úspešne načítaná a validovaná');
+        
       } catch (err: any) {
-        console.error('Chyba pri načítaní pozvánky:', err);
+        console.error('❌ Chyba pri načítaní pozvánky:', err);
         console.error('Detaily chyby:', {
           code: err.code,
           message: err.message,
           stack: err.stack
         });
-        setError('Nepodarilo sa načítať pozvánku. Prosím skúste to znova.');
+        
+        // Detailnejšie error handling
+        let errorMessage = 'Nepodarilo sa načítať pozvánku. Prosím skúste to znova.';
+        
+        if (err.code === 'permission-denied') {
+          errorMessage = 'Nemáte oprávnenie na prístup k tejto pozvánke.';
+        } else if (err.code === 'unavailable') {
+          errorMessage = 'Služba je momentálne nedostupná. Skúste to prosím neskôr.';
+        }
+        
+        setError(errorMessage);
+      } finally {
         setLoading(false);
       }
     };
@@ -109,21 +129,30 @@ const AcceptInvitation: React.FC = () => {
       return;
     }
 
+    if (password.length < 6) {
+      setError('Heslo musí mať aspoň 6 znakov');
+      return;
+    }
+
     if (!invitation) {
       setError('Chýbajúce údaje pozvánky.');
       return;
     }
 
-    setError('');
+    setError(''); // Reset chyby na začiatku registrácie
     setSubmitting(true);
 
     try {
+      console.log('🔄 Začínam registráciu používateľa...');
+      
       // Vytvorenie používateľa v Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         invitation.email,
         password
       );
+
+      console.log('✅ Používateľ vytvorený v Firebase Auth');
 
       // Vytvorenie používateľa v kolekcii users
       await setDoc(doc(db, 'users', userCredential.user.uid), {
@@ -138,6 +167,8 @@ const AcceptInvitation: React.FC = () => {
         createdAt: new Date().toISOString()
       });
 
+      console.log('✅ Používateľský profil uložený do Firestore');
+
       // Aktualizácia stavu pozvánky
       await updateDoc(doc(db, 'invitations', invitationId!), {
         status: 'accepted',
@@ -145,11 +176,32 @@ const AcceptInvitation: React.FC = () => {
         userId: userCredential.user.uid
       });
 
-      // Presmerovanie na dashboard
-      navigate('/dashboard');
+      console.log('✅ Pozvánka označená ako akceptovaná');
+      console.log('🎉 Registrácia úspešne dokončená');
+
+      // Presmerovanie na login namiesto dashboard
+      navigate('/login');
     } catch (err: any) {
-      console.error('Chyba pri registrácii:', err);
-      setError(err.message || 'Nepodarilo sa dokončiť registráciu.');
+      console.error('❌ Chyba pri registrácii:', err);
+      
+      // Detailnejšie error handling
+      let errorMessage = 'Nepodarilo sa dokončiť registráciu.';
+      
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'Účet s týmto emailom už existuje. Skúste sa prihlásiť.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Neplatný formát emailu.';
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = 'Heslo je príliš slabé. Použite aspoň 6 znakov.';
+      } else if (err.code === 'permission-denied') {
+        errorMessage = 'Nemáte oprávnenie na túto akciu.';
+      } else if (err.code === 'unavailable') {
+        errorMessage = 'Služba je momentálne nedostupná. Skúste to prosím neskôr.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -197,7 +249,11 @@ const AcceptInvitation: React.FC = () => {
               label="Heslo"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                // Reset chyby keď používateľ začne písať
+                if (error) setError('');
+              }}
               margin="normal"
               required
               InputLabelProps={{
@@ -226,7 +282,11 @@ const AcceptInvitation: React.FC = () => {
               label="Potvrdenie hesla"
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                // Reset chyby keď používateľ začne písať
+                if (error) setError('');
+              }}
               margin="normal"
               required
               InputLabelProps={{

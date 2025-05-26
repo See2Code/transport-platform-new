@@ -35,33 +35,57 @@ function RegisterUser() {
   useEffect(() => {
     if (!invitationId) {
       setError('Chýba ID pozvánky');
+      setCompanyLoading(false);
       return;
     }
 
     const fetchInvitation = async () => {
       try {
+        setError(''); // Reset chyby na začiatku načítavania
+        console.log('🔄 Načítavam pozvánku s ID:', invitationId);
+        
         const invitationDoc = await getDoc(doc(db, 'invitations', invitationId));
         if (!invitationDoc.exists()) {
-          setError('Pozvánka nebola nájdená');
+          setError('Pozvánka nebola nájdená alebo už nie je platná');
+          setCompanyLoading(false);
           return;
         }
 
         const invitationData = invitationDoc.data();
+        console.log('✅ Pozvánka načítaná:', invitationData);
+        
         if (invitationData.status !== 'pending') {
-          setError('Táto pozvánka už bola použitá');
+          setError('Táto pozvánka už bola použitá alebo vypršala');
+          setCompanyLoading(false);
           return;
         }
 
         setInvitation(invitationData);
 
         // Načítanie informácií o firme
+        console.log('🔄 Načítavam údaje firmy...');
         const companyDoc = await getDoc(doc(db, 'companies', invitationData.companyID));
         if (companyDoc.exists()) {
           setCompany(companyDoc.data());
+          console.log('✅ Údaje firmy načítané');
+        } else {
+          console.warn('⚠️ Firma nebola nájdená, ale pokračujem v registrácii');
         }
-      } catch (err) {
-        console.error('Chyba pri načítaní pozvánky:', err);
-        setError('Nepodarilo sa načítať pozvánku');
+        
+        // Úspešne načítané - reset error stavu
+        setError('');
+        
+      } catch (err: any) {
+        console.error('❌ Chyba pri načítaní pozvánky:', err);
+        
+        // Detailnejšie error handling
+        if (err.code === 'permission-denied') {
+          setError('Nemáte oprávnenie na prístup k tejto pozvánke');
+        } else if (err.code === 'unavailable') {
+          setError('Služba je momentálne nedostupná. Skúste to prosím neskôr.');
+        } else {
+          setError('Nepodarilo sa načítať údaje pozvánky. Skúste obnoviť stránku.');
+        }
       } finally {
         setCompanyLoading(false);
       }
@@ -76,6 +100,11 @@ function RegisterUser() {
       ...prev,
       [name]: value
     }));
+    
+    // Reset chyby keď používateľ začne písať
+    if (error && (name === 'password' || name === 'confirmPassword')) {
+      setError('');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +127,9 @@ function RegisterUser() {
 
     try {
       setLoading(true);
-      setError('');
+      setError(''); // Reset chyby na začiatku registrácie
+      
+      console.log('🔄 Začínam registráciu používateľa...');
 
       // Vytvorenie používateľa v Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
@@ -106,6 +137,8 @@ function RegisterUser() {
         invitation.email,
         formData.password
       );
+
+      console.log('✅ Používateľ vytvorený v Firebase Auth');
 
       // Vytvorenie používateľského profilu v Firestore
       const userData = {
@@ -123,6 +156,7 @@ function RegisterUser() {
 
       // Uloženie užívateľa do Firestore s rovnakým ID ako v Auth
       await setDoc(doc(db, 'users', userCredential.user.uid), userData);
+      console.log('✅ Používateľský profil uložený do Firestore');
 
       // Aktualizácia pozvánky
       await updateDoc(doc(db, 'invitations', invitationId), {
@@ -130,14 +164,35 @@ function RegisterUser() {
         userId: userCredential.user.uid,
         acceptedAt: Timestamp.now()
       });
+      console.log('✅ Pozvánka označená ako akceptovaná');
 
+      console.log('🎉 Registrácia úspešne dokončená');
       setRegistrationSuccess(true);
+      
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err: any) {
-      console.error('Chyba pri registrácii:', err);
-      setError(err.message || 'Nastala chyba pri registrácii');
+      console.error('❌ Chyba pri registrácii:', err);
+      
+      // Detailnejšie error handling
+      let errorMessage = 'Nastala chyba pri registrácii';
+      
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'Účet s týmto emailom už existuje. Skúste sa prihlásiť.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Neplatný formát emailu.';
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = 'Heslo je príliš slabé. Použite aspoň 6 znakov.';
+      } else if (err.code === 'permission-denied') {
+        errorMessage = 'Nemáte oprávnenie na túto akciu.';
+      } else if (err.code === 'unavailable') {
+        errorMessage = 'Služba je momentálne nedostupná. Skúste to prosím neskôr.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -349,7 +404,21 @@ function RegisterUser() {
             </Grid>
 
             {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  mt: 2,
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                  border: '1px solid rgba(244, 67, 54, 0.3)',
+                  '& .MuiAlert-icon': {
+                    color: '#f44336'
+                  },
+                  '& .MuiAlert-message': {
+                    color: '#ffffff',
+                    fontWeight: 500
+                  }
+                }}
+              >
                 {error}
               </Alert>
             )}
