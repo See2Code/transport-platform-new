@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -108,6 +108,26 @@ function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  // useEffect pre automatický redirect po úspešnej registrácii
+  useEffect(() => {
+    if (registrationSuccess && redirectCountdown > 0) {
+      const timer = setInterval(() => {
+        setRedirectCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate('/login');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [registrationSuccess, redirectCountdown, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -154,13 +174,18 @@ function Register() {
       setLoading(true);
       setError('');
 
+      console.log('🔄 Začínam registráciu novej firmy...');
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         formData.email,
         formData.password
       );
 
+      console.log('✅ Používateľ vytvorený v Firebase Auth');
+
       const companyID = generateCompanyID(formData.companyName);
+      console.log('🏢 Vygenerované Company ID:', companyID);
 
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         uid: userCredential.user.uid,
@@ -176,6 +201,8 @@ function Register() {
         status: 'active'
       });
 
+      console.log('👤 Používateľský profil uložený do Firestore');
+
       await setDoc(doc(db, 'companies', companyID), {
         companyName: formData.companyName,
         street: formData.street,
@@ -187,14 +214,35 @@ function Register() {
         createdAt: new Date().toISOString()
       });
 
+      console.log('🏢 Firma uložená do Firestore');
+
       setFormData(prev => ({
         ...prev,
         companyID
       }));
-      setRegistrationSuccess(true);
+
+      // Krátky delay pre lepší UX
+      setTimeout(() => {
+        console.log('🎉 Registrácia úspešne dokončená');
+        setRegistrationSuccess(true);
+      }, 500);
+
     } catch (err: any) {
-      console.error('Chyba pri registrácii:', err);
-      setError(err.message || 'Nastala chyba pri registrácii');
+      console.error('❌ Chyba pri registrácii:', err);
+      let errorMessage = 'Nastala chyba pri registrácii';
+      
+      // Špecifické chybové hlášky
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'Email je už používaný. Skúste sa prihlásiť alebo použite iný email.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Neplatný formát emailu.';
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = 'Heslo je príliš slabé. Použite aspoň 6 znakov.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -202,6 +250,16 @@ function Register() {
 
   const handleClose = () => {
     navigate('/');
+  };
+
+  const handleCopyCompanyId = async () => {
+    try {
+      await navigator.clipboard.writeText(formData.companyID);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Nepodarilo sa skopírovať Company ID:', err);
+    }
   };
 
   if (registrationSuccess) {
@@ -269,7 +327,7 @@ function Register() {
             </IconButton>
 
             <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: '#ff9f43' }}>
-              Registrácia úspešná!
+              🎉 Registrácia úspešná!
             </Typography>
 
             <Alert 
@@ -277,43 +335,144 @@ function Register() {
               sx={{ 
                 mb: 3,
                 '& .MuiAlert-icon': {
-                  color: '#ff9f43'
+                  color: '#4caf50'
                 },
                 '& .MuiAlert-message': {
-                  color: '#ff9f43'
+                  color: isDarkMode ? '#ffffff' : '#000000'
                 },
-                backgroundColor: 'rgba(255, 159, 67, 0.1)',
+                backgroundColor: isDarkMode ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+                border: '1px solid rgba(76, 175, 80, 0.2)'
               }}
             >
-              Vaša firma bola úspešne zaregistrovaná.
+              <strong>Váš účet a firma boli úspešne vytvorené!</strong><br />
+              Môžete sa teraz prihlásiť a začať používať transport platformu.
             </Alert>
 
+            <Box sx={{ 
+              p: 3, 
+              mb: 3, 
+              borderRadius: '12px',
+              backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.1)' : 'rgba(255, 159, 67, 0.05)',
+              border: '1px solid rgba(255, 159, 67, 0.2)'
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ color: '#ff9f43', fontWeight: 600 }}>
+                📋 Detaily vášho účtu:
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}>
+                    Email:
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 500, color: isDarkMode ? '#ffffff' : '#000000' }}>
+                    {formData.email}
+                  </Typography>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}>
+                    Rola:
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 500, color: '#ff9f43' }}>
+                    Administrator
+                  </Typography>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}>
+                    Firma:
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 500, color: isDarkMode ? '#ffffff' : '#000000' }}>
+                    {formData.companyName}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+
             <Typography variant="h6" gutterBottom sx={{ color: isDarkMode ? '#ffffff' : '#333333' }}>
-              Váš Company ID:
+              🏢 Váš Company ID:
             </Typography>
             <Paper 
               elevation={2} 
+              onClick={handleCopyCompanyId}
               sx={{ 
                 p: 2, 
                 mb: 3, 
-                backgroundColor: '#ff9f43',
+                backgroundColor: copySuccess ? '#4caf50' : '#ff9f43',
                 color: 'white',
                 textAlign: 'center',
                 fontSize: '1.2rem',
                 fontWeight: 'bold',
-                wordBreak: 'break-all'
+                wordBreak: 'break-all',
+                borderRadius: '8px',
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  backgroundColor: copySuccess ? '#45a049' : '#f7b067',
+                  transform: 'scale(1.02)'
+                }
               }}
             >
               {formData.companyID}
+              <Typography variant="caption" sx={{ 
+                display: 'block', 
+                mt: 1, 
+                fontSize: '0.75rem', 
+                opacity: 0.9 
+              }}>
+                {copySuccess ? '✅ Skopírované!' : '📋 Kliknite pre kopírovanie'}
+              </Typography>
             </Paper>
 
-            <Typography variant="body1" gutterBottom color="warning.main" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>
-              Prosím, uložte si tento Company ID. Budete ho potrebovať pre:
-            </Typography>
-            <Box component="ul" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>
-              <li>Správu zamestnancov</li>
-              <li>Pridávanie nových členov tímu</li>
-              <li>Administráciu vašej firmy</li>
+            <Alert 
+              severity="info" 
+              sx={{ 
+                mb: 3,
+                backgroundColor: isDarkMode ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                border: '1px solid rgba(33, 150, 243, 0.2)',
+                '& .MuiAlert-icon': {
+                  color: '#2196f3'
+                }
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                💡 <strong>Dôležité:</strong> Uložte si Company ID na bezpečné miesto!
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85rem' }}>
+                Budete ho potrebovať pre pozvanie nových zamestnancov a správu firmy.
+              </Typography>
+            </Alert>
+
+            <Box sx={{ 
+              p: 2, 
+              mb: 3, 
+              borderRadius: '8px',
+              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+              border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+              textAlign: 'center'
+            }}>
+              <Typography variant="body1" sx={{ 
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+                mb: 1
+              }}>
+                ⏱️ Automatické presmerovanie na prihlásenie o {redirectCountdown} sekúnd...
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => navigate('/login')}
+                sx={{ 
+                  borderColor: '#ff9f43',
+                  color: '#ff9f43',
+                  '&:hover': {
+                    borderColor: '#f7b067',
+                    backgroundColor: 'rgba(255, 159, 67, 0.1)'
+                  }
+                }}
+              >
+                Prihlásiť sa teraz
+              </Button>
             </Box>
 
             <Button
@@ -321,7 +480,7 @@ function Register() {
               variant="contained"
               onClick={() => navigate('/login')}
               sx={{ 
-                mt: 3,
+                mt: 2,
                 background: 'linear-gradient(45deg, #ff9f43 0%, #ffbe76 100%)',
                 color: 'white',
                 '&:hover': {
@@ -329,9 +488,11 @@ function Register() {
                 },
                 padding: '12px',
                 borderRadius: '12px',
+                fontSize: '1rem',
+                fontWeight: 600
               }}
             >
-              Prihlásiť sa
+              🚀 Pokračovať na prihlásenie
             </Button>
           </Paper>
         </Container>
@@ -408,7 +569,21 @@ function Register() {
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                backgroundColor: isDarkMode ? 'rgba(244, 67, 54, 0.1)' : 'rgba(244, 67, 54, 0.05)',
+                border: '1px solid rgba(244, 67, 54, 0.2)',
+                '& .MuiAlert-icon': {
+                  color: '#f44336'
+                },
+                '& .MuiAlert-message': {
+                  color: isDarkMode ? '#ffffff' : '#000000',
+                  fontWeight: 500
+                }
+              }}
+            >
               {error}
             </Alert>
           )}
@@ -849,16 +1024,34 @@ function Register() {
                   variant="contained"
                   disabled={loading}
                   sx={{
-                    background: 'linear-gradient(45deg, #ff9f43 0%, #ffbe76 100%)',
+                    background: loading 
+                      ? 'rgba(255, 159, 67, 0.6)' 
+                      : 'linear-gradient(45deg, #ff9f43 0%, #ffbe76 100%)',
                     color: 'white',
                     '&:hover': {
-                      background: 'linear-gradient(45deg, #f39839 0%, #f2b56e 100%)',
+                      background: loading 
+                        ? 'rgba(255, 159, 67, 0.6)' 
+                        : 'linear-gradient(45deg, #f39839 0%, #f2b56e 100%)',
+                    },
+                    '&:disabled': {
+                      background: 'rgba(255, 159, 67, 0.6)',
+                      color: 'rgba(255, 255, 255, 0.8)'
                     },
                     padding: '12px',
                     borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    position: 'relative'
                   }}
                 >
-                  {loading ? <CircularProgress size={24} sx={{ color: '#ffffff' }} /> : 'Registrovať'}
+                  {loading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={20} sx={{ color: '#ffffff' }} />
+                      <span>Vytváram účet...</span>
+                    </Box>
+                  ) : (
+                    '🚀 Registrovať firmu'
+                  )}
                 </Button>
               </Grid>
               <Grid item xs={12}>

@@ -474,7 +474,8 @@ const OrdersList: React.FC = () => {
   const [isLoadingCarriers, setIsLoadingCarriers] = useState(true);
   const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const [isLoadingDispatchers, setIsLoadingDispatchers] = useState(true);
-  const [isLoadingTeamMembers, setIsLoadingTeamMembers] = useState(true);
+  // eslint-disable-next-line
+  const [_isLoadingTeamMembers, setIsLoadingTeamMembers] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -991,7 +992,7 @@ const OrdersList: React.FC = () => {
     if (userData?.companyID) {
       fetchTeamMembers();
     }
-  }, [userData?.companyID]);
+  }, [userData?.companyID, fetchTeamMembers]);
 
   // Hlavný useEffect pre inicializáciu real-time listeners (spúšťa sa len raz keď je userData dostupné)
   useEffect(() => {
@@ -1029,7 +1030,7 @@ const OrdersList: React.FC = () => {
         unsubscribeLocations();
       }
     };
-  }, [userData?.companyID]); // Odstránil som fetchCustomers, fetchCarriers, fetchOrders, fetchLocations z dependency array
+  }, [userData?.companyID, fetchCarriers, fetchCustomers, fetchLocations, fetchOrders]);
 
   // Separátny useEffect pre fetchOrders pri zmene filtrov (startDate, endDate)
   useEffect(() => {
@@ -1047,7 +1048,7 @@ const OrdersList: React.FC = () => {
         unsubscribeOrders();
       }
     };
-  }, [startDate, endDate]); // Odstránil som userData?.companyID z dependency array aby sa zabránilo duplicite
+  }, [startDate, endDate, fetchOrders, userData?.companyID]);
 
   // useEffect pre dispatchers - spúšťa sa len pri zmene relevantných filtrov
   useEffect(() => {
@@ -1055,7 +1056,7 @@ const OrdersList: React.FC = () => {
       console.log("📊 Running fetchDispatchers due to filter change");
       fetchDispatchers();
     }
-  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]);
+  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers, fetchDispatchers]);
 
 
   // --- OSTATNÉ FUNKCIE --- 

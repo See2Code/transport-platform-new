@@ -659,7 +659,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         userData: userData
       });
     }
-  }, [open, userData?.companyID, fetchCustomers, fetchCarriers, fetchSavedData, fetchTeamMembers]);
+  }, [open, userData?.companyID, userData, fetchCustomers, fetchCarriers, fetchSavedData, fetchTeamMembers]);
 
   // Load edit data
   useEffect(() => {
