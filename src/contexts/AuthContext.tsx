@@ -195,38 +195,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           lastName: ''
         });
 
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const firestoreData = userDoc.data();
-          const newUserData: UserData = {
-            uid: user.uid,
-            email: user.email || "",
-            firstName: firestoreData.firstName || "",
-            lastName: firestoreData.lastName || "",
-            phone: firestoreData.phone,
-            companyID: firestoreData.companyID || "",
-            companyName: firestoreData.companyName,
-            role: firestoreData.role || "",
-            photoURL: firestoreData.photoURL
-          };
-          setUserData(newUserData);
-          
-          setCurrentUser(prev => ({
-            ...prev!,
-            companyID: firestoreData.companyID || "",
-            role: firestoreData.role || "",
-            firstName: firestoreData.firstName || "",
-            lastName: firestoreData.lastName || ""
-          }));
+        // Nastavíme real-time listener na používateľské údaje
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubscribeUserData = onSnapshot(userDocRef, (userDoc) => {
+          if (userDoc.exists()) {
+            const firestoreData = userDoc.data();
+            console.log('📊 AuthContext: Real-time aktualizácia používateľských údajov', firestoreData);
+            
+            const newUserData: UserData = {
+              uid: user.uid,
+              email: user.email || "",
+              firstName: firestoreData.firstName || "",
+              lastName: firestoreData.lastName || "",
+              phone: firestoreData.phone || undefined, // Konzistentné s real-time listenerom
+              companyID: firestoreData.companyID || "",
+              companyName: firestoreData.companyName,
+              role: firestoreData.role || "",
+              photoURL: firestoreData.photoURL
+            };
+            setUserData(newUserData);
+            
+            setCurrentUser(prev => ({
+              ...prev!,
+              companyID: firestoreData.companyID || "",
+              role: firestoreData.role || "",
+              firstName: firestoreData.firstName || "",
+              lastName: firestoreData.lastName || ""
+            }));
+          }
+          setLoading(false);
+        });
 
-          await manageSession(user);
-        }
+        await manageSession(user);
+
+        // Vraciame cleanup funkciu pre user data listener
+        return () => {
+          unsubscribeUserData();
+        };
       } else {
         setCurrentUser(null);
         setUserData(null);
         setCurrentSession(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -255,7 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: userCredential.user.email || "",
         firstName: firestoreData.firstName || "",
         lastName: firestoreData.lastName || "",
-        phone: firestoreData.phone,
+        phone: firestoreData.phone || undefined, // Konzistentné s real-time listenerom
         companyID: firestoreData.companyID || "",
         companyName: firestoreData.companyName,
         role: firestoreData.role || "",

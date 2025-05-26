@@ -579,13 +579,17 @@ function Settings() {
   const isDarkMode = theme.palette.mode === 'dark';
 
   // Konverzia z UserData na LocalUserData
-  const convertToLocalData = useCallback((data: UserData): LocalUserData => ({
-    ...data,
-    phone: data.phone || ""
-  }), []);
+  const convertToLocalData = useCallback((data: UserData): LocalUserData => {
+    console.log('📱 Settings: Konverzia údajov používateľa', data);
+    return {
+      ...data,
+      phone: data.phone || "" // Konvertujeme undefined na prázdny string
+    };
+  }, []);
 
   useEffect(() => {
     if (userData) {
+      console.log('🔄 Settings: Aktualizácia localUserData z userData', userData);
       setLocalUserData(convertToLocalData(userData));
       setProfileImage(userData.photoURL || '');
     }
@@ -705,14 +709,22 @@ function Settings() {
       setSuccess('');
       const userRef = doc(db, 'users', localUserData.uid);
       
+      console.log('💾 Settings: Ukladám profil používateľa', {
+        firstName: localUserData.firstName,
+        lastName: localUserData.lastName,
+        phone: localUserData.phone,
+        originalUserData: userData
+      });
+      
       // Vytvoríme objekt len s poliami, ktoré chceme aktualizovať
       const updateData = {
         firstName: localUserData.firstName,
         lastName: localUserData.lastName,
-        phone: localUserData.phone || null,
+        phone: localUserData.phone || null, // Uložíme null namiesto prázdneho stringu
         updatedAt: serverTimestamp()
       };
 
+      console.log('💾 Settings: Ukladané dáta do Firestore', updateData);
       await updateDoc(userRef, updateData);
       
       // Aktualizujeme lokálny stav s kompletným userData objektom
@@ -722,6 +734,7 @@ function Settings() {
         lastName: localUserData.lastName,
         phone: localUserData.phone || undefined
       };
+      console.log('✅ Settings: Aktualizované userData', updatedUserData);
       setUserData(updatedUserData);
       
       setSnackbar({
@@ -731,7 +744,7 @@ function Settings() {
       });
       setIsEditingProfile(false);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('❌ Settings: Chyba pri aktualizácii profilu:', error);
       setSnackbar({
         open: true,
         message: 'Chyba pri aktualizácii profilu',
