@@ -113,7 +113,9 @@ const LogoContainer = styled(Box)(() => ({
   }
 }));
 
-const LogoImage = styled('img')<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const LogoImage = styled('img', {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   width: '120px',
   height: 'auto',
   filter: isDarkMode ? 'brightness(0) invert(1)' : 'brightness(0)',
@@ -199,7 +201,9 @@ const CarouselNavButton = styled(IconButton)(({ theme }) => ({
 }));
 
 // App screenshot box
-const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, _theme }) => ({
+const ScreenshotBox = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode, _theme }) => ({
   position: 'relative',
   overflow: 'hidden',
   borderRadius: '20px',
@@ -239,7 +243,9 @@ const ScreenshotBox = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode, _theme
 }));
 
 // Feature cards
-const FeatureCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const FeatureCard = styled(Card, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   height: '100%',
   background: isDarkMode 
     ? 'rgba(28, 28, 45, 0.8)' 
@@ -269,7 +275,9 @@ const FeatureIcon = styled(Avatar)(({ _theme }) => ({
   boxShadow: '0 8px 20px rgba(255, 159, 67, 0.3)',
 }));
 
-const SectionTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const SectionTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '2.5rem',
   fontWeight: 700,
   marginBottom: '15px',
@@ -292,7 +300,9 @@ const SectionTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }
   }
 }));
 
-const SectionSubtitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const SectionSubtitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.2rem',
   fontWeight: 400,
   maxWidth: '700px',

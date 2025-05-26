@@ -1066,13 +1066,14 @@ export default function BusinessCases() {
           phases: [...currentPhases, newPhase]
         });
         
-        setCases(prevCases => 
-          prevCases.map(businessCase => 
-            businessCase.id === businessCaseId 
-              ? { ...businessCase, phases: [...(businessCase.phases || []), newPhase] }
-              : businessCase
-          )
-        );
+        // Odstránené - real-time listener automaticky aktualizuje
+        // setCases(prevCases => 
+        //   prevCases.map(businessCase => 
+        //     businessCase.id === businessCaseId 
+        //       ? { ...businessCase, phases: [...(businessCase.phases || []), newPhase] }
+        //       : businessCase
+        //   )
+        // );
         
         setSnackbar({
           open: true,
@@ -1104,13 +1105,14 @@ export default function BusinessCases() {
           phases: updatedPhases
         });
         
-        setCases(prevCases => 
-          prevCases.map(businessCase => 
-            businessCase.id === businessCaseId 
-              ? { ...businessCase, phases: updatedPhases }
-              : businessCase
-          )
-        );
+        // Odstránené - real-time listener automaticky aktualizuje
+        // setCases(prevCases => 
+        //   prevCases.map(businessCase => 
+        //     businessCase.id === businessCaseId 
+        //       ? { ...businessCase, phases: updatedPhases }
+        //       : businessCase
+        //   )
+        // );
         
         setSnackbar({
           open: true,
