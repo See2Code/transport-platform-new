@@ -134,19 +134,33 @@ const MessageBubble = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isOwn' && prop !== 'isDarkMode',
 })<{ isOwn: boolean; isDarkMode: boolean }>(({ isOwn, isDarkMode }) => ({
   maxWidth: '75%',
-  padding: '10px 16px',
-  borderRadius: '16px',
+  padding: '12px 16px',
+  borderRadius: '12px',
   marginBottom: '8px',
   wordBreak: 'break-word',
   alignSelf: isOwn ? 'flex-end' : 'flex-start',
   backgroundColor: isOwn
     ? isDarkMode
-      ? 'rgba(99, 102, 241, 0.8)'
-      : 'rgba(99, 102, 241, 0.7)'
+      ? 'rgba(99, 102, 241, 0.85)'
+      : 'rgba(99, 102, 241, 0.8)'
     : isDarkMode
     ? 'rgba(255, 255, 255, 0.1)'
-    : 'rgba(0, 0, 0, 0.05)',
+    : 'rgba(0, 0, 0, 0.06)',
   color: isOwn ? '#ffffff' : isDarkMode ? '#ffffff' : '#000000',
+  border: isOwn 
+    ? 'none'
+    : isDarkMode 
+      ? '1px solid rgba(255, 255, 255, 0.1)'
+      : '1px solid rgba(0, 0, 0, 0.1)',
+  boxShadow: isOwn 
+    ? '0 2px 8px rgba(99, 102, 241, 0.25)'
+    : isDarkMode 
+      ? '0 1px 4px rgba(0, 0, 0, 0.2)'
+      : '0 1px 4px rgba(0, 0, 0, 0.08)',
+  transition: 'transform 0.1s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-1px)',
+  }
 }));
 
 const InputContainer = styled(Box, {
@@ -205,6 +219,7 @@ const ChatDrawer = styled(Drawer)(({ theme }) => ({
     bottom: 0,
     height: '100vh',
     borderLeft: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+    borderRadius: '12px 0 0 12px',
     boxSizing: 'border-box',
     overflow: 'hidden',
     transform: 'none !important',
@@ -222,6 +237,7 @@ const ChatDrawer = styled(Drawer)(({ theme }) => ({
       width: '100%',
       height: '100dvh',
       minHeight: '100vh',
+      borderRadius: 0,
     }
   },
   '&.MuiDrawer-root': {
@@ -668,72 +684,66 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                 inputRef={inputRef}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '24px !important',
-                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05) !important' : 'rgba(0,0,0,0.03) !important',
-                    border: 'none !important',
+                    borderRadius: '12px !important',
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.15) !important' : 'rgba(0,0,0,0.08) !important',
+                    border: `2px solid ${isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'} !important`,
                     outline: 'none !important',
                     boxShadow: 'none !important',
-                    overflow: 'hidden !important',
+                    overflow: 'visible !important',
+                    transition: 'all 0.2s ease-in-out',
+                    minHeight: '52px !important',
+                    alignItems: 'center !important',
                     '& fieldset': {
                       border: 'none !important',
                       outline: 'none !important',
                       display: 'none !important',
                     },
-                    '&:hover fieldset': {
-                      border: 'none !important',
-                      outline: 'none !important',
-                      display: 'none !important',
-                    },
-                    '&.Mui-focused fieldset': {
-                      border: `2px solid ${isDarkMode ? '#ff9f43' : '#6366f1'} !important`,
-                      outline: 'none !important',
-                      display: 'block !important',
-                      borderRadius: '24px !important',
-                      boxShadow: `0 0 8px ${isDarkMode ? 'rgba(255, 159, 67, 0.3)' : 'rgba(99, 102, 241, 0.3)'} !important`,
+                    '&:hover': {
+                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.18) !important' : 'rgba(0,0,0,0.1) !important',
+                      border: `2px solid ${isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'} !important`,
                     },
                     '&.Mui-focused': {
-                      border: 'none !important',
-                      '& fieldset': {
-                        border: `2px solid ${isDarkMode ? '#ff9f43' : '#6366f1'} !important`,
-                        borderRadius: '24px !important',
-                        display: 'block !important',
-                      }
-                    }
+                      border: `2px solid ${isDarkMode ? '#ff9f43' : '#6366f1'} !important`,
+                      backgroundColor: isDarkMode ? 'rgba(255,255,255,0.22) !important' : 'rgba(0,0,0,0.06) !important',
+                      boxShadow: `0 0 0 3px ${isDarkMode ? 'rgba(255, 159, 67, 0.2)' : 'rgba(99, 102, 241, 0.2)'} !important`,
+                    },
                   },
                   '& .MuiInputBase-root': {
                     border: 'none !important',
                     outline: 'none !important',
-                    borderRadius: '24px !important',
+                    borderRadius: '12px !important',
                     backgroundColor: 'transparent !important',
+                    minHeight: '52px !important',
+                    padding: '0 !important',
                   },
                   '& .MuiOutlinedInput-notchedOutline': {
                     border: 'none !important',
                     display: 'none !important',
                   },
                   '& .MuiInputBase-input': {
-                    borderRadius: '24px !important',
+                    borderRadius: '12px !important',
                     backgroundColor: 'transparent !important',
+                    color: isDarkMode ? '#ffffff !important' : '#000000 !important',
+                    caretColor: isDarkMode ? '#ff9f43 !important' : '#6366f1 !important',
+                    fontSize: '16px !important',
+                    fontWeight: '400 !important',
+                    minHeight: '24px !important',
+                    padding: '14px 16px !important',
+                    lineHeight: '1.4 !important',
+                    '&::placeholder': {
+                      color: isDarkMode ? 'rgba(255,255,255,0.6) !important' : 'rgba(0,0,0,0.6) !important',
+                      opacity: '1 !important',
+                    },
+                    '&:focus': {
+                      caretColor: isDarkMode ? '#ff9f43 !important' : '#6366f1 !important',
+                      color: isDarkMode ? '#ffffff !important' : '#000000 !important',
+                    },
+                    '&:empty': {
+                      caretColor: isDarkMode ? '#ff9f43 !important' : '#6366f1 !important',
+                    }
                   }
                 }}
                 InputProps={{
-                  sx: {
-                    border: 'none !important',
-                    outline: 'none !important',
-                    borderRadius: '24px !important',
-                    backgroundColor: 'transparent !important',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      border: 'none !important',
-                      display: 'none !important',
-                    },
-                    '&.Mui-focused': {
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        border: `2px solid ${isDarkMode ? '#ff9f43' : '#6366f1'} !important`,
-                        borderRadius: '24px !important',
-                        display: 'block !important',
-                        boxShadow: `0 0 8px ${isDarkMode ? 'rgba(255, 159, 67, 0.3)' : 'rgba(99, 102, 241, 0.3)'} !important`,
-                      }
-                    }
-                  },
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton 
@@ -804,10 +814,28 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                 focused={!searchTerm && open}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderWidth: 2,
-                    borderColor: 'primary.main',
-                    boxShadow: '0 0 5px rgba(99, 102, 241, 0.3)',
-                    transition: 'all 0.2s ease-in-out'
+                    borderRadius: '12px !important',
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05) !important' : 'rgba(0,0,0,0.03) !important',
+                    transition: 'all 0.2s ease-in-out',
+                    '& fieldset': {
+                      borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      borderRadius: '12px !important',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderWidth: 2,
+                      borderColor: '#6366f1',
+                      boxShadow: '0 0 8px rgba(99, 102, 241, 0.3)',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: isDarkMode ? '#ffffff !important' : '#000000 !important',
+                    caretColor: isDarkMode ? '#ff9f43 !important' : '#6366f1 !important',
+                    '&::placeholder': {
+                      color: isDarkMode ? 'rgba(255,255,255,0.5) !important' : 'rgba(0,0,0,0.5) !important',
+                    },
                   }
                 }}
                 InputProps={{
@@ -833,17 +861,43 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                     maxHeight: '300px', 
                     overflow: 'auto',
                     bgcolor: isDarkMode ? 'rgba(45, 45, 60, 0.95)' : 'white',
+                    borderRadius: '12px',
                     transition: `all ${TRANSITION_DURATION} ease-in-out`,
                     visibility: open ? 'visible' : 'hidden',
                     opacity: open ? 1 : 0,
                     position: 'relative',
-                    zIndex: 10
+                    zIndex: 10,
+                    '&::-webkit-scrollbar': {
+                      width: '6px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: 'transparent',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: 'rgba(255, 159, 67, 0.3)',
+                      borderRadius: '3px',
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                      background: 'rgba(255, 159, 67, 0.5)',
+                    }
                   }}
                 >
                   {searchedUsers.length > 0 ? (
                     <List dense>
                       {searchedUsers.map((user) => (
-                        <ListItem button key={user.uid} onClick={() => handleStartConversation(user)}>
+                        <ListItem 
+                          button 
+                          key={user.uid} 
+                          onClick={() => handleStartConversation(user)}
+                          sx={{
+                            borderRadius: '8px',
+                            mx: 1,
+                            my: 0.5,
+                            '&:hover': {
+                              backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                            }
+                          }}
+                        >
                           <ListItemAvatar>
                             <Avatar src={user.photoURL}>
                               {(user.firstName?.charAt(0) || '') + (user.lastName?.charAt(0) || '')}
@@ -931,7 +985,16 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                         bgcolor: hasUnread 
                           ? (isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)')
                           : 'transparent',
-                        borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+                        borderRadius: '12px',
+                        mx: 1,
+                        my: 0.5,
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          bgcolor: hasUnread 
+                            ? (isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)')
+                            : (isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'),
+                          transform: 'translateX(4px)',
+                        }
                       }}
                     >
                       <ListItemAvatar>
