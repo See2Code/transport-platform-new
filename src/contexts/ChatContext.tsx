@@ -58,6 +58,7 @@ interface ChatContextType {
   searchedUsers: ChatUser[];
   loadingConversations: boolean;
   loadingMessages: boolean;
+  sendingMessage: boolean;
   searchUsersByName: (query: string) => Promise<void>;
   searchUsersByEmail: (query: string) => Promise<void>;
   createConversation: (userId: string) => Promise<string>;
@@ -88,6 +89,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [searchedUsers, setSearchedUsers] = useState<ChatUser[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const [unreadConversationsCount, setUnreadConversationsCount] = useState(0);
   const [hasNewMessages, setHasNewMessages] = useState(false);
 
@@ -526,8 +528,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Odoslanie novej správy - teraz len lokálne pridanie, backend sa rieši cez Firebase Functions
   const sendMessage = async (text: string): Promise<void> => {
-    if (!text.trim() || !currentConversation || !userData?.uid) return;
+    if (!text.trim() || !currentConversation || !userData?.uid || sendingMessage) return;
 
+    setSendingMessage(true);
     try {
       console.log(`Odosielam správu do konverzácie ${currentConversation.id}: "${text}"`);
       
@@ -544,6 +547,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Chyba pri odosielaní správy:', error);
       throw new Error('Nepodarilo sa odoslať správu');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -561,6 +566,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     searchedUsers,
     loadingConversations,
     loadingMessages,
+    sendingMessage,
     searchUsersByName,
     searchUsersByEmail,
     createConversation,

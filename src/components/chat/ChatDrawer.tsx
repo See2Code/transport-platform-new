@@ -274,6 +274,7 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
     searchedUsers,
     loadingConversations,
     loadingMessages,
+    sendingMessage,
     searchUsersByName,
     searchUsersByEmail,
     createConversation,
@@ -445,21 +446,24 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
 
   // Send a message
   const handleSendMessage = async () => {
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || sendingMessage) return;
+    
+    const messageToSend = messageText.trim();
     
     try {
-      await sendMessage(messageText);
+      await sendMessage(messageToSend);
       setMessageText('');
       // Vždy scrollneme na spodok po odoslaní vlastnej správy
       scrollToBottom(true);
     } catch (error) {
       console.error('Error sending message:', error);
+      // Správa zostane v inpute ak sa odosielanie nepodarí
     }
   };
 
   // Handle message input keypress (send on Enter)
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !sendingMessage) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -748,18 +752,18 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                     <InputAdornment position="end">
                       <IconButton 
                         onClick={handleSendMessage}
-                        disabled={!messageText.trim()}
+                        disabled={!messageText.trim() || sendingMessage}
                         color="primary"
                         sx={{
-                          backgroundColor: messageText.trim() ? (isDarkMode ? '#ff9f43' : '#6366f1') : 'transparent',
-                          color: messageText.trim() ? '#ffffff' : 'inherit',
+                          backgroundColor: messageText.trim() && !sendingMessage ? (isDarkMode ? '#ff9f43' : '#6366f1') : 'transparent',
+                          color: messageText.trim() && !sendingMessage ? '#ffffff' : 'inherit',
                           borderRadius: '50%',
                           width: '40px',
                           height: '40px',
                           transition: 'all 0.2s ease-in-out',
                           '&:hover': {
-                            backgroundColor: messageText.trim() ? (isDarkMode ? '#f7b067' : '#5a5fcf') : 'transparent',
-                            transform: messageText.trim() ? 'scale(1.1)' : 'none',
+                            backgroundColor: messageText.trim() && !sendingMessage ? (isDarkMode ? '#f7b067' : '#5a5fcf') : 'transparent',
+                            transform: messageText.trim() && !sendingMessage ? 'scale(1.1)' : 'none',
                           },
                           '&.Mui-disabled': {
                             backgroundColor: 'transparent',
@@ -767,7 +771,16 @@ const ChatDrawerComponent: React.FC<ChatDrawerProps> = ({ open, onClose }) => {
                           },
                         }}
                       >
-                        <SendIcon />
+                        {sendingMessage ? (
+                          <CircularProgress 
+                            size={20} 
+                            sx={{ 
+                              color: isDarkMode ? '#ff9f43' : '#6366f1' 
+                            }} 
+                          />
+                        ) : (
+                          <SendIcon />
+                        )}
                       </IconButton>
                     </InputAdornment>
                   ),
