@@ -89,8 +89,7 @@ const OrderRatingDialog: React.FC<OrderRatingDialogProps> = ({
     const [customerCommunication, setCustomerCommunication] = useState<number>(order.rating?.customerCommunication || 0);
     const [customerOverallSatisfaction, setCustomerOverallSatisfaction] = useState<number>(order.rating?.customerOverallSatisfaction || 0);
     
-    // Celkové hodnotenie prepravy
-    const [overallTransportRating, setOverallTransportRating] = useState<number>(order.rating?.overallTransportRating || 0);
+    // Celkové hodnotenie prepravy - vypočíta sa automaticky
     const [notes, setNotes] = useState<string>(order.rating?.notes || '');
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -103,12 +102,15 @@ const OrderRatingDialog: React.FC<OrderRatingDialogProps> = ({
             setCustomerPaymentReliability(order.rating.customerPaymentReliability || 0);
             setCustomerCommunication(order.rating.customerCommunication || 0);
             setCustomerOverallSatisfaction(order.rating.customerOverallSatisfaction || 0);
-            setOverallTransportRating(order.rating.overallTransportRating || 0);
             setNotes(order.rating.notes || '');
         }
     }, [order]);
 
     const handleSubmit = () => {
+        const carrierAverageRating = (carrierReliability + carrierCommunication + carrierServiceQuality + carrierTimeManagement) / 4;
+        const customerAverageRating = (customerPaymentReliability + customerCommunication + customerOverallSatisfaction) / 3;
+        const overallTransportRating = (carrierAverageRating + customerAverageRating) / 2;
+        
         const rating: OrderRating = {
             carrierReliability,
             carrierCommunication,
@@ -121,8 +123,8 @@ const OrderRatingDialog: React.FC<OrderRatingDialogProps> = ({
             notes,
             lastUpdated: Timestamp.now(),
             ratedBy: userData?.uid || 'unknown',
-            carrierAverageRating: (carrierReliability + carrierCommunication + carrierServiceQuality + carrierTimeManagement) / 4,
-            customerAverageRating: (customerPaymentReliability + customerCommunication + customerOverallSatisfaction) / 3
+            carrierAverageRating,
+            customerAverageRating
         };
         
         onSubmit(rating);
@@ -135,6 +137,7 @@ const OrderRatingDialog: React.FC<OrderRatingDialogProps> = ({
 
     const averageCarrierRating = (carrierReliability + carrierCommunication + carrierServiceQuality + carrierTimeManagement) / 4;
     const averageCustomerRating = (customerPaymentReliability + customerCommunication + customerOverallSatisfaction) / 3;
+    const overallTransportRating = (averageCarrierRating + averageCustomerRating) / 2;
 
     return (
         <Dialog
@@ -351,15 +354,23 @@ const OrderRatingDialog: React.FC<OrderRatingDialogProps> = ({
                         backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.15)' : 'rgba(255, 159, 67, 0.1)',
                         border: `2px solid #ff9f43`,
                     }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                             <StarIcon sx={{ color: '#ff9f43' }} />
                             <Typography variant="h6" sx={{ fontWeight: 600 }}>
                                 Celkové hodnotenie prepravy
                             </Typography>
+                            {overallTransportRating > 0 && (
+                                <Typography variant="body2" sx={{ ml: 1, color: '#ff9f43', fontWeight: 600 }}>
+                                    ⭐ {overallTransportRating.toFixed(1)}
+                                </Typography>
+                            )}
                         </Box>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2, fontStyle: 'italic' }}>
+                            Automaticky vypočítané ako priemer hodnotenia dopravcu a zákazníka
+                        </Typography>
                         <StyledRating
                             value={overallTransportRating}
-                            onChange={(_event: React.SyntheticEvent, newValue: number | null) => setOverallTransportRating(newValue || 0)}
+                            readOnly
                             size="large"
                             icon={<StarIcon fontSize="inherit" />}
                             emptyIcon={<StarIcon fontSize="inherit" />}

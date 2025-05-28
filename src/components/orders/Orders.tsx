@@ -228,6 +228,7 @@ interface OrderFormData extends BaseOrderFormData {
     reminderDateTime?: Date | null;
     companyID?: string;
     createdBy?: string;
+    rating?: OrderRating; // Explicitne pridám rating pole
 }
 
 const convertToDate = (dateTime: any): Date | null => {
@@ -451,7 +452,8 @@ const OrderRow = React.memo<OrderRowProps>(({
     prevOrder.loadingPlaces?.[0]?.city === nextOrder.loadingPlaces?.[0]?.city &&
     prevOrder.unloadingPlaces?.[0]?.city === nextOrder.unloadingPlaces?.[0]?.city &&
     prevOrder.loadingPlaces?.[0]?.goods?.[0]?.name === nextOrder.loadingPlaces?.[0]?.goods?.[0]?.name &&
-    (prevOrder as any).createdByName === (nextOrder as any).createdByName
+    (prevOrder as any).createdByName === (nextOrder as any).createdByName &&
+    JSON.stringify(prevOrder.rating || {}) === JSON.stringify(nextOrder.rating || {}) // Pridám porovnanie rating
   );
 });
 
@@ -776,6 +778,7 @@ const OrdersList: React.FC = () => {
             carrierVehicleReg: data.carrierVehicleReg || '', 
             carrierPrice: data.carrierPrice || '', 
             reminderDateTime: convertToDate(data.reminderDateTime),
+            rating: data.rating || null, // Pridám rating pole
           };
           
           (order as any).zakaznik = data.zakaznik || data.customerCompany || '';
@@ -807,7 +810,8 @@ const OrdersList: React.FC = () => {
                   prevOrder.carrierPrice !== newOrder.carrierPrice ||
                   (prevOrder as any).orderNumberFormatted !== (newOrder as any).orderNumberFormatted ||
                   prevOrder.loadingPlaces?.[0]?.city !== newOrder.loadingPlaces?.[0]?.city ||
-                  prevOrder.unloadingPlaces?.[0]?.city !== newOrder.unloadingPlaces?.[0]?.city
+                  prevOrder.unloadingPlaces?.[0]?.city !== newOrder.unloadingPlaces?.[0]?.city ||
+                  JSON.stringify(prevOrder.rating || {}) !== JSON.stringify(newOrder.rating || {}) // Pridám porovnanie rating
                 );
               });
               
@@ -1761,9 +1765,23 @@ const OrdersList: React.FC = () => {
       await updateDoc(orderRef, {
         rating: rating
       });
+      
+      // Aktualizuj lokálny state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === selectedOrderForRating.id 
+            ? { ...order, rating: rating }
+            : order
+        )
+      );
+      
+      // Zatvor dialóg
+      handleCloseOrderRating();
+      
       console.log('✅ Hodnotenie objednávky uložené úspešne');
     } catch (error) {
       console.error('❌ Chyba pri ukladaní hodnotenia objednávky:', error);
+      alert('Nastala chyba pri ukladaní hodnotenia: ' + (error as Error).message);
     }
   };
 
