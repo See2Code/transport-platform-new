@@ -38,6 +38,7 @@ import ImageCropper from '../common/ImageCropper';
 import { UserData } from '../../contexts/AuthContext';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useTheme } from '@mui/material/styles';
+import TransportNotesCard from './TransportNotesCard';
 
 interface CompanyData {
   id: string;
@@ -1235,9 +1236,15 @@ function Settings() {
             </FormSection>
           </SettingsCard>
         </Grid>
-      </SettingsGrid>
 
-      <Grid container spacing={3}>
+        {/* Transport Notes Card - len pre administrátorov */}
+        {isAdmin && (
+          <Grid item xs={12}>
+            <TransportNotesCard companyID={userData?.companyID || ''} />
+          </Grid>
+        )}
+
+        {/* Súčasné karty na fotky/loga */}
         <Grid item xs={12} md={6}>
           <SettingsCard isDarkMode={isDarkMode}>
             <CardHeader>
@@ -1335,7 +1342,7 @@ function Settings() {
             </UploadSection>
           </SettingsCard>
         </Grid>
-      </Grid>
+      </SettingsGrid>
 
       {/* Image Croppers */}
       <ImageCropper

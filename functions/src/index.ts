@@ -809,6 +809,31 @@ const formatAddress = (street?: string, city?: string, zip?: string, country?: s
   ].filter(Boolean).join(', ');
 };
 
+// Funkcia pre načítanie poznámok k prepravám
+const getTransportNotes = async (companyID: string): Promise<{ sk?: any, en?: any, de?: any, cs?: any }> => {
+  try {
+    const db = admin.firestore();
+    const notesSnapshot = await db.collection('transportNotes')
+      .where('companyID', '==', companyID)
+      .where('isActive', '==', true)
+      .get();
+    
+    const notes: { [key: string]: any } = {};
+    notesSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      notes[data.language] = {
+        title: data.title,
+        content: data.content
+      };
+    });
+    
+    return notes;
+  } catch (error) {
+    console.error('Chyba pri načítaní poznámok k prepravám:', error);
+    return {};
+  }
+};
+
 // Funkcia na generovanie PDF
 export const generateOrderPdf = functions
   .region(REGION)
@@ -993,8 +1018,12 @@ export const generateOrderPdf = functions
         console.error('Chyba pri načítaní nastavení spoločnosti:', error);
       }
 
+      // Načítanie poznámok k prepravám
+      const transportNotes = await getTransportNotes(orderData.companyID);
+      console.log('Načítané poznámky k prepravám:', Object.keys(transportNotes));
+
       // Generovanie kompletného HTML pre PDF - verzia pre dopravcu
-      const htmlContent = generateOrderHtml(orderData, companySettings, carrierData, dispatcherData);
+      const htmlContent = generateOrderHtml(orderData, companySettings, carrierData, dispatcherData, transportNotes);
 
       console.log('Spustenie prehliadača pomocou chrome-aws-lambda');
       
@@ -1041,7 +1070,7 @@ export const generateOrderPdf = functions
   });
 
 // Funkcia pre generovanie HTML šablóny objednávky
-function generateOrderHtml(orderData: any, settings: any, carrierData: any, dispatcherData: any): string {
+function generateOrderHtml(orderData: any, settings: any, carrierData: any, dispatcherData: any, transportNotes: any): string {
   const orderNumber = orderData.orderNumberFormatted || (orderData.id?.substring(0, 8) || 'N/A');
   const createdAtDate = formatDate(orderData.createdAt);
   
@@ -1262,6 +1291,27 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           margin: 3px 0;
           line-height: 1.3;
         }
+        .transport-notes-box {
+          background-color: #f9f9f9;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          padding: 12px;
+          width: 100%;
+          font-size: 10px;
+          margin-bottom: 10px;
+        }
+        .transport-notes-box h3 {
+          margin-top: 0;
+          margin-bottom: 8px;
+          color: #333;
+          font-size: 12px;
+          border-bottom: 1px solid #ddd;
+          padding-bottom: 4px;
+        }
+        .transport-notes-box p {
+          margin: 3px 0;
+          line-height: 1.3;
+        }
         .transport-section {
           margin: 15px 0;
         }
@@ -1426,6 +1476,22 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
             ${orderData.carrierPrice ? `${safeText(orderData.carrierPrice)} €` : 'Podľa zmluvy s dopravcom'}
           </div>
         </div>
+
+        <!-- Transport Notes -->
+        ${Object.keys(transportNotes).length > 0 ? `
+        <div class="transport-section">
+          <div class="section-title">Poznámky k preprave</div>
+          ${Object.entries(transportNotes).map(([language, note]) => {
+            const noteData = note as { title: string; content: string };
+            return `
+              <div class="transport-notes-box">
+                <h3>${safeText(noteData.title)}</h3>
+                <p style="white-space: pre-wrap; line-height: 1.4;">${safeText(noteData.content)}</p>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        ` : ''}
 
         <!-- Footer -->
         <div class="footer">
