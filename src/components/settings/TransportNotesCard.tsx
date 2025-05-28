@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -12,7 +12,8 @@ import {
   CircularProgress,
   Paper,
   Collapse,
-  Grid
+  Tabs,
+  Tab
 } from '@mui/material';
 import { 
   Save as SaveIcon, 
@@ -39,10 +40,10 @@ import { db } from '../../firebase';
 
 // Použijem SVG vlajky z flagcdn.com ako v ostatných komponentoch
 const SUPPORTED_LANGUAGES = [
-  { code: 'sk', name: 'Slovenčina', flag: 'https://flagcdn.com/sk.svg' },
-  { code: 'en', name: 'Angličtina', flag: 'https://flagcdn.com/gb.svg' },
-  { code: 'de', name: 'Nemčina', flag: 'https://flagcdn.com/de.svg' },
-  { code: 'cs', name: 'Čeština', flag: 'https://flagcdn.com/cz.svg' }
+  { code: 'sk', name: 'Slovensky', flag: 'https://flagcdn.com/sk.svg' },
+  { code: 'en', name: 'Anglicky', flag: 'https://flagcdn.com/gb.svg' },
+  { code: 'de', name: 'Nemecky', flag: 'https://flagcdn.com/de.svg' },
+  { code: 'cs', name: 'Česky', flag: 'https://flagcdn.com/cz.svg' }
 ] as const;
 
 interface TransportNotesCardProps {
@@ -58,6 +59,10 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
   const [error, setError] = useState('');
   const [notes, setNotes] = useState<Map<string, TransportNotesFormData>>(new Map());
   const [editingLanguage, setEditingLanguage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('sk'); // Aktívny jazyk
+  
+  // Ref pre editačný formulár
+  const editFormRef = useRef<HTMLDivElement>(null);
 
   // Načítanie poznámok pre všetky jazyky
   const loadTransportNotes = useCallback(async () => {
@@ -111,71 +116,82 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
   }, [companyID, loadTransportNotes]);
 
   const handleSave = async (language: string) => {
-    if (!userData) {
-      setError('Nie ste prihlásený');
-      return;
-    }
-
     setSaving(language);
-    setError('');
-    setSuccess('');
-
     try {
-      const currentNotes = notes.get(language);
-      if (!currentNotes) return;
+      const formData = notes.get(language);
+      if (!formData) return;
 
-      const noteData: Omit<TransportNotes, 'id'> = {
+      const docRef = doc(db, 'transportNotes', `${companyID}_${language}`);
+      
+      const transportNotesData: Omit<TransportNotes, 'id'> = {
         companyID,
-        language: currentNotes.language,
-        title: currentNotes.title,
-        content: currentNotes.content,
-        isActive: currentNotes.isActive,
+        language: language as 'sk' | 'en' | 'de' | 'cs',
+        title: formData.title,
+        content: formData.content,
+        isActive: formData.isActive,
         lastUpdated: Timestamp.now(),
-        updatedBy: userData.uid,
+        updatedBy: userData?.uid || '',
         createdAt: Timestamp.now(),
-        createdBy: userData.uid
+        createdBy: userData?.uid || ''
       };
 
-      // Použijeme kombinovaný ID z companyID a jazyka
-      const docId = `${companyID}_${language}`;
-      await setDoc(doc(db, 'transportNotes', docId), noteData);
-
+      await setDoc(docRef, transportNotesData, { merge: true });
+      
       setSuccess('Poznámky boli úspešne uložené');
       setEditingLanguage(null);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Chyba pri ukladaní poznámok:', err);
       setError('Chyba pri ukladaní poznámok');
+      setTimeout(() => setError(''), 5000);
     } finally {
       setSaving(null);
     }
   };
 
-  const handleFieldChange = (language: string, field: keyof TransportNotesFormData, value: any) => {
-    const currentNotes = notes.get(language);
-    if (!currentNotes) return;
-
-    const updatedNotes = new Map(notes);
-    updatedNotes.set(language, {
-      ...currentNotes,
-      [field]: value
-    });
-    setNotes(updatedNotes);
-  };
-
   const handleEdit = (language: string) => {
     setEditingLanguage(language);
-    setError('');
-    setSuccess('');
+    
+    // Scroll na editačný formulár po krátkom oneskorení (aby sa Collapse stihol otvoriť)
+    setTimeout(() => {
+      if (editFormRef.current) {
+        editFormRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }
+    }, 300); // 300ms oneskorenie pre Collapse animáciu
   };
 
   const handleCancel = () => {
     setEditingLanguage(null);
-    setError('');
-    setSuccess('');
-    // Reload original data
-    loadTransportNotes();
+    loadTransportNotes(); // Obnovenie pôvodných hodnôt
   };
+
+  const handleFieldChange = (language: string, field: keyof TransportNotesFormData, value: any) => {
+    setNotes(prev => {
+      const newMap = new Map(prev);
+      const current = newMap.get(language) || {
+        language: language as 'sk' | 'en' | 'de' | 'cs',
+        title: '',
+        content: '',
+        isActive: false
+      };
+      newMap.set(language, { ...current, [field]: value });
+      return newMap;
+    });
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
+    setActiveTab(newValue);
+    // Ak editujeme a prepneme tab, zrušíme editáciu
+    if (editingLanguage && editingLanguage !== newValue) {
+      setEditingLanguage(null);
+    }
+  };
+
+  const currentNotes = notes.get(activeTab);
 
   return (
     <Card sx={{ 
@@ -213,175 +229,184 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
               </Alert>
             )}
 
-            {/* Grid kartičiek vedľa seba */}
-            <Grid container spacing={2}>
-              {SUPPORTED_LANGUAGES.map((lang) => {
-                const currentNotes = notes.get(lang.code);
+            {/* Záložky jazykov */}
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              sx={{
+                '& .MuiTabs-indicator': {
+                  backgroundColor: '#ff9f43',
+                },
+                '& .MuiTab-root': {
+                  color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+                  fontWeight: 500,
+                  '&.Mui-selected': {
+                    color: '#ff9f43',
+                    fontWeight: 600,
+                  },
+                },
+              }}
+            >
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <Tab 
+                  key={lang.code}
+                  value={lang.code}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <img 
+                        loading="lazy" 
+                        width="20" 
+                        height="15"
+                        src={lang.flag} 
+                        alt="Vlajka" 
+                        style={{ borderRadius: '2px', objectFit: 'cover' }}
+                      />
+                      {lang.name}
+                    </Box>
+                  }
+                />
+              ))}
+            </Tabs>
 
-                return (
-                  <Grid item xs={12} sm={6} md={3} key={lang.code}>
-                    <Paper
-                      sx={{
-                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
-                        border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        height: 'fit-content'
-                      }}
-                    >
-                      {/* Kompaktný header kartičky */}
-                      <Box
-                        sx={{
-                          p: 1.5,
-                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                          borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 1
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <img 
-                              loading="lazy" 
-                              width="20" 
-                              height="15"
-                              src={lang.flag} 
-                              alt={`${lang.name} vlajka`} 
-                              style={{ borderRadius: '2px', objectFit: 'cover' }}
-                            />
-                            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                              {lang.name}
-                            </Typography>
-                          </Box>
-                          {currentNotes?.isActive && (
-                            <Box
-                              sx={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                backgroundColor: '#4caf50'
-                              }}
-                            />
-                          )}
-                        </Box>
+            {/* Náhľad aktívneho jazyka */}
+            <Paper
+              sx={{
+                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                borderRadius: '12px',
+                p: 3
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <img 
+                    loading="lazy" 
+                    width="24" 
+                    height="18"
+                    src={SUPPORTED_LANGUAGES.find(l => l.code === activeTab)?.flag} 
+                    alt="Vlajka" 
+                    style={{ borderRadius: '3px', objectFit: 'cover' }}
+                  />
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {SUPPORTED_LANGUAGES.find(l => l.code === activeTab)?.name}
+                  </Typography>
+                </Box>
+                
+                <Button
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => handleEdit(activeTab)}
+                  sx={{
+                    borderColor: '#ff9f43',
+                    color: '#ff9f43',
+                    '&:hover': {
+                      borderColor: '#f7b067',
+                      backgroundColor: 'rgba(255, 159, 67, 0.1)'
+                    }
+                  }}
+                >
+                  Upraviť
+                </Button>
+              </Box>
 
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          fullWidth
-                          startIcon={<EditIcon />}
-                          onClick={() => handleEdit(lang.code)}
-                          sx={{
-                            borderColor: '#ff9f43',
-                            color: '#ff9f43',
-                            fontSize: '0.75rem',
-                            py: 0.5,
-                            '&:hover': {
-                              borderColor: '#f7b067',
-                              backgroundColor: 'rgba(255, 159, 67, 0.1)'
-                            }
-                          }}
-                        >
-                          Upraviť
-                        </Button>
-                      </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Switch
+                  checked={currentNotes?.isActive || false}
+                  disabled
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: '#ff9f43',
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: '#ff9f43',
+                    },
+                  }}
+                />
+                <Typography variant="body2">
+                  {currentNotes?.isActive ? 'Aktívne - pridáva sa do PDF' : 'Neaktívne'}
+                </Typography>
+              </Box>
 
-                      {/* Kompaktný obsah kartičky */}
-                      <Box sx={{ p: 1.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                          <Switch
-                            checked={currentNotes?.isActive || false}
-                            disabled
-                            size="small"
-                            sx={{
-                              '& .MuiSwitch-switchBase.Mui-checked': {
-                                color: '#ff9f43',
-                              },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                backgroundColor: '#ff9f43',
-                              },
-                            }}
-                          />
-                          <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
-                            {currentNotes?.isActive ? 'Aktívne' : 'Neaktívne'}
-                          </Typography>
-                        </Box>
+              {currentNotes?.title && (
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontWeight: 600,
+                    mb: 1,
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)'
+                  }}
+                >
+                  {currentNotes.title}
+                </Typography>
+              )}
 
-                        {currentNotes?.title && (
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              display: 'block',
-                              fontWeight: 500,
-                              mb: 0.5,
-                              fontSize: '0.75rem',
-                              color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)'
-                            }}
-                          >
-                            {currentNotes.title}
-                          </Typography>
-                        )}
+              {currentNotes?.content ? (
+                <Box
+                  sx={{
+                    maxHeight: '400px', // Približne 25 riadkov
+                    overflow: 'auto',
+                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    borderRadius: '8px',
+                    p: 2,
+                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)',
+                    // Vlastné scrollbar štýly
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      borderRadius: '4px',
+                      '&:hover': {
+                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                      },
+                    },
+                  }}
+                >
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: 1.6,
+                      fontFamily: 'monospace',
+                      fontSize: '13px'
+                    }}
+                  >
+                    {currentNotes.content}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)',
+                    fontStyle: 'italic'
+                  }}
+                >
+                  Žiadne poznámky nie sú zadané
+                </Typography>
+              )}
+            </Paper>
 
-                        {currentNotes?.content ? (
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              fontSize: '0.7rem',
-                              color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical'
-                            }}
-                          >
-                            {currentNotes.content}
-                          </Typography>
-                        ) : (
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              fontSize: '0.7rem',
-                              color: isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)',
-                              fontStyle: 'italic'
-                            }}
-                          >
-                            Žiadne poznámky
-                          </Typography>
-                        )}
-                      </Box>
-                    </Paper>
-                  </Grid>
-                );
-              })}
-            </Grid>
-
-            {/* Editačný formulár pod kartičkami */}
-            {editingLanguage && (
+            {/* Editačný formulár */}
+            {editingLanguage === activeTab && (
               <Collapse in={!!editingLanguage}>
                 <Paper
+                  ref={editFormRef}
                   sx={{
-                    mt: 2,
                     p: 3,
                     backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
                     border: `2px solid #ff9f43`,
                     borderRadius: '12px'
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                    <img 
-                      loading="lazy" 
-                      width="24" 
-                      height="18"
-                      src={SUPPORTED_LANGUAGES.find(l => l.code === editingLanguage)?.flag} 
-                      alt="Vlajka" 
-                      style={{ borderRadius: '3px', objectFit: 'cover' }}
-                    />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Úprava poznámok - {SUPPORTED_LANGUAGES.find(l => l.code === editingLanguage)?.name}
-                    </Typography>
-                  </Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                    Úprava poznámok - {SUPPORTED_LANGUAGES.find(l => l.code === editingLanguage)?.name}
+                  </Typography>
 
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     <FormControlLabel
@@ -434,31 +459,35 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
                       }}
                     />
 
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                      <Button
-                        variant="contained"
-                        startIcon={saving === editingLanguage ? <CircularProgress size={16} /> : <SaveIcon />}
-                        onClick={() => handleSave(editingLanguage)}
-                        disabled={saving === editingLanguage || !notes.get(editingLanguage)?.title.trim()}
-                        sx={{
-                          backgroundColor: '#ff9f43',
-                          color: '#ffffff',
-                          '&:hover': { backgroundColor: '#f7b067' }
-                        }}
-                      >
-                        {saving === editingLanguage ? 'Ukladám...' : 'Uložiť'}
-                      </Button>
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button
                         variant="outlined"
-                        startIcon={<CancelIcon />}
                         onClick={handleCancel}
-                        disabled={saving === editingLanguage}
+                        startIcon={<CancelIcon />}
                         sx={{
                           borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
                           color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'
                         }}
                       >
                         Zrušiť
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={() => handleSave(editingLanguage)}
+                        disabled={saving === editingLanguage}
+                        startIcon={saving === editingLanguage ? <CircularProgress size={16} /> : <SaveIcon />}
+                        sx={{
+                          backgroundColor: '#ff9f43',
+                          color: '#ffffff',
+                          '&:hover': {
+                            backgroundColor: '#f7b067'
+                          },
+                          '&:disabled': {
+                            backgroundColor: 'rgba(255, 159, 67, 0.3)'
+                          }
+                        }}
+                      >
+                        {saving === editingLanguage ? 'Ukladá sa...' : 'Uložiť'}
                       </Button>
                     </Box>
                   </Box>
