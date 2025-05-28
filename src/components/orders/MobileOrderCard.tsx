@@ -24,8 +24,8 @@ interface MobileOrderCardProps {
   order: OrderFormData;
   onEdit: (order: OrderFormData) => void;
   onDelete: (id: string) => void;
-  onPreviewPDF: (order: OrderFormData) => Promise<void>;
-  onDownloadPDF: (order: OrderFormData) => Promise<void>;
+  onPreviewPDF: (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => void;
+  onDownloadPDF: (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => void;
 }
 
 const StyledMobileOrderCard = styled(Box)(({ theme }) => ({
@@ -184,12 +184,12 @@ const MobileOrderCard: React.FC<MobileOrderCardProps> = ({
           </IconButton>
         </Tooltip>
         <Tooltip title="Zobraziť PDF">
-          <IconButton size="small" onClick={() => onPreviewPDF(order)}>
+          <IconButton size="small" onClick={(event: React.MouseEvent<HTMLElement>) => onPreviewPDF(event, order)}>
             <VisibilityIcon fontSize="small" />
           </IconButton>
         </Tooltip>
         <Tooltip title="Stiahnuť PDF">
-          <IconButton size="small" onClick={() => onDownloadPDF(order)}>
+          <IconButton size="small" onClick={(event: React.MouseEvent<HTMLElement>) => onDownloadPDF(event, order)}>
             <FileDownloadIcon fontSize="small" />
           </IconButton>
         </Tooltip>

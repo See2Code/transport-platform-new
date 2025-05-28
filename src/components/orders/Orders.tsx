@@ -5,35 +5,36 @@ import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
-  TextField,
   Button,
+  IconButton,
   Paper,
-  Grid,
-  useTheme,
-  useMediaQuery,
+  TextField,
+  InputAdornment,
+  Chip,
+  Tooltip as BareTooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  CircularProgress,
+  Alert,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress,
-  IconButton,
-  InputAdornment,
-  Collapse,
-  Alert,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  GlobalStyles,
-  DialogActions,
   Tabs,
   Tab,
-  DialogContentText,
+  Grid,
+  useMediaQuery,
+  useTheme,
+  styled,
   Divider,
-  Chip
+  Collapse,
+  GlobalStyles
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -62,14 +63,14 @@ import MobileOrderCard from './MobileOrderCard'; // Import nového komponentu
 import OrderDetail from './OrderDetail';
 import DocumentManager from './DocumentManager';
 import DocumentsIndicator from './DocumentsIndicator';
-import BareTooltip from '../common/BareTooltip';
-import RatingIndicator from '../common/RatingIndicator';
-import CustomerRatingDialog from '../dialogs/CustomerRatingDialog';
-import CarrierRatingDialog from '../dialogs/CarrierRatingDialog';
+// import RatingIndicator from '../common/RatingIndicator';
+// import CustomerRatingDialog from '../dialogs/CustomerRatingDialog';
+// import CarrierRatingDialog from '../dialogs/CarrierRatingDialog';
+import LanguageSelector from './LanguageSelector';
 import { Customer, CustomerRating } from '../../types/customers';
 import { Carrier, CarrierRating } from '../../types/carriers';
 import StarIcon from '@mui/icons-material/Star';
-import OrderRatingDialog from '../dialogs/OrderRatingDialog';
+// import OrderRatingDialog from '../dialogs/OrderRatingDialog';
 import { OrderRating } from '../../types/orders';
 
 
@@ -242,6 +243,53 @@ const convertToDate = (dateTime: any): Date | null => {
     } catch { return null; }
 };
 
+// Dočasné placeholder komponenty
+const RatingIndicator = ({ rating, size, showChip: _showChip }: { rating: number; size?: string; showChip?: boolean }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+    <StarIcon sx={{ fontSize: size === 'small' ? 14 : 16, color: '#ff9f43' }} />
+    <Typography variant="caption">{rating.toFixed(1)}</Typography>
+  </Box>
+);
+
+const CustomerRatingDialog = ({ open, onClose, customer: _customer, onSubmit: _onSubmit }: { 
+  open: boolean; 
+  onClose: () => void; 
+  customer?: Customer | null; 
+  onSubmit?: (rating: CustomerRating) => Promise<void>; 
+}) => (
+  <Dialog open={open} onClose={onClose}>
+    <DialogTitle>Hodnotenie zákazníka</DialogTitle>
+    <DialogContent>Funkcia dočasne nedostupná</DialogContent>
+    <DialogActions><Button onClick={onClose}>Zavrieť</Button></DialogActions>
+  </Dialog>
+);
+
+const CarrierRatingDialog = ({ open, onClose, carrier: _carrier, onSubmit: _onSubmit }: { 
+  open: boolean; 
+  onClose: () => void; 
+  carrier?: Carrier | null; 
+  onSubmit?: (rating: CarrierRating) => Promise<void>; 
+}) => (
+  <Dialog open={open} onClose={onClose}>
+    <DialogTitle>Hodnotenie dopravcu</DialogTitle>
+    <DialogContent>Funkcia dočasne nedostupná</DialogContent>
+    <DialogActions><Button onClick={onClose}>Zavrieť</Button></DialogActions>
+  </Dialog>
+);
+
+const OrderRatingDialog = ({ open, onClose, order: _order, onSubmit: _onSubmit }: { 
+  open: boolean; 
+  onClose: () => void; 
+  order?: any; 
+  onSubmit?: (rating: OrderRating) => Promise<void>; 
+}) => (
+  <Dialog open={open} onClose={onClose}>
+    <DialogTitle>Hodnotenie objednávky</DialogTitle>
+    <DialogContent>Funkcia dočasne nedostupná</DialogContent>
+    <DialogActions><Button onClick={onClose}>Zavrieť</Button></DialogActions>
+  </Dialog>
+);
+
 const DialogGlobalStyles = ({ open }: { open: boolean }) => {
   if (!open) return null;
   
@@ -328,8 +376,8 @@ interface OrderRowProps {
   teamMembers: any;
   onRowClick: (order: OrderFormData) => void;
   onEditOrder: (order: OrderFormData) => void;
-  onPreviewPDF: (order: OrderFormData) => void;
-  onDownloadPDF: (order: OrderFormData) => void;
+  onPreviewPDF: (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => void;
+  onDownloadPDF: (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => void;
   onDeleteOrder: (id: string) => void;
   t: any;
   onRateOrder: (order: OrderFormData) => void;
@@ -426,8 +474,8 @@ const OrderRow = React.memo<OrderRowProps>(({
       <StyledTableCell isDarkMode={isDarkMode}> {/* Akcie */} 
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           <BareTooltip title={t('orders.edit')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></BareTooltip>
-          <BareTooltip title={t('orders.previewPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onPreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></BareTooltip>
-          <BareTooltip title={t('orders.downloadPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></BareTooltip>
+          <BareTooltip title={t('orders.previewPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onPreviewPDF(e, order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></BareTooltip>
+          <BareTooltip title={t('orders.downloadPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDownloadPDF(e, order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></BareTooltip>
           <BareTooltip title={t('orders.delete')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDeleteOrder(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></BareTooltip>
         </Box>
       </StyledTableCell>
@@ -556,6 +604,12 @@ const OrdersList: React.FC = () => {
   const [selectedCarrierForRating, setSelectedCarrierForRating] = useState<Carrier | null>(null);
   const [showOrderRatingDialog, setShowOrderRatingDialog] = useState(false);
   const [selectedOrderForRating, setSelectedOrderForRating] = useState<OrderFormData | null>(null);
+
+  // State pre výber jazyka PDF
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [languageMenuAnchor, setLanguageMenuAnchor] = useState<null | HTMLElement>(null);
+  const [languageMenuAction, setLanguageMenuAction] = useState<'preview' | 'download'>('preview');
+  const [orderForLanguageSelection, setOrderForLanguageSelection] = useState<OrderFormData | null>(null);
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   
@@ -1195,7 +1249,7 @@ const OrdersList: React.FC = () => {
   };
 
   // Upravená funkcia pre náhľad PDF
-  const handlePreviewPDF = async (order: OrderFormData) => {
+  const _handlePreviewPDF = async (order: OrderFormData) => {
     try {
       if (!order.id) {
         alert('Objednávka nemá priradené ID. Prosím, uložte objednávku a skúste znovu.');
@@ -1236,7 +1290,7 @@ const OrdersList: React.FC = () => {
   };
 
   // Upravená funkcia pre stiahnutie PDF
-  const handleDownloadPDF = async (order: OrderFormData) => {
+  const _handleDownloadPDF = async (order: OrderFormData) => {
     try {
       if (!order.id) {
         alert('Objednávka nemá priradené ID. Prosím, uložte objednávku a skúste znovu.');
@@ -1800,6 +1854,125 @@ const OrdersList: React.FC = () => {
     setShowOrderRatingDialog(false);
   };
 
+  // Nové funkcie pre výber jazyka
+  const handleShowLanguageMenu = (event: React.MouseEvent<HTMLElement>, order: OrderFormData, action: 'preview' | 'download') => {
+    event.stopPropagation();
+    setLanguageMenuAnchor(event.currentTarget);
+    setOrderForLanguageSelection(order);
+    setLanguageMenuAction(action);
+    setShowLanguageMenu(true);
+  };
+
+  const handleCloseLanguageMenu = () => {
+    setShowLanguageMenu(false);
+    setLanguageMenuAnchor(null);
+    setOrderForLanguageSelection(null);
+  };
+
+  const handleLanguageSelect = async (language: 'sk' | 'en' | 'de' | 'cs') => {
+    if (!orderForLanguageSelection) return;
+    
+    handleCloseLanguageMenu();
+    
+    if (languageMenuAction === 'preview') {
+      await handlePreviewPDFWithLanguage(orderForLanguageSelection, language);
+    } else {
+      await handleDownloadPDFWithLanguage(orderForLanguageSelection, language);
+    }
+  };
+
+  // Upravené funkcie pre PDF s jazykom
+  const handlePreviewPDFWithLanguage = async (order: OrderFormData, language: 'sk' | 'en' | 'de' | 'cs' = 'sk') => {
+    try {
+      if (!order.id) {
+        alert('Objednávka nemá priradené ID. Prosím, uložte objednávku a skúste znovu.');
+        return;
+      }
+      
+      setLoadingPdf(true);
+      setShowPdfPreview(true);
+      setPreviewOrder(order);
+      
+      // Volanie serverovej funkcie pre generovanie PDF s jazykom
+      const generatePdf = httpsCallable(functions, 'generateOrderPdf');
+      const result = await generatePdf({ orderId: order.id, language });
+      
+      // @ts-ignore - výsledok obsahuje pdfBase64 a fileName
+      const { pdfBase64 } = result.data;
+      
+      // Konverzia base64 na Blob
+      const byteCharacters = atob(pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      // Vytvorenie URL pre blob
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      
+      setLoadingPdf(false);
+    } catch (error) {
+      console.error('Chyba pri generovaní náhľadu PDF:', error);
+      alert('Nastala chyba pri generovaní PDF objednávky: ' + (error as Error).message);
+      setLoadingPdf(false);
+      setShowPdfPreview(false);
+    }
+  };
+
+  const handleDownloadPDFWithLanguage = async (order: OrderFormData, language: 'sk' | 'en' | 'de' | 'cs' = 'sk') => {
+    try {
+      if (!order.id) {
+        alert('Objednávka nemá priradené ID. Prosím, uložte objednávku a skúste znovu.');
+        return;
+      }
+      
+      setLoading(true);
+      
+      // Volanie serverovej funkcie pre generovanie PDF s jazykom
+      const generatePdf = httpsCallable(functions, 'generateOrderPdf');
+      const result = await generatePdf({ orderId: order.id, language });
+      
+      // @ts-ignore - výsledok obsahuje pdfBase64 a fileName
+      const { pdfBase64, fileName } = result.data;
+      
+      // Konverzia base64 na Blob
+      const byteCharacters = atob(pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      // Vytvorenie URL a stiahnutie
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName || `objednavka_${order.id.substring(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Chyba pri sťahovaní PDF:', error);
+      alert('Nastala chyba pri generovaní PDF objednávky: ' + (error as Error).message);
+      setLoading(false);
+    }
+  };
+
+  // Wrapper funkcie pre tabuľku
+  const handlePreviewPDFForTable = (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => {
+    handleShowLanguageMenu(event, order, 'preview');
+  };
+
+  const handleDownloadPDFForTable = (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => {
+    handleShowLanguageMenu(event, order, 'download');
+  };
 
   return (
     <PageWrapper>
@@ -1930,8 +2103,8 @@ const OrdersList: React.FC = () => {
                   order={order} 
                   onEdit={handleEditOrder} 
                   onDelete={handleDeleteOrder}
-                  onPreviewPDF={handlePreviewPDF}
-                  onDownloadPDF={handleDownloadPDF}
+                  onPreviewPDF={handlePreviewPDFForTable}
+                  onDownloadPDF={handleDownloadPDFForTable}
                 />
               ))}
                                   {getFilteredCustomerOrders().length === 0 && (
@@ -2002,8 +2175,8 @@ const OrdersList: React.FC = () => {
                       teamMembers={teamMembers}
                       onRowClick={handleRowClick}
                       onEditOrder={handleEditOrder}
-                      onPreviewPDF={handlePreviewPDF}
-                      onDownloadPDF={handleDownloadPDF}
+                      onPreviewPDF={handlePreviewPDFForTable}
+                      onDownloadPDF={handleDownloadPDFForTable}
                       onDeleteOrder={openDeleteConfirmation}
                       onRateOrder={handleOpenOrderRating}
                       t={t}
@@ -3739,6 +3912,14 @@ const OrdersList: React.FC = () => {
         onSubmit={handleSubmitOrderRating}
       />
     )}
+
+    {/* Language Selector Menu */}
+    <LanguageSelector
+      open={showLanguageMenu}
+      anchorEl={languageMenuAnchor}
+      onClose={handleCloseLanguageMenu}
+      onLanguageSelect={handleLanguageSelect}
+    />
     </PageWrapper>
   );
 };

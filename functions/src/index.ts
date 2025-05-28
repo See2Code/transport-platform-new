@@ -834,6 +834,102 @@ const getTransportNotes = async (companyID: string): Promise<{ sk?: any, en?: an
   }
 };
 
+// Jazykové prekladové objekty
+const PDF_TRANSLATIONS = {
+  sk: {
+    transportOrder: 'Dopravné objednávky číslo',
+    recipient: 'Príjemca',
+    sender: 'Predajca',
+    loadingPlaces: 'Miesta nakládky',
+    unloadingPlaces: 'Miesta vykládky',
+    loading: 'Nakládka',
+    unloading: 'Vykládka',
+    company: 'Spoločnosť',
+    referenceNumber: 'Referenčné číslo',
+    contact: 'Kontakt',
+    phone: 'Telefón',
+    email: 'E-mail',
+    goods: 'Tovar',
+    vehicle: 'Ťahač',
+    dueDate: 'Dátum splatnosti',
+    transport: 'Preprava (bez DPH)',
+    daysFromInvoice: 'dní od prijatia faktúry a dokumentov',
+    contractWithCarrier: 'Podľa zmluvy s dopravcom',
+    generatedIn: 'Dokument bol automaticky vygenerovaný v AESA Transport Platform',
+    noLoadingPlaces: 'Žiadne miesta nakládky',
+    noUnloadingPlaces: 'Žiadne miesta vykládky'
+  },
+  en: {
+    transportOrder: 'Transport Order No.',
+    recipient: 'Recipient',
+    sender: 'Sender',
+    loadingPlaces: 'Loading Places',
+    unloadingPlaces: 'Unloading Places',
+    loading: 'Loading',
+    unloading: 'Unloading',
+    company: 'Company',
+    referenceNumber: 'Reference Number',
+    contact: 'Contact',
+    phone: 'Phone',
+    email: 'E-mail',
+    goods: 'Goods',
+    vehicle: 'Vehicle',
+    dueDate: 'Due Date',
+    transport: 'Transport (excl. VAT)',
+    daysFromInvoice: 'days from invoice and documents receipt',
+    contractWithCarrier: 'According to contract with carrier',
+    generatedIn: 'Document was automatically generated in AESA Transport Platform',
+    noLoadingPlaces: 'No loading places',
+    noUnloadingPlaces: 'No unloading places'
+  },
+  de: {
+    transportOrder: 'Transportauftrag Nr.',
+    recipient: 'Empfänger',
+    sender: 'Absender',
+    loadingPlaces: 'Beladestellen',
+    unloadingPlaces: 'Entladestellen',
+    loading: 'Beladung',
+    unloading: 'Entladung',
+    company: 'Unternehmen',
+    referenceNumber: 'Referenznummer',
+    contact: 'Kontakt',
+    phone: 'Telefon',
+    email: 'E-Mail',
+    goods: 'Waren',
+    vehicle: 'Fahrzeug',
+    dueDate: 'Fälligkeitsdatum',
+    transport: 'Transport (ohne MwSt.)',
+    daysFromInvoice: 'Tage ab Erhalt der Rechnung und Dokumente',
+    contractWithCarrier: 'Laut Vertrag mit Spediteur',
+    generatedIn: 'Das Dokument wurde automatisch in der AESA Transport Platform generiert',
+    noLoadingPlaces: 'Keine Beladestellen',
+    noUnloadingPlaces: 'Keine Entladestellen'
+  },
+  cs: {
+    transportOrder: 'Dopravní objednávka č.',
+    recipient: 'Příjemce',
+    sender: 'Odesílatel',
+    loadingPlaces: 'Místa nakládky',
+    unloadingPlaces: 'Místa vykládky',
+    loading: 'Nakládka',
+    unloading: 'Vykládka',
+    company: 'Společnost',
+    referenceNumber: 'Referenční číslo',
+    contact: 'Kontakt',
+    phone: 'Telefon',
+    email: 'E-mail',
+    goods: 'Zboží',
+    vehicle: 'Vozidlo',
+    dueDate: 'Datum splatnosti',
+    transport: 'Doprava (bez DPH)',
+    daysFromInvoice: 'dní od přijetí faktury a dokumentů',
+    contractWithCarrier: 'Podle smlouvy s dopravcem',
+    generatedIn: 'Dokument byl automaticky vygenerován v AESA Transport Platform',
+    noLoadingPlaces: 'Žádná místa nakládky',
+    noUnloadingPlaces: 'Žádná místa vykládky'
+  }
+};
+
 // Funkcia na generovanie PDF
 export const generateOrderPdf = functions
   .region(REGION)
@@ -1022,8 +1118,12 @@ export const generateOrderPdf = functions
       const transportNotes = await getTransportNotes(orderData.companyID);
       console.log('Načítané poznámky k prepravám:', Object.keys(transportNotes));
 
+      // Získanie jazyka z parametrov (default: sk)
+      const language = (data.language as 'sk' | 'en' | 'de' | 'cs') || 'sk';
+      console.log('Jazyk PDF:', language);
+
       // Generovanie kompletného HTML pre PDF - verzia pre dopravcu
-      const htmlContent = generateOrderHtml(orderData, companySettings, carrierData, dispatcherData, transportNotes);
+      const htmlContent = generateOrderHtml(orderData, companySettings, carrierData, dispatcherData, transportNotes, language);
 
       console.log('Spustenie prehliadača pomocou chrome-aws-lambda');
       
@@ -1070,9 +1170,12 @@ export const generateOrderPdf = functions
   });
 
 // Funkcia pre generovanie HTML šablóny objednávky
-function generateOrderHtml(orderData: any, settings: any, carrierData: any, dispatcherData: any, transportNotes: any): string {
+function generateOrderHtml(orderData: any, settings: any, carrierData: any, dispatcherData: any, transportNotes: any, language: 'sk' | 'en' | 'de' | 'cs'): string {
   const orderNumber = orderData.orderNumberFormatted || (orderData.id?.substring(0, 8) || 'N/A');
   const createdAtDate = formatDate(orderData.createdAt);
+  
+  // Získanie prekladových textov pre daný jazyk
+  const t = PDF_TRANSLATIONS[language];
   
   // Debug informácie o nastaveniach spoločnosti a logu
   console.log("Company settings:", settings ? Object.keys(settings) : 'No settings');
@@ -1134,28 +1237,28 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
         const goodsItems = place.goods.map((item: any) => 
           `${safeText(item.quantity)} ${safeText(item.unit)} ${safeText(item.name)}`
         ).join(', ');
-        goodsHtml = `<p><strong>Tovar:</strong> ${goodsItems}</p>`;
+        goodsHtml = `<p><strong>${t.goods}:</strong> ${goodsItems}</p>`;
       }
 
       loadingPlacesHtml += `
         <div class="place-box-compact">
           <div class="place-header">
-            <strong>Nakládka ${index + 1}</strong>
+            <strong>${t.loading} ${index + 1}</strong>
             <span class="place-date">${dateTimeStr} (${timeStr})</span>
           </div>
-          ${place.companyName ? `<p class="place-company"><strong>Spoločnosť:</strong> ${safeText(place.companyName)}</p>` : ''}
+          ${place.companyName ? `<p class="place-company"><strong>${t.company}:</strong> ${safeText(place.companyName)}</p>` : ''}
           <p class="place-address">${safeText(formatAddress(place.street, place.city, place.zip, place.country))}</p>
           <div class="place-details">
-            <span><strong>Referenčné číslo:</strong> ${safeText(refNumber)}</span>
-            <span><strong>Kontakt:</strong> ${safeText(place.contactPersonName || place.contactPerson || 'N/A')}</span>
-            <span><strong>Telefón:</strong> ${safeText(place.contactPersonPhone || 'N/A')}</span>
+            <span><strong>${t.referenceNumber}:</strong> ${safeText(refNumber)}</span>
+            <span><strong>${t.contact}:</strong> ${safeText(place.contactPersonName || place.contactPerson || 'N/A')}</span>
+            <span><strong>${t.phone}:</strong> ${safeText(place.contactPersonPhone || 'N/A')}</span>
           </div>
           ${goodsHtml}
         </div>
       `;
     });
   } else {
-    loadingPlacesHtml = '<p>Žiadne miesta nakládky</p>';
+    loadingPlacesHtml = `<p>${t.noLoadingPlaces}</p>`;
   }
 
   // Generovanie sekcií pre miesta vykládky - kompaktnejšie
@@ -1172,28 +1275,28 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
         const goodsItems = place.goods.map((item: any) => 
           `${safeText(item.quantity)} ${safeText(item.unit)} ${safeText(item.name)}`
         ).join(', ');
-        goodsHtml = `<p><strong>Tovar:</strong> ${goodsItems}</p>`;
+        goodsHtml = `<p><strong>${t.goods}:</strong> ${goodsItems}</p>`;
       }
 
       unloadingPlacesHtml += `
         <div class="place-box-compact">
           <div class="place-header">
-            <strong>Vykládka ${index + 1}</strong>
+            <strong>${t.unloading} ${index + 1}</strong>
             <span class="place-date">${dateTimeStr} (${timeStr})</span>
           </div>
-          ${place.companyName ? `<p class="place-company"><strong>Spoločnosť:</strong> ${safeText(place.companyName)}</p>` : ''}
+          ${place.companyName ? `<p class="place-company"><strong>${t.company}:</strong> ${safeText(place.companyName)}</p>` : ''}
           <p class="place-address">${safeText(formatAddress(place.street, place.city, place.zip, place.country))}</p>
           <div class="place-details">
-            <span><strong>Referenčné číslo:</strong> ${safeText(refNumber)}</span>
-            <span><strong>Kontakt:</strong> ${safeText(place.contactPersonName || place.contactPerson || 'N/A')}</span>
-            <span><strong>Telefón:</strong> ${safeText(place.contactPersonPhone || 'N/A')}</span>
+            <span><strong>${t.referenceNumber}:</strong> ${safeText(refNumber)}</span>
+            <span><strong>${t.contact}:</strong> ${safeText(place.contactPersonName || place.contactPerson || 'N/A')}</span>
+            <span><strong>${t.phone}:</strong> ${safeText(place.contactPersonPhone || 'N/A')}</span>
           </div>
           ${goodsHtml}
         </div>
       `;
     });
   } else {
-    unloadingPlacesHtml = '<p>Žiadne miesta vykládky</p>';
+    unloadingPlacesHtml = `<p>${t.noUnloadingPlaces}</p>`;
   }
 
   // Výpočet dátumu splatnosti
@@ -1264,6 +1367,7 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           border: 2px solid #333;
           padding: 8px;
           background-color: #f8f8f8;
+          border-radius: 8px;
         }
         .info-section {
           display: flex;
@@ -1274,7 +1378,7 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
         .info-box {
           background-color: #f9f9f9;
           border: 1px solid #ddd;
-          border-radius: 5px;
+          border-radius: 8px;
           padding: 12px;
           width: 48%;
           font-size: 10px;
@@ -1294,11 +1398,21 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
         .transport-notes-box {
           background-color: #f9f9f9;
           border: 1px solid #ddd;
-          border-radius: 5px;
+          border-radius: 8px;
           padding: 12px;
           width: 100%;
           font-size: 10px;
           margin-bottom: 10px;
+          page-break-inside: avoid;
+          break-inside: avoid;
+          -webkit-column-break-inside: avoid;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          box-sizing: border-box;
+        }
+        .transport-notes-box:first-of-type {
+          page-break-before: avoid;
+          break-before: avoid;
         }
         .transport-notes-box h3 {
           margin-top: 0;
@@ -1307,10 +1421,15 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           font-size: 12px;
           border-bottom: 1px solid #ddd;
           padding-bottom: 4px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
         }
         .transport-notes-box p {
           margin: 3px 0;
           line-height: 1.3;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          white-space: pre-wrap;
         }
         .transport-section {
           margin: 15px 0;
@@ -1322,14 +1441,19 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           margin: 15px 0 10px 0;
           font-size: 12px;
           font-weight: bold;
+          border-radius: 6px;
+          page-break-after: avoid;
+          break-after: avoid;
         }
         .place-box-compact {
           background-color: #f9f9f9;
           border: 1px solid #ddd;
-          border-radius: 4px;
+          border-radius: 8px;
           padding: 10px;
           margin-bottom: 8px;
           font-size: 10px;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .place-header {
           display: flex;
@@ -1365,7 +1489,7 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           margin: 20px 0;
           background-color: #f0f0f0;
           padding: 10px;
-          border-radius: 5px;
+          border-radius: 8px;
           border-left: 4px solid #333;
         }
         .vehicle-section p {
@@ -1379,7 +1503,7 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           justify-content: space-between;
           background-color: #f5f5f5;
           padding: 12px;
-          border-radius: 5px;
+          border-radius: 8px;
           border: 1px solid #ddd;
         }
         .payment-item {
@@ -1425,62 +1549,61 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
         </div>
 
         <!-- Order Title -->
-        <div class="order-title">Dopravné objednávky číslo: ${safeText(orderNumber)}</div>
+        <div class="order-title">${t.transportOrder}: ${safeText(orderNumber)}</div>
 
         <!-- Company Info Section -->
         <div class="info-section">
           <div class="info-box">
-            <h3>Príjemca</h3>
+            <h3>${t.recipient}</h3>
             <p><strong>${safeText(recipientCompany)}</strong></p>
             <p>${safeText(recipientAddress)}</p>
             <p>IČO: ${safeText(carrierData?.ico || 'N/A')}</p>
             <p>DIČ/DPH: ${safeText(recipientVatID)}</p>
-            <p><strong>Kontakt:</strong> ${safeText(recipientContact)}</p>
-            ${carrierData?.contactPhone ? `<p><strong>Telefón:</strong> ${safeText(carrierData.contactPhone)}</p>` : ''}
-            ${carrierData?.contactEmail ? `<p><strong>E-mail:</strong> ${safeText(carrierData.contactEmail)}</p>` : ''}
+            <p><strong>${t.contact}:</strong> ${safeText(recipientContact)}</p>
+            ${carrierData?.contactPhone ? `<p><strong>${t.phone}:</strong> ${safeText(carrierData.contactPhone)}</p>` : ''}
+            ${carrierData?.contactEmail ? `<p><strong>${t.email}:</strong> ${safeText(carrierData.contactEmail)}</p>` : ''}
           </div>
           <div class="info-box">
-            <h3>Predajca</h3>
+            <h3>${t.sender}</h3>
             <p><strong>${safeText(companyFullName)}</strong></p>
             <p>${safeText(companyAddress)}</p>
             <p>IČO: ${safeText(companyID)}</p>
             <p>DIČ: ${safeText(companyVatID)}</p>
-            <p><strong>Kontakt:</strong> ${safeText(dispatcherContact)}</p>
-            ${dispatcherPhone ? `<p><strong>Telefón:</strong> ${safeText(dispatcherPhone)}</p>` : ''}
-            ${dispatcherEmail ? `<p><strong>E-mail:</strong> ${safeText(dispatcherEmail)}</p>` : ''}
+            <p><strong>${t.contact}:</strong> ${safeText(dispatcherContact)}</p>
+            ${dispatcherPhone ? `<p><strong>${t.phone}:</strong> ${safeText(dispatcherPhone)}</p>` : ''}
+            ${dispatcherEmail ? `<p><strong>${t.email}:</strong> ${safeText(dispatcherEmail)}</p>` : ''}
           </div>
         </div>
 
         <!-- Loading Places -->
-        <div class="section-title">Miesta nakládky</div>
+        <div class="section-title">${t.loadingPlaces}</div>
         ${loadingPlacesHtml}
 
         <!-- Unloading Places -->
-        <div class="section-title">Miesta vykládky</div>
+        <div class="section-title">${t.unloadingPlaces}</div>
         ${unloadingPlacesHtml}
 
         <!-- Vehicle Information -->
         <div class="vehicle-section">
-          <p><strong>Ťahač:</strong> ${safeText(vehicleRegistration)}</p>
+          <p><strong>${t.vehicle}:</strong> ${safeText(vehicleRegistration)}</p>
         </div>
 
         <!-- Payment Information -->
         <div class="payment-section">
           <div class="payment-item">
-            <strong>Dátum splatnosti:</strong><br>
-            ${paymentTermDays} dní od prijatia faktúry a dokumentov<br>
+            <strong>${t.dueDate}:</strong><br>
+            ${paymentTermDays} ${t.daysFromInvoice}<br>
             (do ${dueDateFormatted})
           </div>
           <div class="payment-item">
-            <strong>Preprava (bez DPH):</strong><br>
-            ${orderData.carrierPrice ? `${safeText(orderData.carrierPrice)} €` : 'Podľa zmluvy s dopravcom'}
+            <strong>${t.transport}:</strong><br>
+            ${orderData.carrierPrice ? `${safeText(orderData.carrierPrice)} €` : t.contractWithCarrier}
           </div>
         </div>
 
         <!-- Transport Notes -->
         ${Object.keys(transportNotes).length > 0 ? `
         <div class="transport-section">
-          <div class="section-title">Poznámky k preprave</div>
           ${Object.entries(transportNotes).map(([language, note]) => {
             const noteData = note as { title: string; content: string };
             return `
@@ -1495,7 +1618,7 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
 
         <!-- Footer -->
         <div class="footer">
-          <p>Dokument bol automaticky vygenerovaný v AESA Transport Platform | ${new Date().toLocaleDateString('sk-SK')}</p>
+          <p>${t.generatedIn} | ${new Date().toLocaleDateString(language === 'sk' ? 'sk-SK' : language === 'en' ? 'en-US' : language === 'de' ? 'de-DE' : 'cs-CZ')}</p>
           <p>${safeText(companyFullName)} | ${safeText(companyAddress)} | IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
         </div>
       </div>
