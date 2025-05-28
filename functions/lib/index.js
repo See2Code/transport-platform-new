@@ -1480,17 +1480,12 @@ function generateOrderHtml(orderData, settings, carrierData, dispatcherData, tra
         </div>
 
         <!-- Transport Notes -->
-        ${Object.keys(transportNotes).length > 0 ? `
+        ${transportNotes[language] ? `
         <div class="transport-section">
-          ${Object.entries(transportNotes).map(([language, note]) => {
-        const noteData = note;
-        return `
-              <div class="transport-notes-box">
-                <h3>${safeText(noteData.title)}</h3>
-                <p style="white-space: pre-wrap; line-height: 1.4;">${safeText(noteData.content)}</p>
-              </div>
-            `;
-    }).join('')}
+          <div class="transport-notes-box">
+            <h3>${safeText(transportNotes[language].title)}</h3>
+            <p style="white-space: pre-wrap; line-height: 1.4;">${safeText(transportNotes[language].content)}</p>
+          </div>
         </div>
         ` : ''}
 

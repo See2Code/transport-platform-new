@@ -43,6 +43,7 @@ import { DatePicker } from '@mui/x-date-pickers';
 import { sk } from 'date-fns/locale';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -383,6 +384,7 @@ interface OrderRowProps {
   teamMembers: any;
   onRowClick: (order: OrderFormData) => void;
   onEditOrder: (order: OrderFormData) => void;
+  onDuplicateOrder: (order: OrderFormData) => void;
   onPreviewPDF: (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => void;
   onDownloadPDF: (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => void;
   onDeleteOrder: (id: string) => void;
@@ -397,6 +399,7 @@ const OrderRow = React.memo<OrderRowProps>(({
   teamMembers, 
   onRowClick, 
   onEditOrder, 
+  onDuplicateOrder, 
   onPreviewPDF, 
   onDownloadPDF, 
   onDeleteOrder,
@@ -421,9 +424,35 @@ const OrderRow = React.memo<OrderRowProps>(({
       </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{(order as any).zakaznik || order.customerCompany || '-'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{(order as any).kontaktnaOsoba || '-'}</StyledTableCell>
-      <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.city || '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>
+        {order.loadingPlaces?.[0] ? (
+          <Box>
+            {order.loadingPlaces[0].companyName && (
+              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                {order.loadingPlaces[0].companyName}
+              </Typography>
+            )}
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', opacity: 0.8 }}>
+              {order.loadingPlaces[0].city}
+            </Typography>
+          </Box>
+        ) : '-'}
+      </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.dateTime ? format(convertToDate(order.loadingPlaces[0].dateTime)!, 'dd.MM HH:mm') : '-'}</StyledTableCell>
-      <StyledTableCell isDarkMode={isDarkMode}>{order.unloadingPlaces?.[0]?.city || '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>
+        {order.unloadingPlaces?.[0] ? (
+          <Box>
+            {order.unloadingPlaces[0].companyName && (
+              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                {order.unloadingPlaces[0].companyName}
+              </Typography>
+            )}
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', opacity: 0.8 }}>
+              {order.unloadingPlaces[0].city}
+            </Typography>
+          </Box>
+        ) : '-'}
+      </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{order.unloadingPlaces?.[0]?.dateTime ? format(convertToDate(order.unloadingPlaces[0].dateTime)!, 'dd.MM HH:mm') : '-'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.goods?.[0]?.name || '-'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{`${(order as any).suma || order.customerPrice || '0'} €`}</StyledTableCell>
@@ -483,6 +512,11 @@ const OrderRow = React.memo<OrderRowProps>(({
           <BareTooltip title={t('orders.edit')} placement="bottom">
             <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEditOrder(order); }} sx={{ color: '#ff9f43' }}>
               <EditIcon fontSize="small"/>
+            </IconButton>
+          </BareTooltip>
+          <BareTooltip title={t('orders.duplicate') || 'Duplikovať'} placement="bottom">
+            <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDuplicateOrder(order); }} sx={{ color: '#2196f3' }}>
+              <ContentCopyIcon fontSize="small"/>
             </IconButton>
           </BareTooltip>
           <BareTooltip title={t('orders.previewPDF')} placement="bottom">
@@ -1233,6 +1267,60 @@ const OrdersList: React.FC = () => {
     setShowNewOrderWizard(true);
   };
 
+  const handleDuplicateOrder = (order: OrderFormData) => {
+    // Hlbšia kópia objednávky pre duplikovanie
+    const duplicatedOrder: OrderFormData = {
+      ...order,
+      // Resetujeme všetky ID a časové značky
+      id: undefined,
+      createdAt: undefined,
+      updatedAt: undefined,
+      orderNumber: undefined,
+      orderNumberFormatted: undefined,
+      
+      // Mapujeme polia pre kompatibilitu s formulárom
+      zakaznik: order.customerCompany || '',
+      kontaktnaOsoba: `${order.customerContactName || ''} ${order.customerContactSurname || ''}`.trim(),
+      suma: order.customerPrice || '',
+      mena: 'EUR',
+      
+      // Hlbšia kópia loading places s resetovanými ID
+      loadingPlaces: order.loadingPlaces ? order.loadingPlaces.map(place => ({
+        ...place,
+        id: '', // Resetujeme ID miesta
+        goods: place.goods ? place.goods.map(good => ({
+          ...good,
+          id: '' // Resetujeme ID tovaru - string namiesto undefined
+        })) : []
+      })) : [],
+      
+      // Hlbšia kópia unloading places s resetovanými ID  
+      unloadingPlaces: order.unloadingPlaces ? order.unloadingPlaces.map(place => ({
+        ...place,
+        id: '', // Resetujeme ID miesta
+        goods: place.goods ? place.goods.map(good => ({
+          ...good,
+          id: '' // Resetujeme ID tovaru - string namiesto undefined
+        })) : []
+      })) : [],
+      
+      // Pridáme prefix k poznámkam
+      internaPoznamka: order.internaPoznamka ? `KÓPIA: ${order.internaPoznamka}` : 'KÓPIA objednávky',
+      
+      // Resetujeme hodnotenie
+      rating: undefined
+    } as any; // Dočasné any pre zložité typy
+    
+    console.log('🔄 Duplikovanie objednávky:', {
+      original: order,
+      duplicated: duplicatedOrder
+    });
+    
+    setSelectedOrder(duplicatedOrder);
+    setIsEditMode(false); // Dôležité - nastavíme na false aby sa vytvorila nová objednávka
+    setShowNewOrderWizard(true);
+  };
+
   const handleDeleteOrder = async (id: string) => {
     if (!userData?.companyID) {
       console.log('Chýba companyID');
@@ -1244,6 +1332,12 @@ const OrdersList: React.FC = () => {
     try {
       await deleteDoc(doc(db, 'orders', id));
       // fetchOrders(); // Odstránené - real-time listener automaticky aktualizuje
+      
+      // Obnovíme štatistiky špeditérov po vymazaní objednávky
+      if (userData?.companyID && Object.keys(teamMembers).length > 0) {
+        console.log("📊 Obnova štatistík špeditérov po vymazaní objednávky");
+        fetchDispatchers();
+      }
     } catch (err) {
       console.error('Chyba pri mazaní objednávky:', err);
       setError('Nastala chyba pri mazaní objednávky');
@@ -2198,6 +2292,7 @@ const OrdersList: React.FC = () => {
                       teamMembers={teamMembers}
                       onRowClick={handleRowClick}
                       onEditOrder={handleEditOrder}
+                      onDuplicateOrder={handleDuplicateOrder}
                       onPreviewPDF={handlePreviewPDFForTable}
                       onDownloadPDF={handleDownloadPDFForTable}
                       onDeleteOrder={openDeleteConfirmation}

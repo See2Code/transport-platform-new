@@ -6,6 +6,7 @@ export interface GoodsItem {
   name: string;
   quantity: number;
   unit: string;
+  weight?: number; // Váha v kg
   palletExchange: string;
   dimensions?: string;
   description?: string;

@@ -58,7 +58,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 // Firebase imports
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, Timestamp, orderBy, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeMode } from '../../contexts/ThemeContext';
@@ -340,6 +340,7 @@ const emptyGoodsItem: GoodsItem = {
   name: '',
   quantity: 1,
   unit: 'ks',
+  weight: undefined,
   palletExchange: 'Bez výmeny',
   dimensions: '',
   description: '',
@@ -438,6 +439,10 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const [isEditingDispatcher, setIsEditingDispatcher] = useState(false);
   const [originalDispatcher, setOriginalDispatcher] = useState<{id: string, name: string} | null>(null);
   const [editedDispatcher, setEditedDispatcher] = useState<{id: string, name: string} | null>(null);
+
+  // Reserved order number for new orders
+  const [reservedOrderNumber, setReservedOrderNumber] = useState<string | null>(null);
+  const [isGeneratingOrderNumber, setIsGeneratingOrderNumber] = useState(false);
 
   // Steps configuration
   const steps = [
@@ -633,6 +638,36 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     }
   }, [userData]);
 
+  // Generate and reserve order number for new orders
+  const generateOrderNumber = useCallback(async () => {
+    if (!userData?.companyID || isEdit) return;
+    
+    setIsGeneratingOrderNumber(true);
+    try {
+      // Generate order number
+      const orderYear = new Date().getFullYear().toString();
+      const orderMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+      
+      const orderNumberQuery = query(
+        collection(db, 'orders'),
+        where('companyID', '==', userData.companyID),
+        where('orderYear', '==', orderYear),
+        where('orderMonth', '==', orderMonth)
+      );
+      
+      const orderSnapshot = await getDocs(orderNumberQuery);
+      const orderNumber = (orderSnapshot.size + 1).toString().padStart(3, '0');
+      const orderNumberFormatted = `${orderYear}${orderMonth}${orderNumber}`;
+      
+      console.log('🎯 Rezervované číslo objednávky:', orderNumberFormatted);
+      setReservedOrderNumber(orderNumberFormatted);
+    } catch (error) {
+      console.error('❌ Chyba pri generovaní čísla objednávky:', error);
+    } finally {
+      setIsGeneratingOrderNumber(false);
+    }
+  }, [userData?.companyID, isEdit]);
+
   // Initialize data
   useEffect(() => {
     console.log('🚀 NewOrderWizard useEffect triggered:', { 
@@ -647,6 +682,11 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       fetchCarriers();
       fetchSavedData();
       fetchTeamMembers();
+      
+      // Generate order number for new orders
+      if (!isEdit) {
+        generateOrderNumber();
+      }
     } else {
       console.log('❌ Conditions NOT met:', {
         open,
@@ -654,7 +694,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         userData: userData
       });
     }
-  }, [open, userData?.companyID, userData, fetchCustomers, fetchCarriers, fetchSavedData, fetchTeamMembers]);
+  }, [open, userData?.companyID, userData, fetchCustomers, fetchCarriers, fetchSavedData, fetchTeamMembers, generateOrderNumber, isEdit]);
 
   // Load edit data
   useEffect(() => {
@@ -766,6 +806,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     setIsEditingDispatcher(false);
     setOriginalDispatcher(null);
     setEditedDispatcher(null);
+    // Reset reserved order number
+    setReservedOrderNumber(null);
   };
 
   const handleInputChange = (field: keyof OrderFormData) => (
@@ -780,17 +822,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
   const handleCustomerChange = (customer: Customer | null) => {
     setFormData(prev => {
-      // Aktualizujeme názov firmy vo všetkých miestach nakládky a vykládky
-      const updatedLoadingPlaces = (prev.loadingPlaces || []).map(place => ({
-        ...place,
-        companyName: customer?.company || ''
-      }));
-      
-      const updatedUnloadingPlaces = (prev.unloadingPlaces || []).map(place => ({
-        ...place,
-        companyName: customer?.company || ''
-      }));
-
+      // Nebudeme už automaticky aktualizovať názov firmy vo všetkých miestach nakládky a vykládky
       return {
         ...prev,
         zakaznikData: customer,
@@ -807,8 +839,6 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         customerPhone: customer?.phone || '',
         customerCompany: customer?.company || '',
         customerPaymentTermDays: customer?.paymentTermDays || 30,
-        loadingPlaces: updatedLoadingPlaces,
-        unloadingPlaces: updatedUnloadingPlaces,
       };
     });
   };
@@ -824,8 +854,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const addLocation = (type: 'loading' | 'unloading') => {
     const newLocation = type === 'loading' ? { ...emptyLoadingPlace } : { ...emptyUnloadingPlace };
     newLocation.id = crypto.randomUUID();
-    // Automaticky vyplníme názov firmy z vybraného zákazníka
-    newLocation.companyName = formData.zakaznikData?.company || '';
+    // Nebudeme už automaticky vyplňovať názov firmy z vybraného zákazníka
     
     setFormData(prev => ({
       ...prev,
@@ -951,7 +980,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           formData.loadingPlaces.forEach((place, index) => {
             if (!place.city) errors.push(`Nakládka #${index + 1}: Zadajte mesto`);
             if (!place.street) errors.push(`Nakládka #${index + 1}: Zadajte ulicu`);
-            if (!place.contactPerson) errors.push(`Nakládka #${index + 1}: Zadajte kontaktnú osobu`);
+            if (!place.contactPersonName) errors.push(`Nakládka #${index + 1}: Zadajte kontaktnú osobu`);
             if (!place.dateTime) errors.push(`Nakládka #${index + 1}: Zadajte dátum a čas`);
             if (!place.goods?.length || !place.goods.some(g => g.name)) {
               errors.push(`Nakládka #${index + 1}: Zadajte aspoň jeden tovar`);
@@ -965,7 +994,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           formData.unloadingPlaces.forEach((place, index) => {
             if (!place.city) errors.push(`Vykládka #${index + 1}: Zadajte mesto`);
             if (!place.street) errors.push(`Vykládka #${index + 1}: Zadajte ulicu`);
-            if (!place.contactPerson) errors.push(`Vykládka #${index + 1}: Zadajte kontaktnú osobu`);
+            if (!place.contactPersonName) errors.push(`Vykládka #${index + 1}: Zadajte kontaktnú osobu`);
             if (!place.dateTime) errors.push(`Vykládka #${index + 1}: Zadajte dátum a čas`);
             if (!place.goods?.length || !place.goods.some(g => g.name)) {
               errors.push(`Vykládka #${index + 1}: Zadajte aspoň jeden tovar`);
@@ -1006,22 +1035,13 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       let orderYear = '';
       let orderMonth = '';
 
-      // Generujeme číslo objednávky len pre nové objednávky
-      if (!isEdit) {
-        // Generate order number
-        orderYear = new Date().getFullYear().toString();
-        orderMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
-        
-        const orderNumberQuery = query(
-          collection(db, 'orders'),
-          where('companyID', '==', userData.companyID),
-          where('orderYear', '==', orderYear),
-          where('orderMonth', '==', orderMonth)
-        );
-        
-        const orderSnapshot = await getDocs(orderNumberQuery);
-        orderNumber = (orderSnapshot.size + 1).toString().padStart(3, '0');
-        orderNumberFormatted = `${orderYear}${orderMonth}${orderNumber}`;
+      // Použijeme rezervované číslo objednávky pre nové objednávky
+      if (!isEdit && reservedOrderNumber) {
+        orderNumberFormatted = reservedOrderNumber;
+        // Extrahovanie častí z rezervovaného čísla
+        orderYear = reservedOrderNumber.substring(0, 4);
+        orderMonth = reservedOrderNumber.substring(4, 6);
+        orderNumber = reservedOrderNumber.substring(6, 9);
       }
 
       // Debug logy pre špeditera
@@ -1061,7 +1081,47 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         finalCreatedByName
       });
 
-      const dataToSave = {
+      // Pomocná funkcia na odstránenie undefined hodnôt
+      const removeUndefinedValues = (obj: any): any => {
+        if (obj === null || obj === undefined) {
+          return null;
+        }
+        
+        if (Array.isArray(obj)) {
+          return obj.map(item => removeUndefinedValues(item));
+        }
+        
+        if (typeof obj === 'object') {
+          const cleaned: any = {};
+          Object.keys(obj).forEach(key => {
+            const value = obj[key];
+            if (value !== undefined) {
+              cleaned[key] = removeUndefinedValues(value);
+            }
+          });
+          return cleaned;
+        }
+        
+        return obj;
+      };
+
+      // Konvertujeme dateTime polia na Timestamp objekty pre Firebase
+      const processedLoadingPlaces = formData.loadingPlaces?.map(place => ({
+        ...place,
+        dateTime: place.dateTime ? Timestamp.fromDate(place.dateTime as Date) : null
+      })) || [];
+      
+      const processedUnloadingPlaces = formData.unloadingPlaces?.map(place => ({
+        ...place,
+        dateTime: place.dateTime ? Timestamp.fromDate(place.dateTime as Date) : null
+      })) || [];
+
+      console.log('🔍 Debug - formData.loadingPlaces:', formData.loadingPlaces);
+      console.log('🔍 Debug - processedLoadingPlaces:', processedLoadingPlaces);
+      console.log('🔍 Debug - formData.unloadingPlaces:', formData.unloadingPlaces);
+      console.log('🔍 Debug - processedUnloadingPlaces:', processedUnloadingPlaces);
+
+      const rawDataToSave = {
         ...formData,
         companyID: userData.companyID,
         createdBy: finalCreatedBy,
@@ -1078,16 +1138,106 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         }),
         customerCompany: formData.zakaznik,
         customerPrice: formData.suma,
+        loadingPlaces: processedLoadingPlaces,
+        unloadingPlaces: processedUnloadingPlaces,
       };
 
+      // Odstránime undefined hodnoty
+      const dataToSave = removeUndefinedValues(rawDataToSave);
+
       console.log('💾 Kompletné dáta na uloženie:', dataToSave);
+      console.log('🔍 Debug - dataToSave.loadingPlaces:', dataToSave.loadingPlaces);
+      console.log('🔍 Debug - dataToSave.unloadingPlaces:', dataToSave.unloadingPlaces);
 
       if (isEdit && orderData.id) {
+        console.log('✏️ Aktualizujem existujúcu objednávku:', orderData.id);
         await updateDoc(doc(db, 'orders', orderData.id), dataToSave);
         console.log('✅ Objednávka úspešne aktualizovaná');
       } else {
-        await addDoc(collection(db, 'orders'), dataToSave);
-        console.log('✅ Nová objednávka úspešne vytvorená');
+        console.log('🆕 Vytváram novú objednávku');
+        const docRef = await addDoc(collection(db, 'orders'), dataToSave);
+        console.log('✅ Nová objednávka úspešne vytvorená s ID:', docRef.id);
+        
+        // Debug: Načítame objednávku späť z Firebase aby sme videli čo sa uložilo
+        const savedDoc = await getDoc(docRef);
+        if (savedDoc.exists()) {
+          const savedData = savedDoc.data();
+          console.log('🔎 Uložené dáta z Firebase:', savedData);
+          console.log('🔎 Uložené loadingPlaces:', savedData.loadingPlaces);
+          console.log('🔎 Uložené unloadingPlaces:', savedData.unloadingPlaces);
+        }
+      }
+
+      // Uloženie miest do dedikovanej kolekcie 'locations' (len pre nové objednávky alebo ak sa miesta zmenili)
+      if (!isEdit || JSON.stringify(formData.loadingPlaces) !== JSON.stringify(orderData.loadingPlaces) || 
+          JSON.stringify(formData.unloadingPlaces) !== JSON.stringify(orderData.unloadingPlaces)) {
+        console.log('📍 Ukladám miesta do kolekcie locations...');
+        
+        const locationsToSave = [
+          ...processedLoadingPlaces.map(place => ({
+            type: 'loading' as const,
+            companyName: place.companyName || '',
+            city: place.city || '',
+            street: place.street || '',
+            zip: place.zip || '',
+            country: place.country || 'Slovensko',
+            contactPersonName: place.contactPersonName || '',
+            contactPersonPhone: place.contactPersonPhone || '',
+            companyID: userData.companyID,
+            createdAt: Timestamp.now(),
+            usageCount: 0
+          })),
+          ...processedUnloadingPlaces.map(place => ({
+            type: 'unloading' as const,
+            companyName: place.companyName || '',
+            city: place.city || '',
+            street: place.street || '',
+            zip: place.zip || '',
+            country: place.country || 'Slovensko',
+            contactPersonName: place.contactPersonName || '',
+            contactPersonPhone: place.contactPersonPhone || '',
+            companyID: userData.companyID,
+            createdAt: Timestamp.now(),
+            usageCount: 0
+          }))
+        ];
+
+        // Kontrola duplicít - pridáme len miesta ktoré ešte neexistujú
+        for (const locationToSave of locationsToSave) {
+          try {
+            // Hľadáme existujúce miesto s rovnakými údajmi
+            const existingLocationQuery = query(
+              collection(db, 'locations'),
+              where('companyID', '==', userData.companyID),
+              where('type', '==', locationToSave.type),
+              where('companyName', '==', locationToSave.companyName),
+              where('city', '==', locationToSave.city),
+              where('street', '==', locationToSave.street)
+            );
+            
+            const existingSnapshot = await getDocs(existingLocationQuery);
+            
+            if (existingSnapshot.empty) {
+              // Miesto neexistuje, pridáme ho
+              const locationRef = await addDoc(collection(db, 'locations'), locationToSave);
+              console.log(`✅ Pridané nové miesto ${locationToSave.type}: ${locationToSave.companyName} - ${locationToSave.city} s ID: ${locationRef.id}`);
+            } else {
+              // Miesto už existuje, zvýšime usageCount
+              const existingLocation = existingSnapshot.docs[0];
+              const currentUsageCount = existingLocation.data().usageCount || 0;
+              await updateDoc(existingLocation.ref, {
+                usageCount: currentUsageCount + 1,
+                updatedAt: Timestamp.now()
+              });
+              console.log(`📈 Zvýšený usageCount pre existujúce miesto ${locationToSave.type}: ${locationToSave.companyName} - ${locationToSave.city}`);
+            }
+          } catch (error) {
+            console.error(`❌ Chyba pri ukladaní miesta ${locationToSave.type}:`, error);
+            // Pokračujeme s ďalšími miestami aj pri chybe
+          }
+        }
+        
+        console.log('📍 Dokončené ukladanie miest do kolekcie locations');
       }
 
       handleReset();
@@ -1598,7 +1748,14 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                 </Box>
 
                 {place.goods?.map((item, goodsIndex) => (
-                  <Card key={item.id} sx={{ mb: 2, backgroundColor: alpha('#f8f9fa', 0.5) }}>
+                  <Card key={item.id} sx={{ 
+                    mb: 2, 
+                    backgroundColor: 'transparent',
+                    border: (theme: any) => `1px solid ${theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.1)' 
+                      : 'rgba(0, 0, 0, 0.1)'}`,
+                    borderRadius: 2
+                  }}>
                     <CardContent sx={{ pb: 2, '&:last-child': { pb: 2 } }}>
                       <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
                         <Chip
@@ -1672,7 +1829,23 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                           </FormControl>
                         </Grid>
                         
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            fullWidth
+                            id={`goods-weight-${type}-${index}-${goodsIndex}`}
+                            name={`goodsWeight${type}${index}${goodsIndex}`}
+                            label="Váha (kg)"
+                            type="number"
+                            value={item.weight || ''}
+                            onChange={(e) => updateGoods(type, index, goodsIndex, 'weight', parseFloat(e.target.value) || undefined)}
+                            inputProps={{ min: 0, step: 0.1 }}
+                            InputProps={{
+                              endAdornment: <InputAdornment position="end">kg</InputAdornment>,
+                            }}
+                          />
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={4}>
                           <TextField
                             fullWidth
                             id={`goods-dimensions-${type}-${index}-${goodsIndex}`}
@@ -1683,7 +1856,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                           />
                         </Grid>
                         
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12} sm={4}>
                           <FormControl fullWidth>
                             <InputLabel id={`pallet-exchange-label-${type}-${index}-${goodsIndex}`}>Výmena paliet</InputLabel>
                             <Select
@@ -2065,6 +2238,45 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Typography variant="body2" color="text.secondary">
                 {steps[activeStep].description}
               </Typography>
+              {/* Zobrazenie rezervovaného čísla objednávky pre nové objednávky */}
+              {!isEdit && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1, 
+                  mt: 1,
+                  p: 1,
+                  backgroundColor: isDarkMode ? 'rgba(76, 175, 80, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+                  borderRadius: 1,
+                  border: `1px solid ${isDarkMode ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.3)'}`
+                }}>
+                  <BusinessIcon sx={{ fontSize: '1rem', color: '#4caf50' }} />
+                  <Typography variant="caption" sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
+                    Číslo objednávky: 
+                  </Typography>
+                  {isGeneratingOrderNumber ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={12} sx={{ color: '#4caf50' }} />
+                      <Typography variant="caption" sx={{ color: '#4caf50', fontStyle: 'italic' }}>
+                        Generujem...
+                      </Typography>
+                    </Box>
+                  ) : reservedOrderNumber ? (
+                    <Typography variant="caption" sx={{ 
+                      fontWeight: 600, 
+                      color: '#4caf50',
+                      fontFamily: 'monospace',
+                      fontSize: '0.9rem'
+                    }}>
+                      {reservedOrderNumber}
+                    </Typography>
+                  ) : (
+                    <Typography variant="caption" sx={{ color: '#f44336', fontStyle: 'italic' }}>
+                      Chyba pri generovaní
+                    </Typography>
+                  )}
+                </Box>
+              )}
               {/* Zobrazenie pôvodného špeditéra pre edit mode */}
               {isEdit && originalDispatcher && (
                 <Box sx={{ 
