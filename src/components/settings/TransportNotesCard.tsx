@@ -217,8 +217,6 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
             <Grid container spacing={2}>
               {SUPPORTED_LANGUAGES.map((lang) => {
                 const currentNotes = notes.get(lang.code);
-                const isEditing = editingLanguage === lang.code;
-                const isSaving = saving === lang.code;
 
                 return (
                   <Grid item xs={12} sm={6} md={3} key={lang.code}>
