@@ -43,7 +43,8 @@ const SUPPORTED_LANGUAGES = [
   { code: 'sk', name: 'Slovensky', flag: 'https://flagcdn.com/sk.svg' },
   { code: 'en', name: 'Anglicky', flag: 'https://flagcdn.com/gb.svg' },
   { code: 'de', name: 'Nemecky', flag: 'https://flagcdn.com/de.svg' },
-  { code: 'cs', name: 'Česky', flag: 'https://flagcdn.com/cz.svg' }
+  { code: 'cs', name: 'Česky', flag: 'https://flagcdn.com/cz.svg' },
+  { code: 'pl', name: 'Polsky', flag: 'https://flagcdn.com/pl.svg' }
 ] as const;
 
 interface TransportNotesCardProps {
@@ -83,7 +84,8 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
           title: lang.code === 'sk' ? 'Všeobecné obchodné podmienky' : 
                  lang.code === 'en' ? 'General Terms and Conditions' :
                  lang.code === 'de' ? 'Allgemeine Geschäftsbedingungen' :
-                 'Všeobecné obchodní podmínky',
+                 lang.code === 'cs' ? 'Všeobecné obchodní podmínky' :
+                 'Ogólne warunki handlowe',
           content: '',
           isActive: false
         });
@@ -125,7 +127,7 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
       
       const transportNotesData: Omit<TransportNotes, 'id'> = {
         companyID,
-        language: language as 'sk' | 'en' | 'de' | 'cs',
+        language: language as 'sk' | 'en' | 'de' | 'cs' | 'pl',
         title: formData.title,
         content: formData.content,
         isActive: formData.isActive,
@@ -173,7 +175,7 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
     setNotes(prev => {
       const newMap = new Map(prev);
       const current = newMap.get(language) || {
-        language: language as 'sk' | 'en' | 'de' | 'cs',
+        language: language as 'sk' | 'en' | 'de' | 'cs' | 'pl',
         title: '',
         content: '',
         isActive: false

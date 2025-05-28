@@ -1986,7 +1986,7 @@ const OrdersList: React.FC = () => {
     setOrderForLanguageSelection(null);
   };
 
-  const handleLanguageSelect = async (language: 'sk' | 'en' | 'de' | 'cs') => {
+  const handleLanguageSelect = async (language: 'sk' | 'en' | 'de' | 'cs' | 'pl') => {
     if (!orderForLanguageSelection) return;
     
     handleCloseLanguageMenu();
@@ -1999,7 +1999,7 @@ const OrdersList: React.FC = () => {
   };
 
   // Upravené funkcie pre PDF s jazykom
-  const handlePreviewPDFWithLanguage = async (order: OrderFormData, language: 'sk' | 'en' | 'de' | 'cs' = 'sk') => {
+  const handlePreviewPDFWithLanguage = async (order: OrderFormData, language: 'sk' | 'en' | 'de' | 'cs' | 'pl' = 'sk') => {
     try {
       if (!order.id) {
         alert('Objednávka nemá priradené ID. Prosím, uložte objednávku a skúste znovu.');
@@ -2039,7 +2039,7 @@ const OrdersList: React.FC = () => {
     }
   };
 
-  const handleDownloadPDFWithLanguage = async (order: OrderFormData, language: 'sk' | 'en' | 'de' | 'cs' = 'sk') => {
+  const handleDownloadPDFWithLanguage = async (order: OrderFormData, language: 'sk' | 'en' | 'de' | 'cs' | 'pl' = 'sk') => {
     try {
       if (!order.id) {
         alert('Objednávka nemá priradené ID. Prosím, uložte objednávku a skúste znovu.');

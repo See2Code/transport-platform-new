@@ -884,6 +884,32 @@ const PDF_TRANSLATIONS = {
         generatedIn: 'Dokument byl automaticky vygenerován v AESA Transport Platform',
         noLoadingPlaces: 'Žádná místa nakládky',
         noUnloadingPlaces: 'Žádná místa vykládky'
+    },
+    pl: {
+        transportOrder: 'Zlecenie transportowe nr',
+        recipient: 'Odbiorca',
+        sender: 'Nadawca',
+        loadingPlaces: 'Miejsca załadunku',
+        unloadingPlaces: 'Miejsca rozładunku',
+        loading: 'Załadunek',
+        unloading: 'Rozładunek',
+        company: 'Firma',
+        referenceNumber: 'Numer referencyjny',
+        contact: 'Kontakt',
+        phone: 'Telefon',
+        email: 'E-mail',
+        goods: 'Towar',
+        weight: 'Waga',
+        dimensions: 'Wymiary',
+        pallets: 'Palety',
+        vehicle: 'Pojazd',
+        dueDate: 'Termin płatności',
+        transport: 'Transport (bez VAT)',
+        daysFromInvoice: 'dni od otrzymania faktury i dokumentów',
+        contractWithCarrier: 'Zgodnie z umową z przewoźnikiem',
+        generatedIn: 'Dokument został automatycznie wygenerowany w AESA Transport Platform',
+        noLoadingPlaces: 'Brak miejsc załadunku',
+        noUnloadingPlaces: 'Brak miejsc rozładunku'
     }
 };
 // Funkcia na generovanie PDF
@@ -1541,7 +1567,7 @@ function generateOrderHtml(orderData, settings, carrierData, dispatcherData, tra
 
         <!-- Footer -->
         <div class="footer">
-          <p>${t.generatedIn} | ${new Date().toLocaleDateString(language === 'sk' ? 'sk-SK' : language === 'en' ? 'en-US' : language === 'de' ? 'de-DE' : 'cs-CZ')}</p>
+          <p>${t.generatedIn} | ${new Date().toLocaleDateString(language === 'sk' ? 'sk-SK' : language === 'en' ? 'en-US' : language === 'de' ? 'de-DE' : language === 'cs' ? 'cs-CZ' : 'pl-PL')}</p>
           <p>${safeText(companyFullName)} | ${safeText(companyAddress)} | IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
         </div>
       </div>

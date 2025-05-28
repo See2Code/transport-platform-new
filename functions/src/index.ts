@@ -810,7 +810,7 @@ const formatAddress = (street?: string, city?: string, zip?: string, country?: s
 };
 
 // Funkcia pre načítanie poznámok k prepravám
-const getTransportNotes = async (companyID: string): Promise<{ sk?: any, en?: any, de?: any, cs?: any }> => {
+const getTransportNotes = async (companyID: string): Promise<{ sk?: any, en?: any, de?: any, cs?: any, pl?: any }> => {
   try {
     const db = admin.firestore();
     const notesSnapshot = await db.collection('transportNotes')
@@ -939,6 +939,32 @@ const PDF_TRANSLATIONS = {
     generatedIn: 'Dokument byl automaticky vygenerován v AESA Transport Platform',
     noLoadingPlaces: 'Žádná místa nakládky',
     noUnloadingPlaces: 'Žádná místa vykládky'
+  },
+  pl: {
+    transportOrder: 'Zlecenie transportowe nr',
+    recipient: 'Odbiorca',
+    sender: 'Nadawca',
+    loadingPlaces: 'Miejsca załadunku',
+    unloadingPlaces: 'Miejsca rozładunku',
+    loading: 'Załadunek',
+    unloading: 'Rozładunek',
+    company: 'Firma',
+    referenceNumber: 'Numer referencyjny',
+    contact: 'Kontakt',
+    phone: 'Telefon',
+    email: 'E-mail',
+    goods: 'Towar',
+    weight: 'Waga',
+    dimensions: 'Wymiary',
+    pallets: 'Palety',
+    vehicle: 'Pojazd',
+    dueDate: 'Termin płatności',
+    transport: 'Transport (bez VAT)',
+    daysFromInvoice: 'dni od otrzymania faktury i dokumentów',
+    contractWithCarrier: 'Zgodnie z umową z przewoźnikiem',
+    generatedIn: 'Dokument został automatycznie wygenerowany w AESA Transport Platform',
+    noLoadingPlaces: 'Brak miejsc załadunku',
+    noUnloadingPlaces: 'Brak miejsc rozładunku'
   }
 };
 
@@ -1131,7 +1157,7 @@ export const generateOrderPdf = functions
       console.log('Načítané poznámky k prepravám:', Object.keys(transportNotes));
 
       // Získanie jazyka z parametrov (default: sk)
-      const language = (data.language as 'sk' | 'en' | 'de' | 'cs') || 'sk';
+      const language = (data.language as 'sk' | 'en' | 'de' | 'cs' | 'pl') || 'sk';
       console.log('Jazyk PDF:', language);
 
       // Generovanie kompletného HTML pre PDF - verzia pre dopravcu
@@ -1182,7 +1208,7 @@ export const generateOrderPdf = functions
   });
 
 // Funkcia pre generovanie HTML šablóny objednávky
-function generateOrderHtml(orderData: any, settings: any, carrierData: any, dispatcherData: any, transportNotes: any, language: 'sk' | 'en' | 'de' | 'cs'): string {
+function generateOrderHtml(orderData: any, settings: any, carrierData: any, dispatcherData: any, transportNotes: any, language: 'sk' | 'en' | 'de' | 'cs' | 'pl'): string {
   const orderNumber = orderData.orderNumberFormatted || (orderData.id?.substring(0, 8) || 'N/A');
   const createdAtDate = formatDate(orderData.createdAt);
   
@@ -1659,7 +1685,7 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
 
         <!-- Footer -->
         <div class="footer">
-          <p>${t.generatedIn} | ${new Date().toLocaleDateString(language === 'sk' ? 'sk-SK' : language === 'en' ? 'en-US' : language === 'de' ? 'de-DE' : 'cs-CZ')}</p>
+          <p>${t.generatedIn} | ${new Date().toLocaleDateString(language === 'sk' ? 'sk-SK' : language === 'en' ? 'en-US' : language === 'de' ? 'de-DE' : language === 'cs' ? 'cs-CZ' : 'pl-PL')}</p>
           <p>${safeText(companyFullName)} | ${safeText(companyAddress)} | IČO: ${safeText(companyID)} | DIČ: ${safeText(companyVatID)}</p>
         </div>
       </div>

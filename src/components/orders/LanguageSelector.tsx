@@ -13,7 +13,7 @@ interface LanguageSelectorProps {
   open: boolean;
   anchorEl: null | HTMLElement;
   onClose: () => void;
-  onLanguageSelect: (language: 'sk' | 'en' | 'de' | 'cs') => void;
+  onLanguageSelect: (language: 'sk' | 'en' | 'de' | 'cs' | 'pl') => void;
 }
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({
@@ -28,7 +28,8 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     { code: 'sk', name: 'Slovenčina', flag: '🇸🇰' },
     { code: 'en', name: 'English', flag: '🇬🇧' },
     { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-    { code: 'cs', name: 'Čeština', flag: '🇨🇿' }
+    { code: 'cs', name: 'Čeština', flag: '🇨🇿' },
+    { code: 'pl', name: 'Polski', flag: '🇵🇱' }
   ] as const;
 
   return (
