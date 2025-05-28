@@ -53,7 +53,7 @@ const RatingIndicator: React.FC<RatingIndicatorProps> = ({
     };
 
     return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
             {/* Farebná bodka indikátor */}
             <Box
                 sx={{
@@ -98,7 +98,8 @@ const RatingIndicator: React.FC<RatingIndicatorProps> = ({
                         backgroundColor: `${getRatingColor(rating)}20`,
                         color: getRatingColor(rating),
                         fontWeight: 600,
-                        fontSize: size === 'small' ? '0.7rem' : '0.75rem'
+                        fontSize: size === 'small' ? '0.7rem' : '0.75rem',
+                        whiteSpace: 'nowrap'
                     }}
                 />
             )}

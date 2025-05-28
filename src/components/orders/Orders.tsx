@@ -389,10 +389,10 @@ const OrderRow = React.memo<OrderRowProps>(({
         })()}
       </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, height: '100%' }}>
           <RatingIndicator 
             rating={getOrderAverageRating(order)} 
-            size="medium" 
+            size="small" 
             showChip 
           />
           <BareTooltip title="Pridať/upraviť hodnotenie">
@@ -401,6 +401,7 @@ const OrderRow = React.memo<OrderRowProps>(({
               size="small"
               sx={{ 
                 color: '#2196f3',
+                padding: '4px',
                 '&:hover': { 
                   backgroundColor: 'rgba(33, 150, 243, 0.1)' 
                 } 
@@ -426,7 +427,6 @@ const OrderRow = React.memo<OrderRowProps>(({
           <BareTooltip title={t('orders.edit')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></BareTooltip>
           <BareTooltip title={t('orders.previewPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onPreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></BareTooltip>
           <BareTooltip title={t('orders.downloadPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></BareTooltip>
-          <BareTooltip title="Pridať/upraviť hodnotenie"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onRateOrder(order); }} sx={{ color: '#2196f3' }}><StarIcon fontSize="small"/></IconButton></BareTooltip>
           <BareTooltip title={t('orders.delete')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDeleteOrder(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></BareTooltip>
         </Box>
       </StyledTableCell>
@@ -2124,10 +2124,10 @@ const OrdersList: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, height: '100%' }}>
                               <RatingIndicator 
                                 rating={getCustomerAverageRating(customer)} 
-                                size="medium" 
+                                size="small" 
                                 showChip 
                               />
                               <BareTooltip title="Pridať/upraviť hodnotenie">
@@ -2136,6 +2136,7 @@ const OrdersList: React.FC = () => {
                                   size="small"
                                   sx={{ 
                                     color: '#2196f3',
+                                    padding: '4px',
                                     '&:hover': { 
                                       backgroundColor: 'rgba(33, 150, 243, 0.1)' 
                                     } 
@@ -2317,10 +2318,10 @@ const OrdersList: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, height: '100%' }}>
                               <RatingIndicator 
                                 rating={getCarrierAverageRating(carrier)} 
-                                size="medium" 
+                                size="small" 
                                 showChip 
                               />
                               <BareTooltip title="Pridať/upraviť hodnotenie">
