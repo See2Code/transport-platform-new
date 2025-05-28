@@ -63,8 +63,9 @@ import OrderDetail from './OrderDetail';
 import DocumentManager from './DocumentManager';
 import DocumentsIndicator from './DocumentsIndicator';
 // import RatingIndicator from '../common/RatingIndicator';
-// import CustomerRatingDialog from '../dialogs/CustomerRatingDialog';
-// import CarrierRatingDialog from '../dialogs/CarrierRatingDialog';
+import CustomerRatingDialog from '../dialogs/CustomerRatingDialog';
+import CarrierRatingDialog from '../dialogs/CarrierRatingDialog';
+import OrderRatingDialog from '../dialogs/OrderRatingDialog';
 import LanguageSelector from './LanguageSelector';
 import { Customer, CustomerRating } from '../../types/customers';
 import { Carrier, CarrierRating } from '../../types/carriers';
@@ -242,51 +243,59 @@ const convertToDate = (dateTime: any): Date | null => {
 };
 
 // Dočasné placeholder komponenty
-const RatingIndicator = ({ rating, size, showChip: _showChip }: { rating: number; size?: string; showChip?: boolean }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-    <StarIcon sx={{ fontSize: size === 'small' ? 14 : 16, color: '#ff9f43' }} />
-    <Typography variant="caption">{rating.toFixed(1)}</Typography>
-  </Box>
-);
+const RatingIndicator = ({ rating, size, showChip: _showChip }: { rating: number; size?: string; showChip?: boolean }) => {
+  // Funkcia pre získanie farby podľa hodnotenia
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return '#4caf50'; // Zelená - výborné
+    if (rating >= 4.0) return '#8bc34a'; // Svetlo zelená - veľmi dobré
+    if (rating >= 3.5) return '#ff9f43'; // Oranžová - dobré
+    if (rating >= 3.0) return '#ff9800'; // Tmavo oranžová - priemerné
+    if (rating >= 2.0) return '#f44336'; // Červená - slabé
+    if (rating > 0) return '#9c27b0'; // Fialová - veľmi slabé
+    return '#e0e0e0'; // Sivá - bez hodnotenia
+  };
 
-const CustomerRatingDialog = ({ open, onClose, customer: _customer, onSubmit: _onSubmit }: { 
-  open: boolean; 
-  onClose: () => void; 
-  customer?: Customer | null; 
-  onSubmit?: (rating: CustomerRating) => Promise<void>; 
-}) => (
-  <Dialog open={open} onClose={onClose}>
-    <DialogTitle>Hodnotenie zákazníka</DialogTitle>
-    <DialogContent>Funkcia dočasne nedostupná</DialogContent>
-    <DialogActions><Button onClick={onClose}>Zavrieť</Button></DialogActions>
-  </Dialog>
-);
+  // Funkcia pre získanie textového popisu
+  const getRatingText = (rating: number) => {
+    if (rating >= 4.5) return 'Výborné';
+    if (rating >= 4.0) return 'Veľmi dobré';
+    if (rating >= 3.5) return 'Dobré';
+    if (rating >= 3.0) return 'Priemerné';
+    if (rating >= 2.0) return 'Slabé';
+    if (rating > 0) return 'Veľmi slabé';
+    return 'Bez hodnotenia';
+  };
 
-const CarrierRatingDialog = ({ open, onClose, carrier: _carrier, onSubmit: _onSubmit }: { 
-  open: boolean; 
-  onClose: () => void; 
-  carrier?: Carrier | null; 
-  onSubmit?: (rating: CarrierRating) => Promise<void>; 
-}) => (
-  <Dialog open={open} onClose={onClose}>
-    <DialogTitle>Hodnotenie dopravcu</DialogTitle>
-    <DialogContent>Funkcia dočasne nedostupná</DialogContent>
-    <DialogActions><Button onClick={onClose}>Zavrieť</Button></DialogActions>
-  </Dialog>
-);
+  const color = getRatingColor(rating);
+  const text = getRatingText(rating);
+  const fontSize = size === 'small' ? '1rem' : '1.25rem';
+  const textSize = size === 'small' ? '0.75rem' : '0.875rem';
 
-const OrderRatingDialog = ({ open, onClose, order: _order, onSubmit: _onSubmit }: { 
-  open: boolean; 
-  onClose: () => void; 
-  order?: any; 
-  onSubmit?: (rating: OrderRating) => Promise<void>; 
-}) => (
-  <Dialog open={open} onClose={onClose}>
-    <DialogTitle>Hodnotenie objednávky</DialogTitle>
-    <DialogContent>Funkcia dočasne nedostupná</DialogContent>
-    <DialogActions><Button onClick={onClose}>Zavrieť</Button></DialogActions>
-  </Dialog>
-);
+  if (rating === 0) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <StarIcon sx={{ fontSize, color: '#e0e0e0' }} />
+        <Typography variant="caption" sx={{ fontSize: textSize, color: '#9e9e9e', whiteSpace: 'nowrap' }}>
+          Bez hodnotenia
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <StarIcon sx={{ fontSize, color }} />
+      <Typography variant="caption" sx={{ 
+        fontSize: textSize, 
+        fontWeight: 600, 
+        color, 
+        whiteSpace: 'nowrap'
+      }}>
+        {rating.toFixed(1)} • {text}
+      </Typography>
+    </Box>
+  );
+};
 
 const DialogGlobalStyles = ({ open }: { open: boolean }) => {
   if (!open) return null;
