@@ -850,6 +850,9 @@ const PDF_TRANSLATIONS = {
     phone: 'Telefón',
     email: 'E-mail',
     goods: 'Tovar',
+    weight: 'Váha',
+    dimensions: 'Rozmery',
+    pallets: 'Palety',
     vehicle: 'Ťahač',
     dueDate: 'Dátum splatnosti',
     transport: 'Preprava (bez DPH)',
@@ -873,6 +876,9 @@ const PDF_TRANSLATIONS = {
     phone: 'Phone',
     email: 'E-mail',
     goods: 'Goods',
+    weight: 'Weight',
+    dimensions: 'Dimensions',
+    pallets: 'Pallets',
     vehicle: 'Vehicle',
     dueDate: 'Due Date',
     transport: 'Transport (excl. VAT)',
@@ -896,6 +902,9 @@ const PDF_TRANSLATIONS = {
     phone: 'Telefon',
     email: 'E-Mail',
     goods: 'Waren',
+    weight: 'Gewicht',
+    dimensions: 'Abmessungen',
+    pallets: 'Paletten',
     vehicle: 'Fahrzeug',
     dueDate: 'Fälligkeitsdatum',
     transport: 'Transport (ohne MwSt.)',
@@ -919,6 +928,9 @@ const PDF_TRANSLATIONS = {
     phone: 'Telefon',
     email: 'E-mail',
     goods: 'Zboží',
+    weight: 'Hmotnost',
+    dimensions: 'Rozměry',
+    pallets: 'Palety',
     vehicle: 'Vozidlo',
     dueDate: 'Datum splatnosti',
     transport: 'Doprava (bez DPH)',
@@ -1234,10 +1246,21 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
 
       let goodsHtml = '';
       if (hasGoods) {
-        const goodsItems = place.goods.map((item: any) => 
-          `${safeText(item.quantity)} ${safeText(item.unit)} ${safeText(item.name)}`
-        ).join(', ');
-        goodsHtml = `<p><strong>${t.goods}:</strong> ${goodsItems}</p>`;
+        let goodsDetails = '<div class="goods-details">';
+        place.goods.forEach((item: any, itemIndex: number) => {
+          goodsDetails += `
+            <div class="goods-item">
+              <strong>${safeText(item.quantity)} ${safeText(item.unit)} ${safeText(item.name)}</strong>
+              ${item.weight ? `<br><span style="font-size: 9px; color: #666;">${t.weight}: ${safeText(item.weight)} t</span>` : ''}
+              ${item.dimensions ? `<br><span style="font-size: 9px; color: #666;">${t.dimensions}: ${safeText(item.dimensions)}</span>` : ''}
+              ${item.description ? `<br><span style="font-size: 9px; color: #666;">${safeText(item.description)}</span>` : ''}
+              ${item.palletExchange && item.palletExchange !== 'Bez výmeny' ? `<br><span style="font-size: 9px; color: #666;">${t.pallets}: ${safeText(item.palletExchange)}</span>` : ''}
+            </div>
+            ${itemIndex < place.goods.length - 1 ? '<hr style="margin: 8px 0; border: none; border-top: 1px solid #ddd;">' : ''}
+          `;
+        });
+        goodsDetails += '</div>';
+        goodsHtml = `<div><strong>${t.goods}:</strong></div>${goodsDetails}`;
       }
 
       loadingPlacesHtml += `
@@ -1272,10 +1295,21 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
 
       let goodsHtml = '';
       if (hasGoods) {
-        const goodsItems = place.goods.map((item: any) => 
-          `${safeText(item.quantity)} ${safeText(item.unit)} ${safeText(item.name)}`
-        ).join(', ');
-        goodsHtml = `<p><strong>${t.goods}:</strong> ${goodsItems}</p>`;
+        let goodsDetails = '<div class="goods-details">';
+        place.goods.forEach((item: any, itemIndex: number) => {
+          goodsDetails += `
+            <div class="goods-item">
+              <strong>${safeText(item.quantity)} ${safeText(item.unit)} ${safeText(item.name)}</strong>
+              ${item.weight ? `<br><span style="font-size: 9px; color: #666;">${t.weight}: ${safeText(item.weight)} t</span>` : ''}
+              ${item.dimensions ? `<br><span style="font-size: 9px; color: #666;">${t.dimensions}: ${safeText(item.dimensions)}</span>` : ''}
+              ${item.description ? `<br><span style="font-size: 9px; color: #666;">${safeText(item.description)}</span>` : ''}
+              ${item.palletExchange && item.palletExchange !== 'Bez výmeny' ? `<br><span style="font-size: 9px; color: #666;">${t.pallets}: ${safeText(item.palletExchange)}</span>` : ''}
+            </div>
+            ${itemIndex < place.goods.length - 1 ? '<hr style="margin: 8px 0; border: none; border-top: 1px solid #ddd;">' : ''}
+          `;
+        });
+        goodsDetails += '</div>';
+        goodsHtml = `<div><strong>${t.goods}:</strong></div>${goodsDetails}`;
       }
 
       unloadingPlacesHtml += `
@@ -1484,6 +1518,18 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           margin: 3px 0;
           font-size: 9px;
           color: #666;
+        }
+        .goods-details {
+          margin-top: 8px;
+          font-size: 10px;
+        }
+        .goods-item {
+          margin: 5px 0;
+          padding: 6px;
+          background-color: #fff;
+          border: 1px solid #e0e0e0;
+          border-radius: 4px;
+          line-height: 1.3;
         }
         .vehicle-section {
           margin: 20px 0;

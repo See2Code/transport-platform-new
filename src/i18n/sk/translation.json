@@ -74,6 +74,7 @@
     "status": "Stav",
     "price": "Cena",
     "weight": "Hmotnosť",
+    "weightTons": "Váha (t)",
     "volume": "Objem",
     "notes": "Poznámky",
     "allOrders": "Všetky objednávky",
@@ -96,6 +97,7 @@
     "loadingTime": "Čas nakládky",
     "unloadingTime": "Čas vykládky",
     "goods": "Tovar",
+    "goodsDescription": "Popis tovaru",
     "customerPrice": "Cena zák.",
     "carrierPrice": "Cena dopr.",
     "profit": "Zisk",
@@ -179,7 +181,9 @@
     "locationType": "Typ miesta",
     "companyInfo": "Informácie o firme",
     "address": "Adresa",
-    "contactInfo": "Kontaktné údaje"
+    "contactInfo": "Kontaktné údaje",
+    "dimensions": "Rozmery",
+    "palletExchange": "Výmena paliet"
   },
   "settings": {
     "profileSettings": "Nastavenia profilu",

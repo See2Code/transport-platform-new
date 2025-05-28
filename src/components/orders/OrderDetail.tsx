@@ -350,6 +350,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Názov</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Množstvo</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Jednotka</strong></StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}><strong>Váha (t)</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Výmena paliet</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Rozmery</strong></StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}><strong>Popis</strong></StyledTableCell>
@@ -363,6 +364,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                           <StyledTableCell isDarkMode={isDarkMode}>{item.name || '-'}</StyledTableCell>
                           <StyledTableCell isDarkMode={isDarkMode}>{item.quantity || '-'}</StyledTableCell>
                           <StyledTableCell isDarkMode={isDarkMode}>{item.unit || '-'}</StyledTableCell>
+                          <StyledTableCell isDarkMode={isDarkMode}>{item.weight ? `${item.weight} t` : '-'}</StyledTableCell>
                           <StyledTableCell isDarkMode={isDarkMode}>{item.palletExchange || '-'}</StyledTableCell>
                           <StyledTableCell isDarkMode={isDarkMode}>{item.dimensions || '-'}</StyledTableCell>
                           <StyledTableCell isDarkMode={isDarkMode}>{item.description || '-'}</StyledTableCell>
@@ -371,7 +373,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                     )
                   ) : (
                     <TableRow>
-                      <StyledTableCell isDarkMode={isDarkMode} colSpan={6}>
+                      <StyledTableCell isDarkMode={isDarkMode} colSpan={7}>
                         Nie sú definované žiadne položky tovaru
                       </StyledTableCell>
                     </TableRow>

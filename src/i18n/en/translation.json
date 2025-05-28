@@ -74,6 +74,7 @@
     "status": "Status",
     "price": "Price",
     "weight": "Weight",
+    "weightTons": "Weight (t)",
     "volume": "Volume",
     "notes": "Notes",
     "allOrders": "All Orders",
@@ -171,7 +172,10 @@
     "addNewCarrier": "Add New Carrier",
     "carrierContact": "Carrier Contact",
     "vehicleRegistration": "Vehicle Registration",
-    "orderSummary": "Order Summary"
+    "orderSummary": "Order Summary",
+    "dimensions": "Dimensions",
+    "palletExchange": "Pallet Exchange",
+    "goodsDescription": "Goods Description"
   },
   "settings": {
     "profileSettings": "Profile Settings",

@@ -1834,13 +1834,13 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             fullWidth
                             id={`goods-weight-${type}-${index}-${goodsIndex}`}
                             name={`goodsWeight${type}${index}${goodsIndex}`}
-                            label="Váha (kg)"
+                            label={t('orders.weightTons')}
                             type="number"
                             value={item.weight || ''}
                             onChange={(e) => updateGoods(type, index, goodsIndex, 'weight', parseFloat(e.target.value) || undefined)}
-                            inputProps={{ min: 0, step: 0.1 }}
+                            inputProps={{ min: 0, step: 0.001 }}
                             InputProps={{
-                              endAdornment: <InputAdornment position="end">kg</InputAdornment>,
+                              endAdornment: <InputAdornment position="end">t</InputAdornment>,
                             }}
                           />
                         </Grid>
@@ -1850,7 +1850,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             fullWidth
                             id={`goods-dimensions-${type}-${index}-${goodsIndex}`}
                             name={`goodsDimensions${type}${index}${goodsIndex}`}
-                            label="Rozmery (d×š×v)"
+                            label={t('orders.dimensions')}
                             value={item.dimensions || ''}
                             onChange={(e) => updateGoods(type, index, goodsIndex, 'dimensions', e.target.value)}
                           />
@@ -1858,13 +1858,13 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                         
                         <Grid item xs={12} sm={4}>
                           <FormControl fullWidth>
-                            <InputLabel id={`pallet-exchange-label-${type}-${index}-${goodsIndex}`}>Výmena paliet</InputLabel>
+                            <InputLabel id={`pallet-exchange-label-${type}-${index}-${goodsIndex}`}>{t('orders.palletExchange')}</InputLabel>
                             <Select
                               id={`pallet-exchange-select-${type}-${index}-${goodsIndex}`}
                               name={`palletExchange${type}${index}${goodsIndex}`}
                               labelId={`pallet-exchange-label-${type}-${index}-${goodsIndex}`}
                               value={item.palletExchange}
-                              label="Výmena paliet"
+                              label={t('orders.palletExchange')}
                               onChange={(e) => updateGoods(type, index, goodsIndex, 'palletExchange', e.target.value)}
                             >
                               <MenuItem value="Bez výmeny">Bez výmeny</MenuItem>
@@ -1879,7 +1879,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             fullWidth
                             id={`goods-description-${type}-${index}-${goodsIndex}`}
                             name={`goodsDescription${type}${index}${goodsIndex}`}
-                            label="Popis tovaru"
+                            label={t('orders.goodsDescription')}
                             value={item.description || ''}
                             onChange={(e) => updateGoods(type, index, goodsIndex, 'description', e.target.value)}
                             multiline
