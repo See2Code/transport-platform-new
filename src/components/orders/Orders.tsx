@@ -332,6 +332,7 @@ interface OrderRowProps {
   onDeleteOrder: (id: string) => void;
   t: any;
   onRateOrder: (order: OrderFormData) => void;
+  getOrderAverageRating: (order: OrderFormData) => number;
 }
 
 const OrderRow = React.memo<OrderRowProps>(({ 
@@ -344,7 +345,8 @@ const OrderRow = React.memo<OrderRowProps>(({
   onDownloadPDF, 
   onDeleteOrder,
   t,
-  onRateOrder 
+  onRateOrder,
+  getOrderAverageRating
 }) => {
   return (
     <StyledTableRow 
@@ -385,6 +387,29 @@ const OrderRow = React.memo<OrderRowProps>(({
           const profit = customerPrice - carrierPrice;
           return `${profit.toFixed(2)} €`;
         })()}
+      </StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <RatingIndicator 
+            rating={getOrderAverageRating(order)} 
+            size="medium" 
+            showChip 
+          />
+          <BareTooltip title="Pridať/upraviť hodnotenie">
+            <IconButton 
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onRateOrder(order); }}
+              size="small"
+              sx={{ 
+                color: '#2196f3',
+                '&:hover': { 
+                  backgroundColor: 'rgba(33, 150, 243, 0.1)' 
+                } 
+              }}
+            >
+              <StarIcon fontSize="small" />
+            </IconButton>
+          </BareTooltip>
+        </Box>
       </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>
         {
@@ -1742,7 +1767,7 @@ const OrdersList: React.FC = () => {
     }
   };
 
-  const _getOrderAverageRating = (order: OrderFormData): number => {
+  const getOrderAverageRating = (order: OrderFormData): number => {
     if (!order.rating) return 0;
     return order.rating.overallTransportRating || 0;
   };
@@ -1944,6 +1969,7 @@ const OrdersList: React.FC = () => {
                     <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{t('orders.customerPrice')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#1976d2', fontWeight: 'bold' }}>{t('orders.carrierPrice')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#2ecc71', fontWeight: 'bold' }}>{t('orders.profit')}</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>Hodnotenie</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.dispatcher')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.creationDate')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.actions')}</StyledTableCell>
@@ -1963,11 +1989,12 @@ const OrdersList: React.FC = () => {
                       onDeleteOrder={openDeleteConfirmation}
                       onRateOrder={handleOpenOrderRating}
                       t={t}
+                      getOrderAverageRating={getOrderAverageRating}
                     />
                   ))}
                   {getFilteredCustomerOrders().length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={15} align="center">
+                      <TableCell colSpan={16} align="center">
                         {t('orders.noOrdersFound')}
                       </TableCell>
                     </TableRow>
