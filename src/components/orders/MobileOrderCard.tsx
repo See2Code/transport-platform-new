@@ -4,7 +4,6 @@ import {
   Typography,
   IconButton,
   Chip,
-  Tooltip,
   styled,
   useTheme
 } from '@mui/material';
@@ -19,6 +18,7 @@ import {
 import { OrderFormData } from '../../types/orders';
 import { format } from 'date-fns';
 import { sk } from 'date-fns/locale';
+import BareTooltip from '../common/BareTooltip';
 
 interface MobileOrderCardProps {
   order: OrderFormData;
@@ -173,26 +173,26 @@ const MobileOrderCard: React.FC<MobileOrderCardProps> = ({
         {/* Môžete pridať ďalšie dôležité informácie o objednávke */}
       </CardContent>
       <CardActions>
-        <Tooltip title="Upraviť objednávku">
+        <BareTooltip title="Upraviť objednávku" placement="bottom">
           <IconButton size="small" onClick={() => onEdit(order)}>
             <EditIcon fontSize="small" />
           </IconButton>
-        </Tooltip>
-        <Tooltip title="Zmazať objednávku">
+        </BareTooltip>
+        <BareTooltip title="Zmazať objednávku" placement="bottom">
           <IconButton size="small" onClick={() => onDelete(order.id!)}>
             <DeleteIcon fontSize="small" />
           </IconButton>
-        </Tooltip>
-        <Tooltip title="Zobraziť PDF">
+        </BareTooltip>
+        <BareTooltip title="Zobraziť PDF" placement="bottom">
           <IconButton size="small" onClick={(event: React.MouseEvent<HTMLElement>) => onPreviewPDF(event, order)}>
             <VisibilityIcon fontSize="small" />
           </IconButton>
-        </Tooltip>
-        <Tooltip title="Stiahnuť PDF">
+        </BareTooltip>
+        <BareTooltip title="Stiahnuť PDF" placement="bottom">
           <IconButton size="small" onClick={(event: React.MouseEvent<HTMLElement>) => onDownloadPDF(event, order)}>
             <FileDownloadIcon fontSize="small" />
           </IconButton>
-        </Tooltip>
+        </BareTooltip>
       </CardActions>
     </StyledMobileOrderCard>
   );

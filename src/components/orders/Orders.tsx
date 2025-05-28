@@ -11,7 +11,6 @@ import {
   TextField,
   InputAdornment,
   Chip,
-  Tooltip as BareTooltip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -72,8 +71,7 @@ import { Carrier, CarrierRating } from '../../types/carriers';
 import StarIcon from '@mui/icons-material/Star';
 // import OrderRatingDialog from '../dialogs/OrderRatingDialog';
 import { OrderRating } from '../../types/orders';
-
-
+import BareTooltip from '../common/BareTooltip';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -473,10 +471,26 @@ const OrderRow = React.memo<OrderRowProps>(({
       <StyledTableCell isDarkMode={isDarkMode}>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}> {/* Akcie */} 
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <BareTooltip title={t('orders.edit')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></BareTooltip>
-          <BareTooltip title={t('orders.previewPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onPreviewPDF(e, order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></BareTooltip>
-          <BareTooltip title={t('orders.downloadPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDownloadPDF(e, order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></BareTooltip>
-          <BareTooltip title={t('orders.delete')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDeleteOrder(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></BareTooltip>
+          <BareTooltip title={t('orders.edit')} placement="bottom">
+            <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEditOrder(order); }} sx={{ color: '#ff9f43' }}>
+              <EditIcon fontSize="small"/>
+            </IconButton>
+          </BareTooltip>
+          <BareTooltip title={t('orders.previewPDF')} placement="bottom">
+            <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onPreviewPDF(e, order); }} sx={{ color: '#1e88e5' }}>
+              <VisibilityIcon fontSize="small"/>
+            </IconButton>
+          </BareTooltip>
+          <BareTooltip title={t('orders.downloadPDF')} placement="bottom">
+            <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDownloadPDF(e, order); }} sx={{ color: '#4caf50' }}>
+              <FileDownloadIcon fontSize="small"/>
+            </IconButton>
+          </BareTooltip>
+          <BareTooltip title={t('orders.delete')} placement="bottom">
+            <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDeleteOrder(order.id || ''); }} sx={{ color: '#ff6b6b' }}>
+              <DeleteIcon fontSize="small"/>
+            </IconButton>
+          </BareTooltip>
         </Box>
       </StyledTableCell>
     </StyledTableRow>
