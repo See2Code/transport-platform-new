@@ -338,7 +338,8 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                 customerContactName: '',
                 customerContactSurname: '',
                 customerEmail: '',
-                customerPhone: ''
+                customerPhone: '',
+                customerPaymentTermDays: 30
             }));
             return;
         }
@@ -359,7 +360,8 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             customerContactName: newValue.contactName || '',
             customerContactSurname: newValue.contactSurname || '',
             customerEmail: newValue.email || '',
-            customerPhone: newValue.phone || ''
+            customerPhone: newValue.phone || '',
+            customerPaymentTermDays: newValue.paymentTermDays || 30
         };
 
         console.log("Updated form data:", updatedData); // Pre debugovanie
@@ -765,6 +767,19 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextField fullWidth label="Kontaktná osoba" name="kontaktnaOsoba" value={formData.kontaktnaOsoba || ''} onChange={handleInputChange} />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField 
+                            fullWidth 
+                            label="Splatnosť zákazníka (dni)" 
+                            name="customerPaymentTermDays" 
+                            type="number"
+                            value={formData.customerPaymentTermDays || 30} 
+                            InputProps={{
+                                readOnly: true,
+                            }}
+                            helperText="Automaticky načítané zo zákazníka"
+                        />
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextField 

@@ -31,7 +31,7 @@ import {
   Tab,
   DialogContentText,
   Divider,
-  Chip,
+  Chip
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useThemeMode } from '../../contexts/ThemeContext';
@@ -39,8 +39,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DatePicker } from '@mui/x-date-pickers';
 import { sk } from 'date-fns/locale';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -64,6 +63,14 @@ import OrderDetail from './OrderDetail';
 import DocumentManager from './DocumentManager';
 import DocumentsIndicator from './DocumentsIndicator';
 import BareTooltip from '../common/BareTooltip';
+import RatingIndicator from '../common/RatingIndicator';
+import CustomerRatingDialog from '../dialogs/CustomerRatingDialog';
+import CarrierRatingDialog from '../dialogs/CarrierRatingDialog';
+import { Customer, CustomerRating } from '../../types/customers';
+import { Carrier, CarrierRating } from '../../types/carriers';
+import StarIcon from '@mui/icons-material/Star';
+import OrderRatingDialog from '../dialogs/OrderRatingDialog';
+import { OrderRating } from '../../types/orders';
 
 
 
@@ -324,6 +331,7 @@ interface OrderRowProps {
   onDownloadPDF: (order: OrderFormData) => void;
   onDeleteOrder: (id: string) => void;
   t: any;
+  onRateOrder: (order: OrderFormData) => void;
 }
 
 const OrderRow = React.memo<OrderRowProps>(({ 
@@ -335,7 +343,8 @@ const OrderRow = React.memo<OrderRowProps>(({
   onPreviewPDF, 
   onDownloadPDF, 
   onDeleteOrder,
-  t 
+  t,
+  onRateOrder 
 }) => {
   return (
     <StyledTableRow 
@@ -392,6 +401,7 @@ const OrderRow = React.memo<OrderRowProps>(({
           <BareTooltip title={t('orders.edit')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEditOrder(order); }} sx={{ color: '#ff9f43' }}><EditIcon fontSize="small"/></IconButton></BareTooltip>
           <BareTooltip title={t('orders.previewPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onPreviewPDF(order); }} sx={{ color: '#1e88e5' }}><VisibilityIcon fontSize="small"/></IconButton></BareTooltip>
           <BareTooltip title={t('orders.downloadPDF')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDownloadPDF(order); }} sx={{ color: '#4caf50' }}><FileDownloadIcon fontSize="small"/></IconButton></BareTooltip>
+          <BareTooltip title="Pridať/upraviť hodnotenie"><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onRateOrder(order); }} sx={{ color: '#2196f3' }}><StarIcon fontSize="small"/></IconButton></BareTooltip>
           <BareTooltip title={t('orders.delete')}><IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDeleteOrder(order.id || ''); }} sx={{ color: '#ff6b6b' }}><DeleteIcon fontSize="small"/></IconButton></BareTooltip>
         </Box>
       </StyledTableCell>
@@ -419,42 +429,6 @@ const OrderRow = React.memo<OrderRowProps>(({
     (prevOrder as any).createdByName === (nextOrder as any).createdByName
   );
 });
-
-interface Customer {
-  id: string;
-  companyName: string;
-  street: string;
-  city: string;
-  zip: string;
-  country: string;
-  contactName: string;
-  contactSurname: string;
-  contactEmail: string;
-  ico?: string;
-  dic?: string;
-  icDph?: string;
-  createdAt?: Date;
-}
-
-interface Carrier {
-  id: string;
-  companyName: string;
-  street: string;
-  city: string;
-  zip: string;
-  country: string;
-  contactName: string;
-  contactSurname: string;
-  contactEmail: string;
-  contactPhone?: string;
-  ico?: string;
-  dic?: string;
-  icDph?: string;
-  vehicleTypes?: string[];
-  notes?: string;
-  paymentTermDays?: number; // Splatnosť v dňoch (default 60)
-  createdAt: Date;
-}
 
 const OrdersList: React.FC = () => {
   const { t } = useTranslation();
@@ -525,7 +499,7 @@ const OrdersList: React.FC = () => {
     paymentTermDays: '60' // Default 60 dní ako string pre TextField
   });
   // eslint-disable-next-line
-  const [_selectedCarrierForEdit, setSelectedCarrierForEdit] = useState<Carrier | null>(null);
+  const [selectedCarrierForEdit, setSelectedCarrierForEdit] = useState<Carrier | null>(null);
   const [showCarrierDeleteConfirm, setShowCarrierDeleteConfirm] = useState(false);
   const [carrierToDelete, setCarrierToDelete] = useState<string>('');
   const [loadingPdf, setLoadingPdf] = useState(false);
@@ -547,6 +521,14 @@ const OrdersList: React.FC = () => {
   // State pre Špeditéri (dispatchers)
   const [dispatchers, setDispatchers] = useState<any[]>([]);
   const [dispatcherSearchQuery, setDispatcherSearchQuery] = useState('');
+
+  // State pre hodnotenie
+  const [showCustomerRatingDialog, setShowCustomerRatingDialog] = useState(false);
+  const [selectedCustomerForRating, setSelectedCustomerForRating] = useState<Customer | null>(null);
+  const [showCarrierRatingDialog, setShowCarrierRatingDialog] = useState(false);
+  const [selectedCarrierForRating, setSelectedCarrierForRating] = useState<Carrier | null>(null);
+  const [showOrderRatingDialog, setShowOrderRatingDialog] = useState(false);
+  const [selectedOrderForRating, setSelectedOrderForRating] = useState<OrderFormData | null>(null);
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   
@@ -662,6 +644,11 @@ const OrdersList: React.FC = () => {
       // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         console.log('🔄 Real-time aktualizácia dopravcov - počet dokumentov:', querySnapshot.docs.length);
+        console.log('📋 Typ zmeny dokumentov:', querySnapshot.docChanges().map(change => ({
+          type: change.type,
+          id: change.doc.id,
+          data: change.doc.data()
+        })));
         
         const carriersData = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -670,11 +657,16 @@ const OrdersList: React.FC = () => {
             ...data,
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
           } as Carrier;
-          console.log("Mapping carrier:", carrier); // Logujeme spracovaný objekt
+          console.log("🚛 Mapping carrier:", {
+            id: carrier.id,
+            companyName: carrier.companyName,
+            vehicleTypes: carrier.vehicleTypes,
+            paymentTermDays: carrier.paymentTermDays
+          }); // Logujeme kľúčové údaje
           return carrier;
         });
         
-        console.log(`Fetched ${carriersData.length} carriers for company ${userData.companyID}.`); 
+        console.log(`📊 Fetched ${carriersData.length} carriers for company ${userData.companyID}.`); 
         setCarriers(carriersData);
         setIsLoadingCarriers(false);
       }, (error) => {
@@ -1271,22 +1263,28 @@ const OrdersList: React.FC = () => {
       console.log('Začínam ukladanie/aktualizáciu zákazníka:', customerData);
       
       const customerDataToSave = {
-        companyName: customerData.companyName,
+        company: customerData.companyName, // Mapujeme companyName na company
         street: customerData.street,
         city: customerData.city,
         zip: customerData.zip,
         country: customerData.country,
         contactName: customerData.contactName,
         contactSurname: customerData.contactSurname,
-        contactEmail: customerData.contactEmail,
+        email: customerData.contactEmail, // Mapujeme contactEmail na email
         ico: customerData.ico || '',
         dic: customerData.dic || '',
-        icDph: customerData.icDph || '',
+        vatId: customerData.icDph || '', // Mapujeme icDph na vatId
+        paymentTermDays: customerData.paymentTermDays || 30,
         companyID: userData.companyID // Pridanie companyID
       };
 
       // Ak máme selectedCustomerForEdit, ideme aktualizovať existujúceho zákazníka
       if (selectedCustomerForEdit) {
+        if (!selectedCustomerForEdit.id) {
+          console.error('Chyba: Zákazník nemá ID');
+          alert('Chyba: Zákazník nemá ID');
+          return;
+        }
         const customerRef = doc(db, 'customers', selectedCustomerForEdit.id);
         
         await updateDoc(customerRef, {
@@ -1324,30 +1322,29 @@ const OrdersList: React.FC = () => {
   const filteredCustomers = customers.filter(customer => {
     const searchLower = customerSearchQuery.toLowerCase();
     return (
-      (customer.companyName || '').toLowerCase().includes(searchLower) ||
+      (customer.company || (customer as any).companyName || '').toLowerCase().includes(searchLower) ||
       (customer.contactName || '').toLowerCase().includes(searchLower) ||
       (customer.contactSurname || '').toLowerCase().includes(searchLower) ||
-      (customer.contactEmail || '').toLowerCase().includes(searchLower) ||
+      (customer.email || (customer as any).contactEmail || '').toLowerCase().includes(searchLower) ||
       (customer.ico || '').toLowerCase().includes(searchLower) ||
       (customer.dic || '').toLowerCase().includes(searchLower) ||
-      (customer.icDph || '').toLowerCase().includes(searchLower)
+      (customer.vatId || (customer as any).icDph || '').toLowerCase().includes(searchLower)
     );
   });
 
   const handleAddCarrier = () => {
+    setSelectedCarrierForEdit(null); // Reset editácie
     setShowCarrierForm(true);
   };
 
-  const handleCarrierSubmit = async (carrierData: any) => {
+  const _handleCarrierSubmit = async (carrierData: any) => {
     if (!userData?.companyID) {
       alert("Chyba: Nemáte priradenú firmu.");
       return;
     }
     try {
-      console.log('Začínam ukladanie dopravcu:', carrierData);
+      console.log('Začínam ukladanie/aktualizáciu dopravcu:', carrierData);
       
-      const carriersRef = collection(db, 'carriers');
-      // Správny objekt pre ukladanie - premenované pre jasnoť
       const carrierDataToSave = {
         companyName: carrierData.companyName,
         street: carrierData.street,
@@ -1364,80 +1361,42 @@ const OrdersList: React.FC = () => {
         vehicleTypes: carrierData.vehicleTypes || [],
         notes: carrierData.notes || '',
         paymentTermDays: carrierData.paymentTermDays || 60, // Default 60 days
-        createdAt: Timestamp.fromDate(new Date()),
         companyID: userData.companyID // Pridanie companyID
       };
-      
-      const docRef = await addDoc(carriersRef, carrierDataToSave);
-      console.log('Dopravca bol úspešne uložený s ID:', docRef.id);
+
+      console.log('💾 Objekt na uloženie:', carrierDataToSave);
+
+      // Ak editujeme existujúceho dopravcu
+      if (selectedCarrierForEdit?.id) {
+        console.log('✏️ Editujem existujúceho dopravcu s ID:', selectedCarrierForEdit.id);
+        const carrierRef = doc(db, 'carriers', selectedCarrierForEdit.id);
+        await updateDoc(carrierRef, carrierDataToSave);
+        console.log('✅ Dopravca bol úspešne aktualizovaný s ID:', selectedCarrierForEdit.id);
+        
+        // Resetujeme stav editácie
+        setSelectedCarrierForEdit(null);
+      } else {
+        console.log('➕ Vytváram nového dopravcu');
+        // Vytvárame nového dopravcu
+        const carriersRef = collection(db, 'carriers');
+        const carrierDataWithTimestamp = {
+          ...carrierDataToSave,
+          createdAt: Timestamp.fromDate(new Date())
+        };
+        
+        const docRef = await addDoc(carriersRef, carrierDataWithTimestamp);
+        console.log('✅ Dopravca bol úspešne uložený s ID:', docRef.id);
+      }
       
       // Real-time listener automaticky aktualizuje zoznam dopravcov
-      console.log("Real-time listener automaticky aktualizuje dopravcov");
+      console.log("🔄 Real-time listener automaticky aktualizuje dopravcov");
       
       // Až potom zatvoríme formulár
       setShowCarrierForm(false);
     } catch (error) {
-      console.error('Chyba pri ukladaní dopravcu:', error);
+      console.error('❌ Chyba pri ukladaní dopravcu:', error);
       alert('Nastala chyba pri ukladaní dopravcu: ' + (error as Error).message);
     }
-  };
-
-  // useEffect pre dopravcov odstránený - real-time listener sa nastavuje v hlavnom useEffect
-
-  const filteredCarriers = carriers.filter(carrier => {
-    const searchLower = carrierSearchQuery.toLowerCase();
-    return (
-      (carrier.companyName || '').toLowerCase().includes(searchLower) ||
-      (carrier.contactName || '').toLowerCase().includes(searchLower) ||
-      (carrier.contactSurname || '').toLowerCase().includes(searchLower) ||
-      (carrier.contactEmail || '').toLowerCase().includes(searchLower) ||
-      (carrier.contactPhone || '').toLowerCase().includes(searchLower) ||
-      (carrier.ico || '').toLowerCase().includes(searchLower) ||
-      (carrier.dic || '').toLowerCase().includes(searchLower) ||
-      (carrier.icDph || '').toLowerCase().includes(searchLower)
-    );
-  });
-
-  const handleCarrierFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setCarrierFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleCarrierFormSubmit = () => {
-    // Transformujeme vehicleTypes z textu na pole
-    const vehicleTypesArray = carrierFormData.vehicleTypes
-      ? carrierFormData.vehicleTypes.split(',').map(type => type.trim())
-      : [];
-
-    const submitData = {
-      ...carrierFormData,
-      vehicleTypes: vehicleTypesArray,
-      paymentTermDays: parseInt(carrierFormData.paymentTermDays) || 60 // Convert string to number
-    };
-
-    handleCarrierSubmit(submitData);
-    
-    // Resetujeme formulárové polia po odoslaní
-    setCarrierFormData({
-      companyName: '',
-      street: '',
-      city: '',
-      zip: '',
-      country: 'Slovensko',
-      contactName: '',
-      contactSurname: '',
-      contactEmail: '',
-      contactPhone: '',
-      ico: '',
-      dic: '',
-      icDph: '',
-      vehicleTypes: '',
-      notes: '',
-      paymentTermDays: '60' // Default 60 dní ako string pre TextField
-    });
   };
 
   const handleEditCustomer = (customer: Customer) => {
@@ -1530,7 +1489,8 @@ const OrdersList: React.FC = () => {
   };
 
   // Pridám pomocnú funkciu nad renderom tabuľky:
-  const getCustomerVatId = (customer: any) => {
+  // eslint-disable-next-line
+  const _getCustomerVatId = (customer: any) => {
     return customer.icDph || customer.vatId || customer['IČ_DPH'] || customer['ic_dph'] || '-';
   };
 
@@ -1655,6 +1615,148 @@ const OrdersList: React.FC = () => {
     setShowLocationDeleteConfirm(false);
     setLocationToDelete('');
   };
+
+  // Funkcie pre hodnotenie zákazníkov
+  const handleOpenCustomerRating = (customer: Customer) => {
+    setSelectedCustomerForRating(customer);
+    setShowCustomerRatingDialog(true);
+  };
+
+  const handleCloseCustomerRating = () => {
+    setShowCustomerRatingDialog(false);
+    setSelectedCustomerForRating(null);
+  };
+
+  const handleSubmitCustomerRating = async (rating: CustomerRating) => {
+    if (!selectedCustomerForRating?.id) return;
+    
+    try {
+      const customerRef = doc(db, 'customers', selectedCustomerForRating.id);
+      await updateDoc(customerRef, { rating });
+      console.log('✅ Hodnotenie zákazníka bolo úspešne uložené');
+    } catch (error) {
+      console.error('❌ Chyba pri ukladaní hodnotenia zákazníka:', error);
+      alert('Nastala chyba pri ukladaní hodnotenia: ' + (error as Error).message);
+    }
+  };
+
+  // Funkcie pre hodnotenie dopravcov
+  const handleOpenCarrierRating = (carrier: Carrier) => {
+    setSelectedCarrierForRating(carrier);
+    setShowCarrierRatingDialog(true);
+  };
+
+  const handleCloseCarrierRating = () => {
+    setSelectedCarrierForRating(null);
+    setShowCarrierRatingDialog(false);
+  };
+
+  const handleSubmitCarrierRating = async (rating: CarrierRating) => {
+    if (!selectedCarrierForRating?.id) return;
+    
+    try {
+      const carrierRef = doc(db, 'carriers', selectedCarrierForRating.id);
+      await updateDoc(carrierRef, { rating });
+      console.log('✅ Hodnotenie dopravcu bolo úspešne uložené');
+    } catch (error) {
+      console.error('❌ Chyba pri ukladaní hodnotenia dopravcu:', error);
+      alert('Nastala chyba pri ukladaní hodnotenia: ' + (error as Error).message);
+    }
+  };
+
+  // Pomocná funkcia pre výpočet priemerného hodnotenia zákazníka
+  const getCustomerAverageRating = (customer: Customer): number => {
+    if (!customer.rating) return 0;
+    const { paymentReliability, communication, overallSatisfaction } = customer.rating;
+    if (paymentReliability === 0 && communication === 0 && overallSatisfaction === 0) return 0;
+    return Math.round((paymentReliability + communication + overallSatisfaction) / 3);
+  };
+
+  // Pomocná funkcia pre výpočet priemerného hodnotenia dopravcu
+  const getCarrierAverageRating = (carrier: Carrier): number => {
+    if (!carrier.rating) return 0;
+    const { reliability, communication, serviceQuality, timeManagement } = carrier.rating;
+    if (reliability === 0 && communication === 0 && serviceQuality === 0 && timeManagement === 0) return 0;
+    return Math.round((reliability + communication + serviceQuality + timeManagement) / 4);
+  };
+
+  // useEffect pre dopravcov odstránený - real-time listener sa nastavuje v hlavnom useEffect
+
+  const filteredCarriers = carriers.filter(carrier => {
+    const searchLower = carrierSearchQuery.toLowerCase();
+    return (
+      (carrier.companyName || '').toLowerCase().includes(searchLower) ||
+      (carrier.contactName || '').toLowerCase().includes(searchLower) ||
+      (carrier.contactSurname || '').toLowerCase().includes(searchLower) ||
+      (carrier.contactEmail || '').toLowerCase().includes(searchLower) ||
+      (carrier.contactPhone || '').toLowerCase().includes(searchLower) ||
+      (carrier.ico || '').toLowerCase().includes(searchLower) ||
+      (carrier.dic || '').toLowerCase().includes(searchLower) ||
+      (carrier.icDph || '').toLowerCase().includes(searchLower)
+    );
+  });
+
+  const handleCarrierFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCarrierFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleCarrierFormSubmit = () => {
+    console.log('Formulár pre dopravcu odoslaný');
+    setCarrierFormData({
+      companyName: '',
+      street: '',
+      city: '',
+      zip: '',
+      country: 'Slovensko',
+      contactName: '',
+      contactSurname: '',
+      contactEmail: '',
+      contactPhone: '',
+      ico: '',
+      dic: '',
+      icDph: '',
+      vehicleTypes: '',
+      notes: '',
+      paymentTermDays: '60' // Default 60 dní ako string pre TextField
+    });
+    
+    // Resetujeme aj selectedCarrierForEdit
+    setSelectedCarrierForEdit(null);
+  };
+
+  const handleSubmitOrderRating = async (rating: OrderRating) => {
+    if (!selectedOrderForRating?.id) return;
+    
+    try {
+      const orderRef = doc(db, 'orders', selectedOrderForRating.id);
+      await updateDoc(orderRef, {
+        rating: rating
+      });
+      console.log('✅ Hodnotenie objednávky uložené úspešne');
+    } catch (error) {
+      console.error('❌ Chyba pri ukladaní hodnotenia objednávky:', error);
+    }
+  };
+
+  const _getOrderAverageRating = (order: OrderFormData): number => {
+    if (!order.rating) return 0;
+    return order.rating.overallTransportRating || 0;
+  };
+
+  const handleOpenOrderRating = (order: OrderFormData) => {
+    setSelectedOrderForRating(order);
+    setShowOrderRatingDialog(true);
+  };
+
+  const handleCloseOrderRating = () => {
+    setSelectedOrderForRating(null);
+    setShowOrderRatingDialog(false);
+  };
+
 
   return (
     <PageWrapper>
@@ -1859,6 +1961,7 @@ const OrdersList: React.FC = () => {
                       onPreviewPDF={handlePreviewPDF}
                       onDownloadPDF={handleDownloadPDF}
                       onDeleteOrder={openDeleteConfirmation}
+                      onRateOrder={handleOpenOrderRating}
                       t={t}
                     />
                   ))}
@@ -1965,6 +2068,8 @@ const OrdersList: React.FC = () => {
                         <TableCell>{t('orders.icDph')}</TableCell>
                         <TableCell>{t('orders.dic')}</TableCell>
                         <TableCell>{t('orders.country')}</TableCell>
+                        <TableCell>{t('orders.paymentTermDays') || 'Splatnosť (dni)'}</TableCell>
+                        <TableCell>Hodnotenie</TableCell>
                         <TableCell>{t('orders.creationDate')}</TableCell>
                         <TableCell>{t('orders.actions')}</TableCell>
                       </TableRow>
@@ -1972,14 +2077,53 @@ const OrdersList: React.FC = () => {
                     <TableBody>
                       {filteredCustomers.map((customer) => (
                         <TableRow key={customer.id}>
-                          <TableCell>{customer.companyName || (customer as any)['company'] || (customer as any)['name'] || '-'}</TableCell>
+                          <TableCell>{customer.company || (customer as any).companyName || '-'}</TableCell>
                           <TableCell>{`${customer.contactName || ''} ${customer.contactSurname || ''}`.trim() || '-'}</TableCell>
-                          <TableCell>{customer.contactEmail || '-'}</TableCell>
+                          <TableCell>{customer.email || (customer as any).contactEmail || '-'}</TableCell>
                           <TableCell>{customer.ico || '-'}</TableCell>
-                          <TableCell>{getCustomerVatId(customer)}</TableCell>
+                          <TableCell>{customer.vatId || (customer as any).icDph || '-'}</TableCell>
                           <TableCell>{customer.dic || '-'}</TableCell>
                           <TableCell>{customer.country || '-'}</TableCell>
-                          <TableCell>{customer.createdAt ? customer.createdAt.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={`${customer.paymentTermDays || 30} dní`}
+                              color="primary"
+                              size="small"
+                              sx={{ 
+                                backgroundColor: '#ff9f43',
+                                color: '#ffffff',
+                                fontWeight: 'bold'
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <RatingIndicator 
+                                rating={getCustomerAverageRating(customer)} 
+                                size="medium" 
+                                showChip 
+                              />
+                              <BareTooltip title="Pridať/upraviť hodnotenie">
+                                <IconButton 
+                                  onClick={() => handleOpenCustomerRating(customer)}
+                                  size="small"
+                                  sx={{ 
+                                    color: '#2196f3',
+                                    '&:hover': { 
+                                      backgroundColor: 'rgba(33, 150, 243, 0.1)' 
+                                    } 
+                                  }}
+                                >
+                                  <StarIcon fontSize="small" />
+                                </IconButton>
+                              </BareTooltip>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{customer.createdAt ? (
+                            customer.createdAt instanceof Date 
+                              ? customer.createdAt.toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                              : (customer.createdAt as any).toDate().toLocaleDateString('sk-SK', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                          ) : '-'}</TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', gap: 1 }}>
                               <BareTooltip title={t('orders.edit')}>
@@ -1997,7 +2141,11 @@ const OrdersList: React.FC = () => {
                               </BareTooltip>
                               <BareTooltip title={t('orders.delete')}>
                                 <IconButton 
-                                  onClick={() => openCustomerDeleteConfirmation(customer.id)}
+                                  onClick={() => {
+                                    if (customer.id) {
+                                      openCustomerDeleteConfirmation(customer.id);
+                                    }
+                                  }}
                                   sx={{ 
                                     color: '#ff6b6b',
                                     '&:hover': { 
@@ -2112,6 +2260,7 @@ const OrdersList: React.FC = () => {
                         <TableCell>{t('orders.dic')}</TableCell>
                         <TableCell>{t('orders.vehicleTypes')}</TableCell>
                         <TableCell>{t('orders.paymentTermDays') || 'Splatnosť (dni)'}</TableCell>
+                        <TableCell>Hodnotenie</TableCell>
                         <TableCell>{t('orders.country')}</TableCell>
                         <TableCell>{t('orders.creationDate')}</TableCell>
                         <TableCell>{t('orders.actions')}</TableCell>
@@ -2140,15 +2289,44 @@ const OrdersList: React.FC = () => {
                               }}
                             />
                           </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <RatingIndicator 
+                                rating={getCarrierAverageRating(carrier)} 
+                                size="medium" 
+                                showChip 
+                              />
+                              <BareTooltip title="Pridať/upraviť hodnotenie">
+                                <IconButton 
+                                  onClick={() => handleOpenCarrierRating(carrier)}
+                                  size="small"
+                                  sx={{ 
+                                    color: '#2196f3',
+                                    '&:hover': { 
+                                      backgroundColor: 'rgba(33, 150, 243, 0.1)' 
+                                    } 
+                                  }}
+                                >
+                                  <StarIcon fontSize="small" />
+                                </IconButton>
+                              </BareTooltip>
+                            </Box>
+                          </TableCell>
                           <TableCell>{carrier.country}</TableCell>
                           <TableCell>
-                            {carrier.createdAt.toLocaleDateString('sk-SK', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {carrier.createdAt ? (
+                              carrier.createdAt instanceof Date ? 
+                                carrier.createdAt.toLocaleDateString('sk-SK', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit'
+                                }) :
+                                carrier.createdAt.toDate().toLocaleDateString('sk-SK', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit'
+                                })
+                            ) : '-'}
                           </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', gap: 1 }}>
@@ -2167,7 +2345,7 @@ const OrdersList: React.FC = () => {
                               </BareTooltip>
                               <BareTooltip title={t('orders.delete')}>
                                 <IconButton 
-                                  onClick={() => openCarrierDeleteConfirmation(carrier.id)}
+                                  onClick={() => carrier.id && openCarrierDeleteConfirmation(carrier.id)}
                                   sx={{ 
                                     color: '#ff6b6b',
                                     '&:hover': { 
@@ -3008,24 +3186,28 @@ const OrdersList: React.FC = () => {
       }}
       onSubmit={handleCustomerSubmit}
       editCustomer={selectedCustomerForEdit ? {
-        companyName: selectedCustomerForEdit.companyName,
+        companyName: selectedCustomerForEdit.company || (selectedCustomerForEdit as any).companyName || '', // Mapujeme company alebo companyName na companyName pre CustomerForm
         street: selectedCustomerForEdit.street,
         city: selectedCustomerForEdit.city,
         zip: selectedCustomerForEdit.zip,
         country: selectedCustomerForEdit.country,
         contactName: selectedCustomerForEdit.contactName,
         contactSurname: selectedCustomerForEdit.contactSurname,
-        contactEmail: selectedCustomerForEdit.contactEmail,
+        contactEmail: selectedCustomerForEdit.email || (selectedCustomerForEdit as any).contactEmail || '', // Mapujeme email alebo contactEmail na contactEmail pre CustomerForm
         ico: selectedCustomerForEdit.ico,
         dic: selectedCustomerForEdit.dic,
-        icDph: selectedCustomerForEdit.icDph
+        icDph: selectedCustomerForEdit.vatId || (selectedCustomerForEdit as any).icDph || '', // Mapujeme vatId alebo icDph na icDph pre CustomerForm
+        paymentTermDays: selectedCustomerForEdit.paymentTermDays || 30
       } : undefined}
     />
 
     {/* Formulár pre dopravcov */}
     <Dialog
       open={showCarrierForm}
-      onClose={() => setShowCarrierForm(false)}
+      onClose={() => {
+        setShowCarrierForm(false);
+        setSelectedCarrierForEdit(null);
+      }}
       maxWidth="md"
       fullWidth
       PaperProps={{
@@ -3076,11 +3258,14 @@ const OrdersList: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <LocalShippingIcon sx={{ color: '#ff9f43' }} />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {t('orders.addCarrier')}
+              {selectedCarrierForEdit ? 'Upraviť dopravcu' : t('orders.addCarrier')}
             </Typography>
           </Box>
           <IconButton 
-            onClick={() => setShowCarrierForm(false)} 
+            onClick={() => {
+              setShowCarrierForm(false);
+              setSelectedCarrierForEdit(null);
+            }} 
             edge="end" 
             aria-label="close"
             sx={{
@@ -3306,7 +3491,10 @@ const OrdersList: React.FC = () => {
         
         <DialogActions sx={{ p: 0, flexShrink: 0 }}>
           <Button 
-            onClick={() => setShowCarrierForm(false)} 
+            onClick={() => {
+              setShowCarrierForm(false);
+              setSelectedCarrierForEdit(null);
+            }} 
             sx={{ 
               color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
               '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }
@@ -3325,7 +3513,7 @@ const OrdersList: React.FC = () => {
               } 
             }}
           >
-            {t('common.save')}
+            {selectedCarrierForEdit ? 'Aktualizovať' : t('common.save')}
           </Button>
         </DialogActions>
       </Box>
@@ -3477,6 +3665,34 @@ const OrdersList: React.FC = () => {
         </DialogActions>
       </StyledDialogContent>
     </Dialog>
+
+    {/* Dialógy pre hodnotenie */}
+    {selectedCustomerForRating && (
+      <CustomerRatingDialog
+        open={showCustomerRatingDialog}
+        onClose={handleCloseCustomerRating}
+        customer={selectedCustomerForRating}
+        onSubmit={handleSubmitCustomerRating}
+      />
+    )}
+
+    {selectedCarrierForRating && (
+      <CarrierRatingDialog
+        open={showCarrierRatingDialog}
+        onClose={handleCloseCarrierRating}
+        carrier={selectedCarrierForRating}
+        onSubmit={handleSubmitCarrierRating}
+      />
+    )}
+
+    {selectedOrderForRating && (
+      <OrderRatingDialog
+        open={showOrderRatingDialog}
+        onClose={handleCloseOrderRating}
+        order={selectedOrderForRating}
+        onSubmit={handleSubmitOrderRating}
+      />
+    )}
     </PageWrapper>
   );
 };

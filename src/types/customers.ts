@@ -1,5 +1,14 @@
 import { Timestamp } from 'firebase/firestore';
 
+export interface CustomerRating {
+    paymentReliability: number; // 1-5 hviezdičiek - platí/neplatí včas
+    communication: number; // 1-5 hviezdičiek - komunikácia
+    overallSatisfaction: number; // 1-5 hviezdičiek - celková spokojnosť
+    notes?: string; // Poznámky k hodnoteniu
+    lastUpdated?: Timestamp; // Kedy bolo hodnotenie naposledy aktualizované
+    ratedBy?: string; // Kto hodnotenie pridal
+}
+
 export interface Customer {
     id?: string;
     company: string;
@@ -11,7 +20,11 @@ export interface Customer {
     contactSurname: string;
     email: string;
     phone?: string;
+    ico?: string;
+    dic?: string;
     vatId?: string;
     companyID?: string;
-    createdAt?: Timestamp;
+    createdAt?: Timestamp | Date;
+    paymentTermDays?: number; // Splatnosť v dňoch (default 30)
+    rating?: CustomerRating; // Hodnotenie zákazníka
 } 

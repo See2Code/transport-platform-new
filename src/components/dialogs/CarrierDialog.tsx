@@ -48,6 +48,7 @@ const CarrierDialog: React.FC<CarrierDialogProps> = ({ open, onClose, onSubmit }
         icDph: '',
         vehicleTypes: [],
         notes: '',
+        paymentTermDays: 60,
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,6 +82,7 @@ const CarrierDialog: React.FC<CarrierDialogProps> = ({ open, onClose, onSubmit }
             icDph: '',
             vehicleTypes: [],
             notes: '',
+            paymentTermDays: 60,
         });
     };
 
@@ -204,6 +206,18 @@ const CarrierDialog: React.FC<CarrierDialogProps> = ({ open, onClose, onSubmit }
                                 name="icDph"
                                 value={formData.icDph}
                                 onChange={handleChange}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <TextField
+                                fullWidth
+                                label="Splatnosť (dni)"
+                                name="paymentTermDays"
+                                type="number"
+                                value={formData.paymentTermDays || 60}
+                                onChange={handleChange}
+                                helperText="Počet dní na úhradu faktúry"
+                                inputProps={{ min: 1, max: 365 }}
                             />
                         </Grid>
                         <Grid item xs={12}>

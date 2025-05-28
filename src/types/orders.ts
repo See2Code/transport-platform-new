@@ -98,17 +98,44 @@ export interface OrderFormData {
   customerEmail?: string;
   customerPhone?: string;
   customerPrice?: string;
+  customerPaymentTermDays?: number;
   goodsDescription?: string;
   weightKg?: string;
   dimensionsL?: string;
   dimensionsW?: string;
   dimensionsH?: string;
   quantity?: string;
+  rating?: OrderRating; // Hodnotenie objednávky/prepravy
 }
 
 export interface Order extends Omit<OrderFormData, 'createdAt' | 'updatedAt'> {
   createdAt: Timestamp;
   updatedAt?: Timestamp;
+}
+
+export interface OrderRating {
+  // Hodnotenie dopravcu pre túto konkretnú prepravu
+  carrierReliability: number; // 0-5
+  carrierCommunication: number; // 0-5
+  carrierServiceQuality: number; // 0-5
+  carrierTimeManagement: number; // 0-5
+  
+  // Hodnotenie zákazníka pre túto konkretnú prepravu  
+  customerPaymentReliability: number; // 0-5
+  customerCommunication: number; // 0-5
+  customerOverallSatisfaction: number; // 0-5
+  
+  // Celkové hodnotenie prepravy
+  overallTransportRating: number; // 0-5
+  
+  // Dodatočné informácie
+  notes: string;
+  ratedBy: string; // ID používateľa ktorý hodnotil
+  lastUpdated: Timestamp;
+  
+  // Pomocné polia pre výpočty
+  carrierAverageRating?: number; // automaticky vypočítané
+  customerAverageRating?: number; // automaticky vypočítané
 }
 
 // Prázdny export aby TypeScript rozpoznal tento súbor ako modul

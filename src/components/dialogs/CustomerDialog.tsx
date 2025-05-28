@@ -35,6 +35,7 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({ open, onClose, onSubmit
         email: '',
         phone: '',
         vatId: '',
+        paymentTermDays: 30,
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,6 +57,7 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({ open, onClose, onSubmit
             email: '',
             phone: '',
             vatId: '',
+            paymentTermDays: 30,
         });
     };
 
@@ -254,6 +256,18 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({ open, onClose, onSubmit
                                     name="vatId"
                                     value={formData.vatId}
                                     onChange={handleChange}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Splatnosť (dni)"
+                                    name="paymentTermDays"
+                                    type="number"
+                                    value={formData.paymentTermDays || 30}
+                                    onChange={handleChange}
+                                    helperText="Počet dní na splatenie faktúry"
+                                    inputProps={{ min: 1, max: 365 }}
                                 />
                             </Grid>
                         </Grid>

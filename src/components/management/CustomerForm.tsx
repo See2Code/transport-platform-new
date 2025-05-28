@@ -29,6 +29,7 @@ export interface CustomerData {
   ico?: string;
   dic?: string;
   icDph?: string;
+  paymentTermDays?: number; // Splatnosť v dňoch
 }
 
 interface CustomerFormProps {
@@ -53,6 +54,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
     ico: '',
     dic: '',
     icDph: '',
+    paymentTermDays: 30,
   });
 
   useEffect(() => {
@@ -74,6 +76,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
         ico: '',
         dic: '',
         icDph: '',
+        paymentTermDays: 30,
       });
     }
   }, [editCustomer, open]);
@@ -280,6 +283,18 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
                 value={formData.icDph}
                 onChange={handleChange}
                 helperText="Identifikačné číslo pre DPH"
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Splatnosť (dni)"
+                name="paymentTermDays"
+                type="number"
+                value={formData.paymentTermDays || 30}
+                onChange={handleChange}
+                helperText="Počet dní na splatenie faktúry"
+                inputProps={{ min: 1, max: 365 }}
               />
             </Grid>
             <Grid item xs={12}>

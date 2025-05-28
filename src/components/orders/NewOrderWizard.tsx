@@ -55,6 +55,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import CheckIcon from '@mui/icons-material/Check';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 // Firebase imports
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, Timestamp, orderBy } from 'firebase/firestore';
@@ -464,33 +465,13 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     try {
       console.log('🔎 Searching customers for companyID:', userData.companyID);
       
-      // Najprv skúsme bez orderBy aby sme videli všetky dokumenty
-      const qWithoutOrder = query(
+      // Používame len where bez orderBy aby sme predišli problémom s prázdnymi poľami
+      const q = query(
         collection(db, 'customers'),
         where('companyID', '==', userData.companyID)
       );
-      const snapshotWithoutOrder = await getDocs(qWithoutOrder);
-      console.log('📊 Total customers without orderBy:', snapshotWithoutOrder.docs.length);
-      
-      snapshotWithoutOrder.docs.forEach((doc, index) => {
-        const data = doc.data();
-        console.log(`📋 Customer ${index + 1}:`, {
-          id: doc.id,
-          companyName: data.companyName,
-          hasCompanyName: !!data.companyName,
-          companyID: data.companyID,
-          allFields: Object.keys(data)
-        });
-      });
-      
-      // Teraz skúsme s orderBy
-      const q = query(
-        collection(db, 'customers'),
-        where('companyID', '==', userData.companyID),
-        orderBy('companyName')
-      );
       const snapshot = await getDocs(q);
-      console.log('🔍 Načítané dokumenty zákazníkov s orderBy:', snapshot.docs.length);
+      console.log('🔍 Načítané dokumenty zákazníkov:', snapshot.docs.length);
       
       const customersData = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -499,16 +480,30 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         const customer = {
           id: doc.id,
           ...data,
-          // Mapujeme správne názvy polí
-          company: data.companyName || data.company || '',
-          email: data.contactEmail || data.email || '',
-          phone: data.contactPhone || data.phone || '',
-          vatId: data.icDph || data.vatId || ''
+          // Zabezpečíme, že všetky potrebné polia existujú
+          company: data.company || data.companyName || '',
+          email: data.email || data.contactEmail || '',
+          phone: data.phone || data.contactPhone || '',
+          vatId: data.vatId || data.icDph || '',
+          contactName: data.contactName || '',
+          contactSurname: data.contactSurname || '',
+          street: data.street || '',
+          city: data.city || '',
+          zip: data.zip || '',
+          country: data.country || 'Slovensko',
+          paymentTermDays: data.paymentTermDays || 30
         };
         
         console.log('✅ Mapped customer:', customer);
         return customer;
       }) as Customer[];
+      
+      // Sortujeme klientsky aby sme predišli problémom s prázdnymi poľami
+      customersData.sort((a, b) => {
+        const nameA = a.company || '';
+        const nameB = b.company || '';
+        return nameA.localeCompare(nameB, 'sk', { sensitivity: 'base' });
+      });
       
       console.log('🎯 Final customerOptions:', customersData);
       setCustomerOptions(customersData);
@@ -811,6 +806,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         customerEmail: customer?.email || '',
         customerPhone: customer?.phone || '',
         customerCompany: customer?.company || '',
+        customerPaymentTermDays: customer?.paymentTermDays || 30,
         loadingPlaces: updatedLoadingPlaces,
         unloadingPlaces: updatedUnloadingPlaces,
       };
@@ -1223,6 +1219,26 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                         </InputAdornment>
                       ),
                     }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    id="customer-payment-terms"
+                    name="customerPaymentTerms"
+                    label="Splatnosť zákazníka (dni)"
+                    type="number"
+                    value={formData.customerPaymentTermDays || 30}
+                    InputProps={{
+                      readOnly: true,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <AccessTimeIcon sx={{ color: 'text.secondary' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    helperText="Automaticky načítané zo zákazníka"
                   />
                 </Grid>
               </Grid>
@@ -2272,17 +2288,18 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
             // Uložíme nového zákazníka do databázy
             const customerRef = collection(db, 'customers');
             const newCustomer = {
-              companyName: customerData.companyName,
+              company: customerData.companyName, // Mapujeme companyName na company
               street: customerData.street,
               city: customerData.city,
               zip: customerData.zip,
               country: customerData.country,
               contactName: customerData.contactName,
               contactSurname: customerData.contactSurname,
-              contactEmail: customerData.contactEmail,
+              email: customerData.contactEmail, // Mapujeme contactEmail na email
               ico: customerData.ico || '',
               dic: customerData.dic || '',
-              icDph: customerData.icDph || '',
+              vatId: customerData.icDph || '', // Mapujeme icDph na vatId
+              paymentTermDays: customerData.paymentTermDays || 30,
               companyID: userData.companyID,
               createdAt: Timestamp.fromDate(new Date())
             };
@@ -2302,6 +2319,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               email: customerData.contactEmail,
               phone: '', // CustomerData nemá phone field
               vatId: customerData.icDph || '',
+              paymentTermDays: customerData.paymentTermDays || 30,
               companyID: userData.companyID
             };
             
