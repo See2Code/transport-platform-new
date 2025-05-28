@@ -1423,7 +1423,7 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           </div>
           <div class="payment-item">
             <strong>Preprava (bez DPH):</strong><br>
-            Podľa zmluvy s dopravcom
+            ${orderData.carrierPrice ? `${safeText(orderData.carrierPrice)} €` : 'Podľa zmluvy s dopravcom'}
           </div>
         </div>
 
