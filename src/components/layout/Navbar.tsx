@@ -130,7 +130,7 @@ const Navbar: FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
-  const { toggleChat } = useChatUI();
+  const { toggleChat, chatOpen } = useChatUI();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -258,12 +258,13 @@ const Navbar: FC = () => {
         position="fixed"
       >
         <Container 
-          maxWidth="lg" 
+          maxWidth={false} 
           disableGutters
           sx={{ 
             width: '100%',
             ml: { xs: 3, sm: 3, md: 3 },
-            mr: { xs: 3, sm: 3, md: 3 },
+            mr: 0,
+            px: 0,
           }}
         >
           <Toolbar sx={{ justifyContent: 'flex-start', px: 0, minHeight: { xs: 56, sm: 64 } }}>
@@ -287,8 +288,82 @@ const Navbar: FC = () => {
               </Typography>
             </Box>
 
-            {/* Desktop Menu - len ikony */}
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, ml: 'auto' }}>
+            {/* Mobile/Tablet responsive behavior - compact icons keď je chat otvorený */}
+            <Box sx={{ 
+              display: { xs: 'none', sm: 'flex', md: 'none' }, // Zobrazí sa len na tablet-och
+              ml: 'auto',
+              mr: chatOpen ? '50px' : '8px', // Menší margin keď chat nie je otvorený
+              transition: 'margin-right 0.3s ease-in-out',
+              gap: 0.3,
+              alignItems: 'center',
+              '& .MuiIconButton-root': {
+                padding: chatOpen ? '6px' : '8px', // Kompaktnejšie na tablet-och
+                transition: 'padding 0.3s ease-in-out',
+              }
+            }}>
+              {/* Len najdôležitejšie ikony pre tablet */}
+              <BareTooltip title={t('common.notifications')} placement="bottom">
+                <NavIconButton onClick={handleNotificationsClick}>
+                  <NotificationsIcon fontSize="small" />
+                </NavIconButton>
+              </BareTooltip>
+
+              <BareTooltip title={t('common.chat')} placement="bottom">
+                <NavIconButton 
+                  onClick={toggleChat}
+                  sx={{
+                    backgroundColor: chatOpen ? 'rgba(255, 159, 67, 0.15)' : 'transparent',
+                    borderRadius: '8px',
+                    transform: chatOpen ? 'scale(1.1)' : 'scale(1)',
+                    transition: 'all 0.3s ease-in-out',
+                  }}
+                >
+                  <Badge 
+                    badgeContent={unreadConversationsCount} 
+                    color="error"
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        backgroundColor: '#ff9f43',
+                        color: '#ffffff',
+                        fontSize: '0.7rem',
+                        minWidth: '16px',
+                        height: '16px',
+                      },
+                    }}
+                  >
+                    <ChatIcon fontSize="small" sx={{ 
+                      color: chatOpen ? '#ff9f43' : 'inherit' 
+                    }} />
+                  </Badge>
+                </NavIconButton>
+              </BareTooltip>
+
+              <BareTooltip title={t('settings.toggleTheme')} placement="bottom">
+                <NavIconButton onClick={toggleTheme}>
+                  {isDarkMode ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
+                </NavIconButton>
+              </BareTooltip>
+            </Box>
+
+            {/* Desktop Menu - ikony s dynamickým pozicionovaním */}
+            <Box sx={{ 
+              display: { xs: 'none', md: 'flex' }, 
+              ml: 'auto',
+              mr: {
+                xs: '10px', 
+                md: chatOpen ? '340px' : '10px', // Posuniem o 10px doľava pre zarovnanie s kartami
+                lg: chatOpen ? '360px' : '10px'  // Rovnako aj pre veľké obrazovky
+              },
+              transition: 'margin-right 0.3s ease-in-out', // Plynulá animácia
+              gap: { md: 0.5, lg: 0.8 }, // Väčšie medzery na veľkých obrazovkách
+              alignItems: 'center',
+              transform: chatOpen ? 'translateX(-10px)' : 'translateX(0)', // Subtle posun pre lepší efekt
+              pr: chatOpen ? 0 : 3, // Pridám padding-right len keď chat nie je otvorený
+              '& .MuiIconButton-root': {
+                transform: chatOpen ? 'scale(0.95)' : 'scale(1)', // Mierne zmenšenie ikon keď je chat otvorený
+                transition: 'transform 0.3s ease-in-out',
+              }
+            }}>
               <BareTooltip title={t('navigation.dashboard')} placement="bottom">
                 <NavIconButton onClick={() => navigate('/dashboard')}>
                   <DashboardIcon />
@@ -338,7 +413,21 @@ const Navbar: FC = () => {
               </BareTooltip>
 
               <BareTooltip title={t('common.chat')} placement="bottom">
-                <NavIconButton onClick={toggleChat}>
+                <NavIconButton 
+                  onClick={toggleChat}
+                  sx={{
+                    backgroundColor: chatOpen ? 'rgba(255, 159, 67, 0.15)' : 'transparent',
+                    borderRadius: '12px',
+                    boxShadow: chatOpen ? '0 2px 8px rgba(255, 159, 67, 0.3)' : 'none',
+                    transform: chatOpen ? 'scale(1.05)' : 'scale(1)',
+                    transition: 'all 0.3s ease-in-out',
+                    '&:hover': {
+                      backgroundColor: chatOpen ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 159, 67, 0.1)',
+                      transform: 'translateY(-2px) scale(1.05)',
+                      boxShadow: '0 4px 12px rgba(255, 159, 67, 0.4)',
+                    },
+                  }}
+                >
                   <Badge 
                     badgeContent={unreadConversationsCount} 
                     color="error"
@@ -350,13 +439,39 @@ const Navbar: FC = () => {
                         fontWeight: 'bold',
                         minWidth: '18px',
                         height: '18px',
+                        animation: chatOpen ? 'pulse 2s infinite' : 'none',
+                      },
+                      '@keyframes pulse': {
+                        '0%': {
+                          transform: 'scale(1)',
+                          opacity: 1,
+                        },
+                        '50%': {
+                          transform: 'scale(1.1)',
+                          opacity: 0.8,
+                        },
+                        '100%': {
+                          transform: 'scale(1)',
+                          opacity: 1,
+                        },
                       },
                     }}
                   >
-                    <ChatIcon />
+                    <ChatIcon sx={{ 
+                      color: chatOpen ? '#ff9f43' : 'inherit',
+                      transition: 'color 0.3s ease-in-out' 
+                    }} />
                   </Badge>
                 </NavIconButton>
               </BareTooltip>
+
+              {/* Separator - vizuálny oddeľovač pred jazykovými/užívateľskými ikonami */}
+              <Box sx={{ 
+                width: '1px', 
+                height: '24px', 
+                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                mx: 1 
+              }} />
 
               {/* Prepínače jazykov */}
               <BareTooltip title="Slovenčina" placement="bottom">
@@ -394,7 +509,7 @@ const Navbar: FC = () => {
                 <NavIconButton
                   onClick={handleLogoutClick}
                   sx={{ 
-                    ml: 2, 
+                    ml: 1, 
                     color: isDarkMode ? '#ff9f43' : '#ff9f43',
                     fontWeight: 600
                   }}
@@ -413,6 +528,7 @@ const Navbar: FC = () => {
               sx={{ 
                 display: { xs: 'flex', md: 'none' },
                 color: isDarkMode ? '#fff' : '#333',
+                mr: 2,
                 '&:hover': {
                   background: 'rgba(255, 159, 67, 0.1)',
                 }
