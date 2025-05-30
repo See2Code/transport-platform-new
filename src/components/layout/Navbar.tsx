@@ -313,9 +313,15 @@ const Navbar: FC = () => {
                   onClick={toggleChat}
                   sx={{
                     backgroundColor: chatOpen ? 'rgba(255, 159, 67, 0.15)' : 'transparent',
-                    borderRadius: '8px',
-                    transform: chatOpen ? 'scale(1.1)' : 'scale(1)',
+                    borderRadius: '12px',
+                    boxShadow: chatOpen ? '0 2px 8px rgba(255, 159, 67, 0.3)' : 'none',
+                    transform: chatOpen ? 'scale(1.05)' : 'scale(1)',
                     transition: 'all 0.3s ease-in-out',
+                    '&:hover': {
+                      backgroundColor: chatOpen ? 'rgba(255, 159, 67, 0.2)' : 'rgba(255, 159, 67, 0.1)',
+                      transform: 'translateY(-2px) scale(1.05)',
+                      boxShadow: '0 4px 12px rgba(255, 159, 67, 0.4)',
+                    },
                   }}
                 >
                   <Badge 
@@ -325,14 +331,46 @@ const Navbar: FC = () => {
                       '& .MuiBadge-badge': {
                         backgroundColor: '#ff9f43',
                         color: '#ffffff',
-                        fontSize: '0.7rem',
-                        minWidth: '16px',
-                        height: '16px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        minWidth: '20px',
+                        height: '20px',
+                        borderRadius: '10px',
+                        animation: chatOpen ? 'pulse 2s infinite' : 'none',
+                        top: '2px',
+                        right: '2px',
+                        transform: 'translate(50%, -50%)',
+                        border: `2px solid ${isDarkMode ? '#2D2D45' : '#ffffff'}`,
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                      },
+                      '& .MuiBadge-anchorOriginTopRightRectangular': {
+                        top: '2px',
+                        right: '2px',
+                        transform: 'translate(50%, -50%)',
+                      },
+                      '@keyframes pulse': {
+                        '0%': {
+                          transform: 'translate(50%, -50%) scale(1)',
+                          opacity: 1,
+                        },
+                        '50%': {
+                          transform: 'translate(50%, -50%) scale(1.1)',
+                          opacity: 0.8,
+                        },
+                        '100%': {
+                          transform: 'translate(50%, -50%) scale(1)',
+                          opacity: 1,
+                        },
                       },
                     }}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
                   >
-                    <ChatIcon fontSize="small" sx={{ 
-                      color: chatOpen ? '#ff9f43' : 'inherit' 
+                    <ChatIcon sx={{ 
+                      color: chatOpen ? '#ff9f43' : 'inherit',
+                      transition: 'color 0.3s ease-in-out' 
                     }} />
                   </Badge>
                 </NavIconButton>
@@ -437,24 +475,39 @@ const Navbar: FC = () => {
                         color: '#ffffff',
                         fontSize: '0.75rem',
                         fontWeight: 'bold',
-                        minWidth: '18px',
-                        height: '18px',
+                        minWidth: '20px',
+                        height: '20px',
+                        borderRadius: '10px',
                         animation: chatOpen ? 'pulse 2s infinite' : 'none',
+                        top: '2px',
+                        right: '2px',
+                        transform: 'translate(50%, -50%)',
+                        border: `2px solid ${isDarkMode ? '#2D2D45' : '#ffffff'}`,
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                      },
+                      '& .MuiBadge-anchorOriginTopRightRectangular': {
+                        top: '2px',
+                        right: '2px',
+                        transform: 'translate(50%, -50%)',
                       },
                       '@keyframes pulse': {
                         '0%': {
-                          transform: 'scale(1)',
+                          transform: 'translate(50%, -50%) scale(1)',
                           opacity: 1,
                         },
                         '50%': {
-                          transform: 'scale(1.1)',
+                          transform: 'translate(50%, -50%) scale(1.1)',
                           opacity: 0.8,
                         },
                         '100%': {
-                          transform: 'scale(1)',
+                          transform: 'translate(50%, -50%) scale(1)',
                           opacity: 1,
                         },
                       },
+                    }}
+                    anchorOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
                     }}
                   >
                     <ChatIcon sx={{ 
