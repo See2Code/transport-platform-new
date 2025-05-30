@@ -581,7 +581,8 @@ const Navbar: FC = () => {
               sx={{ 
                 display: { xs: 'flex', md: 'none' },
                 color: isDarkMode ? '#fff' : '#333',
-                mr: 2,
+                ml: 'auto',
+                mr: 4,
                 '&:hover': {
                   background: 'rgba(255, 159, 67, 0.1)',
                 }
