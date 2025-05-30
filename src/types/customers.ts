@@ -20,9 +20,12 @@ export interface Customer {
     contactSurname: string;
     email: string;
     phone?: string;
+    contactPhonePrefix?: string;
+    contactPhone?: string;
     ico?: string;
     dic?: string;
     vatId?: string;
+    customerId?: string; // Identifikačné číslo zákazníka (napr. Z19233)
     companyID?: string;
     createdAt?: Timestamp | Date;
     paymentTermDays?: number; // Splatnosť v dňoch (default 30)

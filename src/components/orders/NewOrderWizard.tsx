@@ -496,7 +496,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           city: data.city || '',
           zip: data.zip || '',
           country: data.country || 'Slovensko',
-          paymentTermDays: data.paymentTermDays || 30
+          paymentTermDays: data.paymentTermDays || 30,
+          customerId: data.customerId || '' // Načítame customerId z databázy
         };
         
         console.log('✅ Mapped customer:', customer);
@@ -836,9 +837,12 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         customerContactName: customer?.contactName || '',
         customerContactSurname: customer?.contactSurname || '',
         customerEmail: customer?.email || '',
-        customerPhone: customer?.phone || '',
+        customerPhone: customer?.phone || (customer?.contactPhonePrefix && customer?.contactPhone 
+          ? `${customer.contactPhonePrefix}${customer.contactPhone}` 
+          : '') || '',
         customerCompany: customer?.company || '',
         customerPaymentTermDays: customer?.paymentTermDays || 30,
+        customerId: (customer as any)?.customerId || '', // Pridáme customerId
       };
     });
   };
@@ -908,10 +912,29 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     setFormData(prev => {
       const places = [...(prev[`${type}Places` as keyof typeof prev] as any[])];
       places[locationIndex].goods = [...places[locationIndex].goods, newGoods];
-      return {
+      
+      // Automatické kopírovanie tovaru z nakládky do vykládky
+      // Len ak má užívateľ jednu nakládku a jednu vykládku
+      const updatedFormData = {
         ...prev,
         [`${type}Places`]: places
       };
+      
+      if (type === 'loading' && 
+          prev.loadingPlaces?.length === 1 && 
+          prev.unloadingPlaces?.length === 1 &&
+          prev.unloadingPlaces[0].goods?.length === 0) {
+        // Skopírujeme všetky tovary z nakládky do vykládky
+        const loadingGoods = places[locationIndex].goods;
+        const unloadingPlaces = [...prev.unloadingPlaces];
+        unloadingPlaces[0].goods = loadingGoods.map((goods: GoodsItem) => ({
+          ...goods,
+          id: crypto.randomUUID() // Nové ID pre kopiu
+        }));
+        updatedFormData.unloadingPlaces = unloadingPlaces;
+      }
+      
+      return updatedFormData;
     });
   };
 
@@ -919,10 +942,28 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     setFormData(prev => {
       const places = [...(prev[`${type}Places` as keyof typeof prev] as any[])];
       places[locationIndex].goods.splice(goodsIndex, 1);
-      return {
+      
+      const updatedFormData = {
         ...prev,
         [`${type}Places`]: places
       };
+      
+      // Automatické kopírovanie zmien tovaru z nakládky do vykládky
+      // Len ak má užívateľ jednu nakládku a jednu vykládku
+      if (type === 'loading' && 
+          prev.loadingPlaces?.length === 1 && 
+          prev.unloadingPlaces?.length === 1) {
+        // Skopírujeme všetky tovary z nakládky do vykládky
+        const loadingGoods = places[locationIndex].goods;
+        const unloadingPlaces = [...prev.unloadingPlaces];
+        unloadingPlaces[0].goods = loadingGoods.map((goods: GoodsItem) => ({
+          ...goods,
+          id: crypto.randomUUID() // Nové ID pre kopiu
+        }));
+        updatedFormData.unloadingPlaces = unloadingPlaces;
+      }
+      
+      return updatedFormData;
     });
   };
 
@@ -939,10 +980,29 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         ...places[locationIndex].goods[goodsIndex],
         [field]: value
       };
-      return {
+      
+      const updatedFormData = {
         ...prev,
         [`${type}Places`]: places
       };
+      
+      // Automatické kopírovanie zmien tovaru z nakládky do vykládky
+      // Len ak má užívateľ jednu nakládku a jednu vykládku
+      if (type === 'loading' && 
+          prev.loadingPlaces?.length === 1 && 
+          prev.unloadingPlaces?.length === 1 &&
+          prev.unloadingPlaces[0].goods?.length > 0) {
+        // Skopírujeme všetky tovary z nakládky do vykládky
+        const loadingGoods = places[locationIndex].goods;
+        const unloadingPlaces = [...prev.unloadingPlaces];
+        unloadingPlaces[0].goods = loadingGoods.map((goods: GoodsItem) => ({
+          ...goods,
+          id: crypto.randomUUID() // Nové ID pre kopiu
+        }));
+        updatedFormData.unloadingPlaces = unloadingPlaces;
+      }
+      
+      return updatedFormData;
     });
   };
 
@@ -980,7 +1040,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           formData.loadingPlaces.forEach((place, index) => {
             if (!place.city) errors.push(`Nakládka #${index + 1}: Zadajte mesto`);
             if (!place.street) errors.push(`Nakládka #${index + 1}: Zadajte ulicu`);
-            if (!place.contactPersonName) errors.push(`Nakládka #${index + 1}: Zadajte kontaktnú osobu`);
+            // Kontaktná osoba je teraz nepovinná
             if (!place.dateTime) errors.push(`Nakládka #${index + 1}: Zadajte dátum a čas`);
             if (!place.goods?.length || !place.goods.some(g => g.name)) {
               errors.push(`Nakládka #${index + 1}: Zadajte aspoň jeden tovar`);
@@ -994,7 +1054,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           formData.unloadingPlaces.forEach((place, index) => {
             if (!place.city) errors.push(`Vykládka #${index + 1}: Zadajte mesto`);
             if (!place.street) errors.push(`Vykládka #${index + 1}: Zadajte ulicu`);
-            if (!place.contactPersonName) errors.push(`Vykládka #${index + 1}: Zadajte kontaktnú osobu`);
+            // Kontaktná osoba je teraz nepovinná
             if (!place.dateTime) errors.push(`Vykládka #${index + 1}: Zadajte dátum a čas`);
             if (!place.goods?.length || !place.goods.some(g => g.name)) {
               errors.push(`Vykládka #${index + 1}: Zadajte aspoň jeden tovar`);
@@ -1391,6 +1451,36 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                     helperText="Automaticky načítané zo zákazníka"
                   />
                 </Grid>
+                
+                {/* Identifikačné číslo zákazníka */}
+                {formData.zakaznikData && formData.customerId && (
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      fullWidth
+                      id="customer-id"
+                      name="customerId"
+                      label="Identifikačné číslo zákazníka"
+                      value={formData.customerId || ''}
+                      InputProps={{
+                        readOnly: true,
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <BusinessIcon sx={{ color: 'text.secondary' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      helperText="Automaticky pridelené systémom"
+                      sx={{
+                        '& .MuiInputBase-input': {
+                          fontWeight: 600,
+                          fontFamily: 'monospace',
+                          fontSize: '1.1rem',
+                          color: '#ff9f43'
+                        }
+                      }}
+                    />
+                  </Grid>
+                )}
               </Grid>
             </CardContent>
           </StyledCard>
@@ -1443,16 +1533,23 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                   </FormControl>
                 </Grid>
                 
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    id="customer-reference-number"
-                    name="customerReferenceNumber"
-                    label={t('orders.customerReferenceNumber') || 'Referenčné číslo zákazníka'}
-                    value={formData.cisloNakladuZakaznika || ''}
-                    onChange={handleInputChange('cisloNakladuZakaznika')}
-                  />
-                </Grid>
+
+                {/* Identifikačné číslo zákazníka */}
+                {formData.zakaznikData && formData.customerId && (
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      fullWidth
+                      id="customer-id"
+                      name="customerId"
+                      label="Identifikačné číslo zákazníka"
+                      value={formData.customerId || ""}
+                      InputProps={{
+                        readOnly: true
+                      }}
+                      helperText="Automaticky pridelené systémom"
+                    />
+                  </Grid>
+                )}
 
                 <Grid item xs={12}>
                   <TextField
@@ -1695,10 +1792,9 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                   fullWidth
                   id={`${type}-contact-name-${index}`}
                   name={`${type}ContactName${index}`}
-                  label="Meno kontaktnej osoby *"
+                  label="Meno kontaktnej osoby"
                   value={place.contactPersonName}
                   onChange={(e) => updateLocation(type, index, 'contactPersonName', e.target.value)}
-                  required
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -1714,10 +1810,9 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                   fullWidth
                   id={`${type}-contact-phone-${index}`}
                   name={`${type}ContactPhone${index}`}
-                  label="Telefón kontaktnej osoby *"
+                  label="Telefón kontaktnej osoby"
                   value={place.contactPersonPhone}
                   onChange={(e) => updateLocation(type, index, 'contactPersonPhone', e.target.value)}
-                  required
                   placeholder="+421 XXX XXX XXX"
                   InputProps={{
                     startAdornment: (
@@ -2181,17 +2276,17 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="lg"
-      fullWidth
+      maxWidth={false}
+      fullWidth={false}
       PaperProps={{
         sx: {
           background: 'none',
           boxShadow: 'none',
-          margin: {
-            xs: '8px',
-            sm: '16px'
-          },
-          maxHeight: '90vh',
+          margin: 0,
+          maxHeight: '95vh',
+          height: '95vh',
+          width: '95vw',
+          maxWidth: '1400px',
           overflow: 'hidden'
         }
       }}
@@ -2201,21 +2296,34 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           backgroundColor: 'rgba(0, 0, 0, 0.8)'
         }
       }}
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        '& .MuiDialog-container': {
+          alignItems: 'center',
+          justifyContent: 'center'
+        },
+        '& .MuiDialog-paper': {
+          margin: 0
+        }
+      }}
     >
       <Box
         sx={{
           backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
           borderRadius: '12px',
-          padding: '24px',
-          maxWidth: '1200px',
+          padding: '16px',
+          maxWidth: '1400px',
           width: '100%',
-          maxHeight: '90vh',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           backdropFilter: 'blur(10px)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
           border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
           color: isDarkMode ? '#ffffff' : '#000000',
+          overflow: 'hidden'
         }}
       >
         {/* Header */}
@@ -2508,10 +2616,16 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               contactName: customerData.contactName,
               contactSurname: customerData.contactSurname,
               email: customerData.contactEmail, // Mapujeme contactEmail na email
+              phone: customerData.contactPhonePrefix && customerData.contactPhone 
+                ? `${customerData.contactPhonePrefix}${customerData.contactPhone}` 
+                : '', // Kombinujeme predvoľbu a číslo
+              contactPhonePrefix: customerData.contactPhonePrefix || '+421',
+              contactPhone: customerData.contactPhone || '',
               ico: customerData.ico || '',
               dic: customerData.dic || '',
               vatId: customerData.icDph || '', // Mapujeme icDph na vatId
               paymentTermDays: customerData.paymentTermDays || 30,
+              customerId: customerData.customerId || '', // Pridáme customerId
               companyID: userData.companyID,
               createdAt: Timestamp.fromDate(new Date())
             };
@@ -2529,9 +2643,14 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               contactName: customerData.contactName,
               contactSurname: customerData.contactSurname,
               email: customerData.contactEmail,
-              phone: '', // CustomerData nemá phone field
+              phone: customerData.contactPhonePrefix && customerData.contactPhone 
+                ? `${customerData.contactPhonePrefix}${customerData.contactPhone}` 
+                : '',
+              contactPhonePrefix: customerData.contactPhonePrefix || '+421',
+              contactPhone: customerData.contactPhone || '',
               vatId: customerData.icDph || '',
               paymentTermDays: customerData.paymentTermDays || 30,
+              customerId: customerData.customerId || '', // Pridáme customerId
               companyID: userData.companyID
             };
             

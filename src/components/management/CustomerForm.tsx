@@ -11,6 +11,11 @@ import {
   useTheme,
   Box,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Business as BusinessIcon } from '@mui/icons-material';
@@ -26,10 +31,13 @@ export interface CustomerData {
   contactName: string;
   contactSurname: string;
   contactEmail: string;
+  contactPhonePrefix: string;
+  contactPhone: string;
   ico?: string;
   dic?: string;
   icDph?: string;
   paymentTermDays?: number; // Splatnosť v dňoch
+  customerId?: string; // Automaticky generované ID zákazníka (napr. Z19233)
 }
 
 interface CustomerFormProps {
@@ -42,6 +50,15 @@ interface CustomerFormProps {
 const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, editCustomer }) => {
   const _theme = useTheme();
   const { isDarkMode } = useThemeMode();
+  
+  // Funkcia na generovanie unikátneho ID zákazníka (jedno písmeno + 5 číslic)
+  const generateCustomerId = (): string => {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const letter = letters[Math.floor(Math.random() * letters.length)];
+    const numbers = Math.floor(Math.random() * 90000) + 10000; // 5-miestne číslo od 10000 do 99999
+    return `${letter}${numbers}`;
+  };
+  
   const [formData, setFormData] = useState<CustomerData>({
     companyName: '',
     street: '',
@@ -51,6 +68,8 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
     contactName: '',
     contactSurname: '',
     contactEmail: '',
+    contactPhonePrefix: '+421',
+    contactPhone: '',
     ico: '',
     dic: '',
     icDph: '',
@@ -62,6 +81,8 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
       setFormData({
         ...editCustomer,
         icDph: editCustomer.icDph || (editCustomer as any).vatId || (editCustomer as any)['IČ_DPH'] || (editCustomer as any).ic_dph || '',
+        contactPhonePrefix: editCustomer.contactPhonePrefix || '+421',
+        contactPhone: editCustomer.contactPhone || '',
       });
     } else {
       setFormData({
@@ -73,6 +94,8 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
         contactName: '',
         contactSurname: '',
         contactEmail: '',
+        contactPhonePrefix: '+421',
+        contactPhone: '',
         ico: '',
         dic: '',
         icDph: '',
@@ -89,8 +112,24 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
     }));
   };
 
+  const handleCountryChange = (event: SelectChangeEvent) => {
+    const selectedCountryName = event.target.value as string;
+    const selectedCountry = countries.find(c => c.name === selectedCountryName);
+    
+    setFormData(prev => ({
+      ...prev,
+      country: selectedCountryName,
+      contactPhonePrefix: selectedCountry?.prefix || '+421'
+    }));
+  };
+
   const handleSubmit = () => {
-    onSubmit(formData);
+    const customerDataToSubmit = {
+      ...formData,
+      // Ak je to nový zákazník (bez customerId), vygeneruj mu nové ID
+      customerId: formData.customerId || generateCustomerId()
+    };
+    onSubmit(customerDataToSubmit);
   };
 
   return (
@@ -231,24 +270,31 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
               />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                select
-                label="Krajina"
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                SelectProps={{
-                  native: true,
-                }}
-                required
-              >
-                {countries.map((country) => (
-                  <option key={country.code} value={country.name}>
-                    {country.name}
-                  </option>
-                ))}
-              </TextField>
+              <FormControl fullWidth required>
+                <InputLabel>Krajina</InputLabel>
+                <Select
+                  label="Krajina"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleCountryChange}
+                >
+                  {countries.map((country) => (
+                    <MenuItem key={country.code} value={country.name}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <img 
+                          loading="lazy" 
+                          width="20" 
+                          height="15"
+                          src={`https://flagcdn.com/${country.code.toLowerCase()}.svg`} 
+                          alt={`${country.name} vlajka`} 
+                          style={{ borderRadius: '2px', objectFit: 'cover' }}
+                        />
+                        <span>{country.name}</span>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12}>
               <Typography variant="subtitle1" sx={{ mt: 2, mb: 2, color: '#ff9f43', fontWeight: 600 }}>
@@ -322,7 +368,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
                 required
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Email"
@@ -332,6 +378,110 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ open, onClose, onSubmit, ed
                 onChange={handleChange}
                 required
               />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <FormControl sx={{ minWidth: 120 }}>
+                  <InputLabel sx={{ 
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                    '&.Mui-focused': {
+                      color: '#ff9f43',
+                    },
+                  }}>Krajina</InputLabel>
+                  <Select
+                    label="Krajina"
+                    value={formData.contactPhonePrefix}
+                    onChange={(e: SelectChangeEvent) => {
+                      const selectedPrefix = e.target.value as string;
+                      setFormData(prev => ({
+                        ...prev,
+                        contactPhonePrefix: selectedPrefix
+                      }));
+                    }}
+                    sx={{
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#ff9f43',
+                      },
+                      '& .MuiSelect-icon': {
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                      }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                          backdropFilter: 'blur(8px)',
+                          '& .MuiMenuItem-root': {
+                            color: isDarkMode ? '#ffffff' : '#000000',
+                            '&:hover': {
+                              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                            }
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    {countries.map((country) => (
+                      <MenuItem key={country.code} value={country.prefix}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <img 
+                            loading="lazy" 
+                            width="20" 
+                            height="15"
+                            src={`https://flagcdn.com/${country.code.toLowerCase()}.svg`} 
+                            alt={`${country.name} vlajka`} 
+                            style={{ borderRadius: '2px', objectFit: 'cover' }}
+                          />
+                          <span style={{ minWidth: '60px' }}>{country.prefix}</span>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Telefónne číslo"
+                  name="contactPhone"
+                  value={formData.contactPhone}
+                  onChange={handleChange}
+                  placeholder="9XX XXX XXX"
+                  helperText="Zadajte telefónne číslo bez predvoľby"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      color: isDarkMode ? '#ffffff' : '#000000',
+                      '& fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#ff9f43',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                      '&.Mui-focused': {
+                        color: '#ff9f43',
+                      },
+                    },
+                    '& .MuiFormHelperText-root': {
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                      fontSize: '0.75rem',
+                      marginLeft: 0,
+                      marginTop: '4px',
+                    }
+                  }}
+                />
+              </Box>
             </Grid>
           </Grid>
         </DialogContent>

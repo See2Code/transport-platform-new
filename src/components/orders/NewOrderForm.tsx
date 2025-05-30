@@ -360,7 +360,9 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             customerContactName: newValue.contactName || '',
             customerContactSurname: newValue.contactSurname || '',
             customerEmail: newValue.email || '',
-            customerPhone: newValue.phone || '',
+            customerPhone: newValue.phone || (newValue.contactPhonePrefix && newValue.contactPhone 
+              ? `${newValue.contactPhonePrefix}${newValue.contactPhone}` 
+              : '') || '',
             customerPaymentTermDays: newValue.paymentTermDays || 30
         };
 

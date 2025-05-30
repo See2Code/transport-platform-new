@@ -100,6 +100,7 @@ export interface OrderFormData {
   customerPhone?: string;
   customerPrice?: string;
   customerPaymentTermDays?: number;
+  customerId?: string; // Identifikačné číslo zákazníka (napr. Z19233)
   goodsDescription?: string;
   weightKg?: string;
   dimensionsL?: string;

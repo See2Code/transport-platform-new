@@ -1,11 +1,8 @@
 import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
-import { OrderFormData as BaseOrderFormData, LoadingPlace, UnloadingPlace, } from '../../types/orders';
-import { countries } from '../../constants/countries';
-import { useTranslation } from 'react-i18next';
-import {
-  Box,
-  Typography,
-  Button,
+import { 
+  Box, 
+  Typography, 
+  Button, 
   IconButton,
   Paper,
   TextField,
@@ -18,12 +15,12 @@ import {
   DialogActions,
   CircularProgress,
   Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow, 
   Tabs,
   Tab,
   Grid,
@@ -31,8 +28,7 @@ import {
   useTheme,
   styled,
   Divider,
-  Collapse,
-  GlobalStyles
+  Collapse
 } from '@mui/material';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import SearchIcon from '@mui/icons-material/Search';
@@ -74,6 +70,9 @@ import StarIcon from '@mui/icons-material/Star';
 // import OrderRatingDialog from '../dialogs/OrderRatingDialog';
 import { OrderRating } from '../../types/orders';
 import BareTooltip from '../common/BareTooltip';
+import { OrderFormData as BaseOrderFormData, LoadingPlace, UnloadingPlace, } from '../../types/orders';
+import { countries } from '../../constants/countries';
+import { useTranslation } from 'react-i18next';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -298,30 +297,26 @@ const RatingIndicator = ({ rating, size, showChip: _showChip }: { rating: number
   );
 };
 
-const DialogGlobalStyles = ({ open }: { open: boolean }) => {
-  if (!open) return null;
-  
-  return (
-    <GlobalStyles 
-      styles={`
-        .MuiDialog-root .MuiDialog-paper {
-          max-height: 100vh !important;
-          overflow: hidden !important;
-        }
-        .MuiDialog-root .MuiDialogContent-root {
-          overflow: auto !important;
-          padding: 0 !important;
-          display: flex !important;
-          flex-direction: column !important;
-          max-height: 90vh !important;
-        }
-        body {
-          overflow: ${open ? 'hidden' : 'auto'};
-        }
-      `}
-    />
-  );
-};
+const DialogGlobalStyles = ({ open }: { open: boolean }) => (
+  <style>
+    {open && `
+      .MuiDialog-root .MuiDialog-paper {
+        max-height: 100vh !important;
+        overflow: hidden !important;
+      }
+      .MuiDialog-root .MuiDialogContent-root {
+        overflow: auto !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        max-height: 90vh !important;
+      }
+      body {
+        overflow: hidden;
+      }
+    `}
+  </style>
+);
 
 const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
@@ -1471,6 +1466,11 @@ const OrdersList: React.FC = () => {
         contactName: customerData.contactName,
         contactSurname: customerData.contactSurname,
         email: customerData.contactEmail, // Mapujeme contactEmail na email
+        phone: customerData.contactPhonePrefix && customerData.contactPhone 
+          ? `${customerData.contactPhonePrefix}${customerData.contactPhone}` 
+          : '', // Kombinujeme predvoľbu a číslo
+        contactPhonePrefix: customerData.contactPhonePrefix || '+421',
+        contactPhone: customerData.contactPhone || '',
         ico: customerData.ico || '',
         dic: customerData.dic || '',
         vatId: customerData.icDph || '', // Mapujeme icDph na vatId
@@ -2400,6 +2400,7 @@ const OrdersList: React.FC = () => {
                         <TableCell>{t('orders.companyName')}</TableCell>
                         <TableCell>{t('orders.contactPerson')}</TableCell>
                         <TableCell>{t('orders.email')}</TableCell>
+                        <TableCell>Telefón</TableCell>
                         <TableCell>{t('orders.ico')}</TableCell>
                         <TableCell>{t('orders.icDph')}</TableCell>
                         <TableCell>{t('orders.dic')}</TableCell>
@@ -2416,6 +2417,31 @@ const OrdersList: React.FC = () => {
                           <TableCell>{customer.company || (customer as any).companyName || '-'}</TableCell>
                           <TableCell>{`${customer.contactName || ''} ${customer.contactSurname || ''}`.trim() || '-'}</TableCell>
                           <TableCell>{customer.email || (customer as any).contactEmail || '-'}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {customer.contactPhonePrefix && customer.contactPhone && (
+                                <>
+                                  <img 
+                                    loading="lazy" 
+                                    width="20" 
+                                    height="15"
+                                    src={`https://flagcdn.com/${(countries.find(c => c.prefix === customer.contactPhonePrefix)?.code || 'sk').toLowerCase()}.svg`} 
+                                    alt="Vlajka krajiny" 
+                                    style={{ borderRadius: '2px', objectFit: 'cover' }}
+                                  />
+                                  <Typography variant="body2">
+                                    {customer.contactPhonePrefix}{customer.contactPhone}
+                                  </Typography>
+                                </>
+                              )}
+                              {!customer.contactPhonePrefix && customer.phone && (
+                                <Typography variant="body2">{customer.phone}</Typography>
+                              )}
+                              {!customer.contactPhonePrefix && !customer.contactPhone && !customer.phone && (
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>-</Typography>
+                              )}
+                            </Box>
+                          </TableCell>
                           <TableCell>{customer.ico || '-'}</TableCell>
                           <TableCell>{customer.vatId || (customer as any).icDph || '-'}</TableCell>
                           <TableCell>{customer.dic || '-'}</TableCell>
@@ -3531,6 +3557,8 @@ const OrdersList: React.FC = () => {
         contactName: selectedCustomerForEdit.contactName,
         contactSurname: selectedCustomerForEdit.contactSurname,
         contactEmail: selectedCustomerForEdit.email || (selectedCustomerForEdit as any).contactEmail || '', // Mapujeme email alebo contactEmail na contactEmail pre CustomerForm
+        contactPhonePrefix: selectedCustomerForEdit.contactPhonePrefix || '+421',
+        contactPhone: selectedCustomerForEdit.contactPhone || '',
         ico: selectedCustomerForEdit.ico,
         dic: selectedCustomerForEdit.dic,
         icDph: selectedCustomerForEdit.vatId || (selectedCustomerForEdit as any).icDph || '', // Mapujeme vatId alebo icDph na icDph pre CustomerForm
