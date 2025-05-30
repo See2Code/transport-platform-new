@@ -5,7 +5,8 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  GlobalStyles
+  GlobalStyles,
+  Box
 } from '@mui/material';
 import { useThemeMode } from '../../contexts/ThemeContext';
 
@@ -16,6 +17,62 @@ interface LanguageSelectorProps {
   onLanguageSelect: (language: 'sk' | 'en' | 'de' | 'cs' | 'pl') => void;
 }
 
+// SVG vlajky komponenty - rovnaké ako v navbar-e
+const SKFlagIcon = () => (
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/sk.svg" 
+    alt="Slovenská vlajka" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
+);
+
+const ENFlagIcon = () => (
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/gb.svg" 
+    alt="English flag" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
+);
+
+const DEFlagIcon = () => (
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/de.svg" 
+    alt="Deutsche Flagge" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
+);
+
+const CSFlagIcon = () => (
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/cz.svg" 
+    alt="Česká vlajka" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
+);
+
+const PLFlagIcon = () => (
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/pl.svg" 
+    alt="Polska flaga" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
+);
+
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   open,
   anchorEl,
@@ -25,11 +82,11 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const { isDarkMode } = useThemeMode();
   
   const languages = [
-    { code: 'sk', name: 'Slovenčina', flag: '🇸🇰' },
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-    { code: 'cs', name: 'Čeština', flag: '🇨🇿' },
-    { code: 'pl', name: 'Polski', flag: '🇵🇱' }
+    { code: 'sk', name: 'Slovenčina', flagComponent: <SKFlagIcon /> },
+    { code: 'en', name: 'English', flagComponent: <ENFlagIcon /> },
+    { code: 'de', name: 'Deutsch', flagComponent: <DEFlagIcon /> },
+    { code: 'cs', name: 'Čeština', flagComponent: <CSFlagIcon /> },
+    { code: 'pl', name: 'Polski', flagComponent: <PLFlagIcon /> }
   ] as const;
 
   return (
@@ -116,7 +173,9 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
             }}
           >
             <ListItemIcon sx={{ minWidth: '36px' }}>
-              <Typography variant="h6">{language.flag}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                {language.flagComponent}
+              </Box>
             </ListItemIcon>
             <ListItemText
               primary={

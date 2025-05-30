@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, FC, useCallback } from 'react';
+import React, { useState, useEffect, FC } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useChat } from '../../contexts/ChatContext';
@@ -6,17 +6,13 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
-import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import Typography from '@mui/material/Typography';
 
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import AppBar from '@mui/material/AppBar';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -24,44 +20,35 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
 import Popover from '@mui/material/Popover';
-import Paper from '@mui/material/Paper';
+import Container from '@mui/material/Container';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
 
 import DialogContentText from '@mui/material/DialogContentText';
 
 import SettingsIcon from '@mui/icons-material/Settings';
-
 import NotificationsIcon from '@mui/icons-material/Notifications';
-
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-
 import BusinessIcon from '@mui/icons-material/Business';
 import ChatIcon from '@mui/icons-material/Chat';
-
 import DashboardIcon from '@mui/icons-material/Dashboard';
-
 import PeopleIcon from '@mui/icons-material/People';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import LightModeIcon from '@mui/icons-material/LightMode';
+import CloseIcon from '@mui/icons-material/Close';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+
 import { useNavigate } from 'react-router-dom';
-
 import { useAuth } from '../../contexts/AuthContext';
-import { MenuProps } from '@mui/material/Menu';
 import { useThemeMode } from '../../contexts/ThemeContext';
-
-
 import { useChatUI } from '../../AppContent';
-import { alpha } from '@mui/material/styles';
-
-
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-
-// Importujeme náš nový MobileNavbar komponent
-import MobileNavbar from './MobileNavbar';
+import BareTooltip from '../common/BareTooltip';
 
 // Importujeme komponenty pre vlajky - SVG vlajky z flagcdn.com
 const SKFlagIcon = () => (
@@ -81,695 +68,99 @@ const ENFlagIcon = () => (
     width="20" 
     height="15"
     src="https://flagcdn.com/gb.svg" 
-    alt="Anglická vlajka" 
+    alt="English flag" 
     style={{ borderRadius: '2px', objectFit: 'cover' }}
   />
 );
 
-// CSS vlajky (používané aktuálne)
-const _SKFlagIcon = () => (
-  <Box sx={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    width: '24px',
-    height: '16px',
-    borderRadius: '2px',
-    border: '1px solid rgba(0,0,0,0.1)',
-    overflow: 'hidden',
-    position: 'relative',
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: '33.33%',
-      background: '#FFFFFF'
-    },
-    '&::after': {
-      content: '""',
-      position: 'absolute',
-      top: '33.33%',
-      left: 0,
-      right: 0,
-      height: '33.33%',
-      background: '#0052D4'
-    },
-    background: '#EE1C25'
-  }}>
-  </Box>
-);
+// Logo paths - nepoužívané, môžeme ich odstrániť
 
-const _ENFlagIcon = () => (
-  <Box sx={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    width: '24px',
-    height: '16px',
-    borderRadius: '2px',
-    border: '1px solid rgba(0,0,0,0.1)',
-    overflow: 'hidden',
-    position: 'relative',
-    background: '#012169',
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: '20%',
-      background: '#FFFFFF'
-    },
-    '&::after': {
-      content: '""',
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: '20%',
-      background: '#C8102E'
-    }
-  }}>
-    {/* Biely krížik Union Jack */}
-    <Box sx={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: '40%',
-        left: 0,
-        right: 0,
-        height: '20%',
-        background: '#FFFFFF'
-      },
-      '&::after': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        bottom: 0,
-        left: '40%',
-        width: '20%',
-        background: '#FFFFFF'
-      }
-    }} />
-    {/* Červený krížik */}
-    <Box sx={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: '45%',
-        left: 0,
-        right: 0,
-        height: '10%',
-        background: '#C8102E'
-      },
-      '&::after': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        bottom: 0,
-        left: '45%',
-        width: '10%',
-        background: '#C8102E'
-      }
-    }} />
-  </Box>
-);
-
-// Definícia farebnej palety
-const colors = {
-  primary: {
-    main: '#6366f1', // Moderná indigová farba
-    light: '#818cf8',
-    dark: '#4f46e5',
-  },
-  background: {
-    main: 'rgba(28, 28, 45, 0.95)',
-    light: 'rgba(255, 255, 255, 0.95)',
-    dark: '#12121f',
-  },
-  text: {
-    primary: '#ffffff',
-    secondary: 'rgba(255, 255, 255, 0.9)',
-    disabled: 'rgba(255, 255, 255, 0.7)',
-  }
-};
-
-const _ListItemIconStyled = styled(ListItemIcon)({
-  minWidth: 48,
-  color: 'inherit',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+// Navbar komponenty v štýle Home.tsx
+const NavbarContainer = styled(AppBar)(({ theme }) => ({
+  background: 'transparent',
+  boxShadow: 'none',
+  padding: '15px 0',
+  transition: 'all 0.3s ease',
+  position: 'fixed',
+  height: '80px',
   display: 'flex',
   justifyContent: 'center',
-  width: '100%',
-  margin: 0,
-  '& .MuiSvgIcon-root': {
-    transition: 'transform 0.3s ease',
-    fontSize: '24px'
-  }
-});
-
-const _StyledMenuItem = styled(MenuItem)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
-  padding: '12px 16px',
-  margin: '4px 8px',
-  borderRadius: '8px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '16px',
-  color: isDarkMode ? '#ffffff' : '#000000',
-  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
-  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-  border: `1px solid ${isDarkMode ? '#ffffff' : '#000000'}`,
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.1)',
-    transform: 'translateX(4px)',
-  },
-  '& .MuiListItemIcon-root': {
-    minWidth: '40px',
-    color: 'inherit',
-    '& .MuiSvgIcon-root': {
-      fontSize: '1.25rem',
-    },
-  },
-  '& .MuiListItemText-root': {
-    '& .MuiTypography-root': {
-      fontSize: '1rem',
-      fontWeight: 500,
-    },
-  },
-}));
-
-const _LogoutButton = styled(IconButton)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
-  color: isDarkMode ? colors.text.primary : '#000000',
-  '&:hover': {
-    color: colors.primary.main,
-    backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.1)' : 'rgba(0, 0, 0, 0.05)'
-  }
-}));
-
-const _ContentWrapper = styled('div')({
-  padding: '24px',
-  position: 'relative',
-  zIndex: 1,
-  '@media (max-width: 600px)': {
-    padding: '16px'
-  }
-});
-
-const _Overlay = styled('div')({
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  backdropFilter: 'blur(4px)',
-  zIndex: 1100,
-  opacity: 0,
-  visibility: 'hidden',
-  transition: 'all 0.3s ease-in-out',
-  display: 'none',
-  '@media (max-width: 600px)': {
-    display: 'block',
-    '&.visible': {
-      opacity: 1,
-      visibility: 'visible'
-    }
-  }
-});
-
-const StyledAppBar = styled(AppBar, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode?: boolean }>(({ _theme, isDarkMode = false }) => ({
-  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
-  color: isDarkMode ? '#ffffff' : '#000000',
-  boxShadow: '0 1px 8px 0 rgba(0,0,0,0.1)',
-  backdropFilter: 'blur(10px)',
-  position: 'fixed',
-  top: 0,
-  right: 0,
-  left: 0,
-  width: '100%',
-  zIndex: 1200,
-  transition: 'all 0.3s ease-in-out',
-}));
-
-const StyledToolbar = styled(Toolbar)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  padding: '0 24px',
-  minHeight: '56px',
-  '@media (max-width: 600px)': {
-    padding: '0 16px',
-    minHeight: '48px',
-  },
-  color: theme.palette.text.primary,
-}));
-
-const _BottomActions = styled(Box)({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '4px',
-  marginTop: '4px'
-});
-
-const _ActionItem = styled(MenuItem)<{ isDarkMode?: boolean; isLogout?: boolean }>(({ isDarkMode, isLogout }) => ({
-  padding: '12px 16px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  borderRadius: 0,
-  color: isLogout ? '#ef4444' : (isDarkMode ? '#ffffff' : '#000000'),
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    backgroundColor: isLogout 
-      ? 'rgba(239, 68, 68, 0.1)'
-      : (isDarkMode ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)'),
-    transform: 'translateX(4px)',
-  },
-}));
-
-const _MainContent = styled('main')({
-  flexGrow: 1,
-  width: '100%',
-});
-
-const _StyledListItem = styled(ListItem)<{ button?: boolean; isDarkMode?: boolean }>(({ isDarkMode = true }) => ({
-  minWidth: 'auto',
-  padding: '12px 16px',
-  borderRadius: 0,
-  margin: '4px 8px',
-  cursor: 'pointer',
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-    transform: 'translateX(4px)',
-  },
-  '& .MuiListItemIcon-root': {
-    minWidth: '40px',
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-  },
-  '& .MuiListItemText-root': {
-    margin: 0,
-    '& .MuiTypography-root': {
-      fontSize: '1rem',
-      fontWeight: 500,
-      color: isDarkMode ? '#ffffff' : '#000000',
-    },
-  },
-}));
-
-const _StyledDivider = styled(Divider)<{ isDarkMode?: boolean }>(({ isDarkMode }) => ({
-  margin: '8px 16px',
-  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-  height: '1px',
-}));
-
-const _StyledDialog = styled(Dialog, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  '& .MuiDialog-paper': {
-    backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+  zIndex: 1000,
+  '&.scrolled': {
+    background: theme.palette.mode === 'dark' 
+      ? 'rgba(16, 14, 60, 0.9)' 
+      : 'rgba(255, 255, 255, 0.9)',
     backdropFilter: 'blur(10px)',
-    borderRadius: 0,
-    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-    boxShadow: isDarkMode 
-      ? '0 8px 32px rgba(0, 0, 0, 0.4)' 
-      : '0 8px 32px rgba(0, 0, 0, 0.1)',
-  },
-  '& .MuiDialogTitle-root': {
-    color: isDarkMode ? '#ffffff' : '#000000',
-  },
-  '& .MuiDialogContent-root': {
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
-  },
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+    padding: '10px 0',
+    height: '70px',
+  }
 }));
 
-const _StyledButton = styled(Button, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode: boolean; variant: 'text' | 'contained' }>(({ isDarkMode, variant }) => ({
-  borderRadius: 0,
-  textTransform: 'none',
-  padding: '8px 16px',
+const NavIconButton = styled(IconButton)(({ theme }) => ({
+  marginLeft: theme.spacing(1),
+  color: theme.palette.mode === 'dark' ? '#fff' : '#333',
+  fontSize: '0.95rem',
   fontWeight: 500,
-  ...(variant === 'contained' ? {
-    backgroundColor: isDarkMode ? '#ff6b6b' : '#d64545',
-    color: '#ffffff',
-    '&:hover': {
-      backgroundColor: isDarkMode ? '#ff8787' : '#e05858',
-    },
-  } : {
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
-    '&:hover': {
-      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-    },
-  }),
-}));
-
-// --- Konštanty pre cesty k logám v public adresári ---
-const logoLightPath = "/AESA black.svg"; // Alebo /logo.png ak existuje
-const logoDarkPath = "/AESA white.svg";  // Alebo /logo-dark.png ak existuje
-const _logoMiniLightPath = "/favicon.png"; // Nahraďte správnou cestou k mini logu
-const _logoMiniDarkPath = "/AESA white favicon.png"; // Nahraďte správnou cestou k mini tmavému logu
-
-// Nové komponenty pre notifikácie
-const _NotificationPopover = styled(Popover)(({ _theme }) => ({
-  '& .MuiPopover-paper': {
-    width: '360px',
-    maxHeight: '500px',
-    overflow: 'hidden',
-    marginTop: '10px',
-    borderRadius: '10px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-  },
-}));
-
-const _NotificationHeader = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  padding: '12px 16px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-}));
-
-const _NotificationContainer = styled(Box)({
-  maxHeight: '360px',
-  overflowY: 'auto',
-  '&::-webkit-scrollbar': {
-    width: '6px',
-  },
-  '&::-webkit-scrollbar-track': {
-    background: 'transparent',
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: '3px',
-  },
-});
-
-const _NotificationItem = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode' && prop !== 'isRead'
-})<{ isDarkMode: boolean; isRead: boolean }>(({ isDarkMode, isRead }) => ({
-  padding: '12px 16px',
-  borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
-  backgroundColor: isRead ? 'transparent' : (isDarkMode ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.04)'),
-  transition: 'all 0.2s ease',
+  transition: 'all 0.3s ease',
   '&:hover': {
-    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    background: 'rgba(255, 159, 67, 0.1)',
+    transform: 'translateY(-2px)',
   },
+  '&.active': {
+    color: '#ff9f43',
+    fontWeight: 600,
+  }
 }));
 
-const _NotificationFooter = styled(Box, {
+const LogoImage = styled('img', {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
 })<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  padding: '12px 16px',
-  display: 'flex',
-  justifyContent: 'center',
-  borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-}));
-
-const _StyledMenu = styled((props: MenuProps) => (
-  <Menu
-    elevation={0}
-    anchorOrigin={{
-      vertical: 'bottom',
-      horizontal: 'right',
-    }}
-    transformOrigin={{
-      vertical: 'top',
-      horizontal: 'right',
-    }}
-    {...props}
-  />
-))(({ theme }) => ({
-  '& .MuiPaper-root': {
-    borderRadius: 6,
-    marginTop: theme.spacing(1),
-    minWidth: 180,
-    color: theme.palette.mode === 'light' ? 'rgb(55, 65, 81)' : theme.palette.grey[300],
-    boxShadow:
-      'rgb(255, 255, 255) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px',
-    '& .MuiMenu-list': {
-      padding: '4px 0',
-    },
-    '& .MuiMenuItem-root': {
-      '& .MuiSvgIcon-root': {
-        fontSize: 18,
-        color: theme.palette.text.secondary,
-        marginRight: theme.spacing(1.5),
-      },
-      '&:active': {
-        backgroundColor: alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity),
-      },
-    },
+  width: '80px',
+  height: 'auto',
+  filter: isDarkMode ? 'brightness(0) invert(1)' : 'brightness(0)',
+  cursor: 'pointer',
+  transition: 'transform 0.3s ease-in-out',
+  '&:hover': {
+    transform: 'scale(1.05)',
   },
 }));
-
-const _SolidDialogPaper = styled(Paper)(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? '#232342' : '#fff',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-  borderRadius: 16,
-  minWidth: 320,
-  color: theme.palette.mode === 'dark' ? '#fff' : '#232342',
-  opacity: 1,
-  backdropFilter: 'none',
-  backgroundImage: 'none',
-}));
-
-// Pridáme klučové animácie do globálnych štýlov
-const _globalStyles = {
-  '@keyframes fadeInTooltip': {
-    '0%': { 
-      opacity: 0, 
-      transform: 'translateX(-50%) translateY(10px)' 
-    },
-    '100%': { 
-      opacity: 1, 
-      transform: 'translateX(-50%) translateY(0)' 
-    },
-  },
-};
-
-// Úplne nový vlastný tooltip bez závislosti na MUI Tooltip
-interface BareTooltipProps {
-  title: React.ReactNode;
-  children: React.ReactElement;
-  placement?: 'top' | 'bottom' | 'left' | 'right';
-  enterDelay?: number;
-  leaveDelay?: number;
-}
-
-const BareTooltip: FC<BareTooltipProps> = ({ 
-  title, 
-  children, 
-  placement = 'bottom',
-  enterDelay = 300,
-  leaveDelay = 200
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const childRef = useRef<HTMLElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const enterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isHoveringRef = useRef(false);
-  
-  const { isDarkMode } = useThemeMode();
-
-  // Prida globálne štýly
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes fadeInTooltip {
-        from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-        to { opacity: 1; transform: translateX(-50%) translateY(0); }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
-  // Sledovanie dokumentu na strate fokusu/prekliknutí na inú aplikáciu
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Skryť tooltip, keď je okno neaktívne
-        setIsVisible(false);
-        if (enterTimeoutRef.current) {
-          clearTimeout(enterTimeoutRef.current);
-          enterTimeoutRef.current = null;
-        }
-        if (leaveTimeoutRef.current) {
-          clearTimeout(leaveTimeoutRef.current);
-          leaveTimeoutRef.current = null;
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  const updateTooltipPosition = useCallback(() => {
-    if (!childRef.current || !isHoveringRef.current) return;
-    
-    const rect = childRef.current.getBoundingClientRect();
-    let top = 0;
-    let left = 0;
-    
-    switch (placement) {
-      case 'top':
-        top = rect.top - (tooltipRef.current?.offsetHeight || 0) - 10;
-        left = rect.left + rect.width / 2;
-        break;
-      case 'bottom':
-        top = rect.bottom + 10;
-        left = rect.left + rect.width / 2;
-        break;
-      case 'left':
-        top = rect.top + rect.height / 2;
-        left = rect.left - (tooltipRef.current?.offsetWidth || 0) - 10;
-        break;
-      case 'right':
-        top = rect.top + rect.height / 2;
-        left = rect.right + 10;
-        break;
-    }
-    
-    setPosition({ top, left });
-  }, [placement]);
-
-  const handleMouseEnter = useCallback(() => {
-    isHoveringRef.current = true;
-    
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current);
-      leaveTimeoutRef.current = null;
-    }
-    
-    // Ak je tooltip už zobrazený, netreba čakať
-    if (isVisible) {
-      updateTooltipPosition();
-      return;
-    }
-    
-    if (enterTimeoutRef.current) return;
-    
-    enterTimeoutRef.current = setTimeout(() => {
-      updateTooltipPosition();
-      setIsVisible(true);
-      enterTimeoutRef.current = null;
-    }, enterDelay);
-  }, [enterDelay, isVisible, updateTooltipPosition]);
-
-  const handleMouseLeave = useCallback(() => {
-    isHoveringRef.current = false;
-    
-    if (enterTimeoutRef.current) {
-      clearTimeout(enterTimeoutRef.current);
-      enterTimeoutRef.current = null;
-    }
-    
-    if (leaveTimeoutRef.current) return;
-    
-    leaveTimeoutRef.current = setTimeout(() => {
-      setIsVisible(false);
-      leaveTimeoutRef.current = null;
-    }, leaveDelay);
-  }, [leaveDelay]);
-
-  // Čistenie timeoutov pri unmount
-  useEffect(() => {
-    return () => {
-      if (enterTimeoutRef.current) clearTimeout(enterTimeoutRef.current);
-      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
-    };
-  }, []);
-
-  // Pridávame event handlery pre hover a focus
-  const child = React.cloneElement(children, {
-    ref: childRef,
-    onMouseEnter: handleMouseEnter,
-    onMouseLeave: handleMouseLeave,
-    onFocus: handleMouseEnter,
-    onBlur: handleMouseLeave,
-  });
-
-  return (
-    <>
-      {child}
-      {isVisible && createPortal(
-        <div
-          ref={tooltipRef}
-          style={{
-            position: 'fixed',
-            top: position.top,
-            left: position.left,
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            padding: '10px 16px',
-            backgroundColor: isDarkMode 
-              ? 'rgba(15, 23, 42, 0.85)'
-              : 'rgba(255, 255, 255, 0.92)',
-            color: isDarkMode ? '#ffffff' : '#0f172a',
-            borderRadius: '12px',
-            fontSize: '0.85rem',
-            fontWeight: 500,
-            letterSpacing: '0.2px',
-            boxShadow: isDarkMode
-              ? '0 16px 24px -6px rgba(0, 0, 0, 0.3), 0 4px 10px -3px rgba(0, 0, 0, 0.25)'
-              : '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            backdropFilter: 'blur(12px)',
-            pointerEvents: 'none', // Aby tooltip nereagoval na mouse eventy
-            animationName: 'fadeInTooltip',
-            animationDuration: '0.2s',
-            animationFillMode: 'forwards',
-            willChange: 'transform, opacity', // Optimalizácia pre GPU
-          }}
-        >
-          {title}
-        </div>,
-        document.body
-      )}
-    </>
-  );
-};
 
 const Navbar: FC = () => {
-  const theme = useTheme();
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
   const { toggleChat } = useChatUI();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t, i18n } = useTranslation();
   const { userData } = useAuth();
   const { unreadConversationsCount } = useChat();
   const [notificationsAnchorEl, setNotificationsAnchorEl] = useState<null | HTMLElement>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  // Handle scroll events for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollThreshold = 150;
+      if (window.scrollY > scrollThreshold) {
+        if (!scrolled) {
+          setScrolled(true);
+        }
+      } else {
+        if (scrolled) {
+          setScrolled(false);
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [scrolled]);
 
   const formatDateTime = (timestamp: any): string => {
     if (!timestamp) return 'Neznámy čas';
@@ -786,7 +177,6 @@ const Navbar: FC = () => {
 
   const handleNotificationsClick = (event: React.MouseEvent<HTMLElement>) => {
     setNotificationsAnchorEl(event.currentTarget);
-    // Načítame notifikácie pri otvorení
     loadNotifications();
   };
 
@@ -818,10 +208,8 @@ const Navbar: FC = () => {
   };
 
   const handleNotificationClick = (notification: any) => {
-    // Zatvoríme popover
     setNotificationsAnchorEl(null);
     
-    // Podľa typu notifikácie vykonáme príslušnú akciu
     if (notification.metadata?.conversationId) {
       navigate(`/chat/${notification.metadata.conversationId}`);
     } else if (notification.metadata?.orderId) {
@@ -833,6 +221,7 @@ const Navbar: FC = () => {
 
   const handleLogoutClick = () => {
     setLogoutDialogOpen(true);
+    setMobileMenuOpen(false);
   };
 
   const handleLogoutCancel = () => {
@@ -857,391 +246,560 @@ const Navbar: FC = () => {
   const currentLanguage = i18n.language;
   const isEN = currentLanguage === 'en';
 
+  const handleLogoClick = () => {
+    navigate('/dashboard');
+  };
+
   return (
     <>
-      <StyledAppBar position="fixed" isDarkMode={isDarkMode}>
-        <StyledToolbar>
-          {isMobile ? (
-            <>
-              <IconButton
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                onClick={() => setDrawerOpen(true)}
-              >
-                <MenuIcon />
-              </IconButton>
-              
-              <Box sx={{ 
-                flexGrow: 1, 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center' 
-              }}>
-                <img 
-                  src={isDarkMode ? logoDarkPath : logoLightPath} 
-                  alt="AESA Logo" 
-                  style={{ 
-                    height: '28px',
-                    opacity: 0.9,
-                  }} 
-                />
-              </Box>
-            </>
-          ) : (
+      {/* Fixed Navigation - presne ako v Home.tsx */}
+      <NavbarContainer 
+        className={scrolled ? 'scrolled' : ''}
+        position="fixed"
+      >
+        <Container 
+          maxWidth="lg" 
+          disableGutters
+          sx={{ 
+            width: '100%',
+            ml: { xs: 3, sm: 3, md: 3 },
+            mr: { xs: 3, sm: 3, md: 3 },
+          }}
+        >
+          <Toolbar sx={{ justifyContent: 'flex-start', px: 0, minHeight: { xs: 56, sm: 64 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <img 
-                src={isDarkMode ? logoDarkPath : logoLightPath} 
-                alt="Logo" 
-                style={{ height: '40px', marginRight: '16px' }} 
+              <LogoImage 
+                src="/AESA black.svg" 
+                alt="AESA Logo" 
+                isDarkMode={isDarkMode} 
+                onClick={handleLogoClick}
+                sx={{ width: '80px', mr: 2 }}
               />
-              <Typography variant="h6" sx={{ display: { xs: 'none', sm: 'block' } }}>
-                Transport Platform
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: isDarkMode ? '#fff' : '#333',
+                  display: { xs: 'none', sm: 'block' }
+                }}
+              >
+                CORE
               </Typography>
             </Box>
-          )}
 
-          {!isMobile && (
-            <Box sx={{ display: 'flex', flexGrow: 1, ml: 4 }}>
-              <BareTooltip
-                title={t('navigation.dashboard')}
-                placement="bottom"
-                enterDelay={300}
-                leaveDelay={200}
-              >
-                <Button
-                  color="inherit"
-                  startIcon={<DashboardIcon />}
-                  onClick={() => navigate('/dashboard')}
-                  sx={{
-                    mr: 2,
-                    transition: 'transform 0.2s ease, background-color 0.2s ease',
-                    '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
-                      transform: 'translateY(-2px)'
-                    },
-                  }}
-                  aria-label={t('navigation.dashboard')}
-                />
+            {/* Desktop Menu - len ikony */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, ml: 'auto' }}>
+              <BareTooltip title={t('navigation.dashboard')} placement="bottom">
+                <NavIconButton onClick={() => navigate('/dashboard')}>
+                  <DashboardIcon />
+                </NavIconButton>
               </BareTooltip>
-              <BareTooltip
-                title={t('navigation.cases')}
-                placement="bottom"
-                enterDelay={300}
-                leaveDelay={200}
-              >
-                <Button
-                  color="inherit"
-                  startIcon={<BusinessIcon />}
-                  onClick={() => navigate('/business-cases')}
-                  sx={{
-                    mr: 2,
-                    transition: 'transform 0.2s ease, background-color 0.2s ease',
-                    '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
-                      transform: 'translateY(-2px)'
-                    },
-                  }}
-                  aria-label={t('navigation.cases')}
-                />
+              
+              <BareTooltip title={t('navigation.cases')} placement="bottom">
+                <NavIconButton onClick={() => navigate('/business-cases')}>
+                  <BusinessIcon />
+                </NavIconButton>
               </BareTooltip>
-              <BareTooltip
-                title={t('navigation.orders')}
-                placement="bottom"
-                enterDelay={300}
-                leaveDelay={200}
-              >
-                <Button
-                  color="inherit"
-                  startIcon={<ReceiptIcon />}
-                  onClick={() => navigate('/orders')}
-                  sx={{
-                    mr: 2,
-                    transition: 'transform 0.2s ease, background-color 0.2s ease',
-                    '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
-                      transform: 'translateY(-2px)'
-                    },
-                  }}
-                  aria-label={t('navigation.orders')}
-                />
+              
+              <BareTooltip title={t('navigation.orders')} placement="bottom">
+                <NavIconButton onClick={() => navigate('/orders')}>
+                  <ReceiptIcon />
+                </NavIconButton>
               </BareTooltip>
-              <BareTooltip
-                title={t('tracking.vehicleTracking')}
-                placement="bottom"
-                enterDelay={300}
-                leaveDelay={200}
-              >
-                <Button
-                  color="inherit"
-                  startIcon={<VisibilityIcon />}
-                  onClick={() => navigate('/tracked-shipments')}
-                  sx={{
-                    mr: 2,
-                    transition: 'transform 0.2s ease, background-color 0.2s ease',
-                    '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
-                      transform: 'translateY(-2px)'
-                    },
-                  }}
-                  aria-label={t('tracking.vehicleTracking')}
-                />
+              
+              <BareTooltip title={t('tracking.vehicleTracking')} placement="bottom">
+                <NavIconButton onClick={() => navigate('/tracked-shipments')}>
+                  <VisibilityIcon />
+                </NavIconButton>
               </BareTooltip>
-              <BareTooltip
-                title={t('tracking.liveLocation')}
-                placement="bottom"
-                enterDelay={300}
-                leaveDelay={200}
-              >
-                <Button
-                  color="inherit"
-                  startIcon={<LocationOnIcon />}
-                  onClick={() => navigate('/vehicle-map')}
-                  sx={{
-                    mr: 2,
-                    transition: 'transform 0.2s ease, background-color 0.2s ease',
-                    '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
-                      transform: 'translateY(-2px)'
-                    },
-                  }}
-                  aria-label={t('tracking.liveLocation')}
-                />
+              
+              <BareTooltip title={t('tracking.liveLocation')} placement="bottom">
+                <NavIconButton onClick={() => navigate('/vehicle-map')}>
+                  <LocationOnIcon />
+                </NavIconButton>
               </BareTooltip>
-              <BareTooltip
-                title={t('navigation.team')}
-                placement="bottom"
-                enterDelay={300}
-                leaveDelay={200}
-              >
-                <Button
-                  color="inherit"
-                  startIcon={<PeopleIcon />}
-                  onClick={() => navigate('/team')}
-                  sx={{
-                    mr: 2,
-                    transition: 'transform 0.2s ease, background-color 0.2s ease',
-                    '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
-                      transform: 'translateY(-2px)'
-                    },
-                  }}
-                  aria-label={t('navigation.team')}
-                />
+              
+              <BareTooltip title={t('navigation.team')} placement="bottom">
+                <NavIconButton onClick={() => navigate('/team')}>
+                  <PeopleIcon />
+                </NavIconButton>
               </BareTooltip>
-              <BareTooltip
-                title={t('navigation.settings')}
-                placement="bottom"
-                enterDelay={300}
-                leaveDelay={200}
-              >
-                <Button
-                  color="inherit"
-                  startIcon={<SettingsIcon />}
-                  onClick={() => navigate('/settings')}
-                  sx={{
-                    mr: 2,
-                    transition: 'transform 0.2s ease, background-color 0.2s ease',
-                    '&:hover, &.Mui-focusVisible': {
-                      backgroundColor: (theme: any) => alpha(theme.palette.action.hover, 0.8),
-                      transform: 'translateY(-2px)'
-                    },
-                  }}
-                  aria-label={t('navigation.settings')}
-                />
+              
+              <BareTooltip title={t('navigation.settings')} placement="bottom">
+                <NavIconButton onClick={() => navigate('/settings')}>
+                  <SettingsIcon />
+                </NavIconButton>
               </BareTooltip>
-            </Box>
-          )}
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton
-              color="inherit"
-              onClick={handleNotificationsClick}
-              sx={{
-                position: 'relative',
-                '&:hover': {
-                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                },
-              }}
-            >
-              <NotificationsIcon />
-            </IconButton>
-            
-            <BareTooltip title={t('common.chat')} placement="bottom">
-              <IconButton 
-                color="inherit" 
-                onClick={toggleChat}
-                sx={{ ml: 1 }}
-              >
-                <Badge 
-                  badgeContent={unreadConversationsCount} 
-                  color="error"
-                  sx={{
-                    '& .MuiBadge-badge': {
-                      backgroundColor: '#ff9f43',
-                      color: '#ffffff',
-                      fontSize: '0.75rem',
-                      fontWeight: 'bold',
-                      minWidth: '18px',
-                      height: '18px',
-                    },
+              <BareTooltip title={t('common.notifications')} placement="bottom">
+                <NavIconButton onClick={handleNotificationsClick}>
+                  <NotificationsIcon />
+                </NavIconButton>
+              </BareTooltip>
+
+              <BareTooltip title={t('common.chat')} placement="bottom">
+                <NavIconButton onClick={toggleChat}>
+                  <Badge 
+                    badgeContent={unreadConversationsCount} 
+                    color="error"
+                    sx={{
+                      '& .MuiBadge-badge': {
+                        backgroundColor: '#ff9f43',
+                        color: '#ffffff',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        minWidth: '18px',
+                        height: '18px',
+                      },
+                    }}
+                  >
+                    <ChatIcon />
+                  </Badge>
+                </NavIconButton>
+              </BareTooltip>
+
+              {/* Prepínače jazykov */}
+              <BareTooltip title="Slovenčina" placement="bottom">
+                <NavIconButton 
+                  onClick={() => changeLanguage('sk')}
+                  sx={{ 
+                    opacity: !isEN ? 1 : 0.6,
                   }}
                 >
-                  <ChatIcon />
-                </Badge>
-              </IconButton>
-            </BareTooltip>
-            
-            {/* Prepínač jazykov */}
-            {!isMobile && (
-              <Box sx={{ display: 'flex', ml: 1 }}>
-                <BareTooltip title="Slovenčina" placement="bottom">
-                  <IconButton 
-                    onClick={() => changeLanguage('sk')}
-                    color="inherit"
-                    sx={{ 
-                      opacity: !isEN ? 1 : 0.6,
-                      '&:hover': { opacity: 1 }
-                    }}
-                  >
-                    <SKFlagIcon />
-                  </IconButton>
-                </BareTooltip>
-                <BareTooltip title="English" placement="bottom">
-                  <IconButton 
-                    onClick={() => changeLanguage('en')}
-                    color="inherit"
-                    sx={{ 
-                      opacity: isEN ? 1 : 0.6,
-                      '&:hover': { opacity: 1 }
-                    }}
-                  >
-                    <ENFlagIcon />
-                  </IconButton>
-                </BareTooltip>
-              </Box>
-            )}
-            
-            {!isMobile && (
-              <>
-                <BareTooltip title={t('settings.toggleTheme')} placement="bottom">
-                  <IconButton color="inherit" onClick={toggleTheme} sx={{ ml: 1 }}>
-                    {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
-                  </IconButton>
-                </BareTooltip>
-                <BareTooltip title={t('auth.logout')} placement="bottom">
-                  <IconButton
-                    color="inherit"
-                    onClick={handleLogoutClick}
-                    sx={{ ml: 1 }}
-                  >
-                    <LogoutIcon />
-                  </IconButton>
-                </BareTooltip>
-              </>
-            )}
-          </Box>
-        </StyledToolbar>
-      </StyledAppBar>
+                  <SKFlagIcon />
+                </NavIconButton>
+              </BareTooltip>
+              
+              <BareTooltip title="English" placement="bottom">
+                <NavIconButton 
+                  onClick={() => changeLanguage('en')}
+                  sx={{ 
+                    opacity: isEN ? 1 : 0.6,
+                  }}
+                >
+                  <ENFlagIcon />
+                </NavIconButton>
+              </BareTooltip>
 
-      {/* Mobilné menu s použitím nového komponentu */}
-      <MobileNavbar 
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onLogout={handleLogoutClick}
-      />
+              <BareTooltip title={t('settings.toggleTheme')} placement="bottom">
+                <NavIconButton
+                  onClick={toggleTheme}
+                  aria-label="prepnúť tému"
+                >
+                  {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+                </NavIconButton>
+              </BareTooltip>
 
-      {/* Dialóg pre odhlásenie */}
-      <Dialog
-        open={logoutDialogOpen}
-        onClose={handleLogoutCancel}
-        aria-labelledby="logout-dialog-title"
-        aria-describedby="logout-dialog-description"
-        PaperProps={{
-          sx: {
-            background: 'none',
-            boxShadow: 'none',
-            margin: { xs: '8px', sm: '16px' },
-            borderRadius: '24px'
-          }
-        }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(8px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)'
-          }
-        }}
-      >
-        <Box sx={{
-            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-            color: isDarkMode ? '#ffffff' : '#000000',
-            padding: '0px',
-            borderRadius: '24px',
-            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-         }}>
-          <DialogTitle id="logout-dialog-title" 
-            sx={{ 
-              padding: '24px 24px 16px 24px',
-              fontSize: '1.25rem',
-              fontWeight: 600
-            }}
-          >
-            {t('auth.logout')}
-          </DialogTitle>
-          <DialogContent sx={{ 
-              padding: '16px 24px',
-              color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
-              overflowY: 'auto', 
-            }}
-          >
-            <DialogContentText id="logout-dialog-description"
+              <BareTooltip title={t('auth.logout')} placement="bottom">
+                <NavIconButton
+                  onClick={handleLogoutClick}
+                  sx={{ 
+                    ml: 2, 
+                    color: isDarkMode ? '#ff9f43' : '#ff9f43',
+                    fontWeight: 600
+                  }}
+                >
+                  <LogoutIcon />
+                </NavIconButton>
+              </BareTooltip>
+            </Box>
+
+            {/* Mobile Menu Toggle */}
+            <IconButton 
+              edge="end" 
+              color="inherit" 
+              aria-label="menu"
+              onClick={() => setMobileMenuOpen(true)}
               sx={{ 
-                color: 'inherit',
-                fontSize: '1rem',
-              }}
-            >
-              {t('auth.logout')}?
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions sx={{ 
-              padding: '16px 24px 24px 24px',
-              gap: 2
-            }}
-          >
-            <Button 
-              onClick={handleLogoutCancel}
-              sx={{ 
-                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
-                '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }
-              }}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button 
-              onClick={handleLogoutConfirm} 
-              autoFocus
-              variant="contained"
-              sx={{
-                backgroundColor: '#ff9f43',
-                color: '#fff',
-                fontWeight: 500,
-                borderRadius: '12px',
-                padding: '8px 20px',
+                display: { xs: 'flex', md: 'none' },
+                color: isDarkMode ? '#fff' : '#333',
                 '&:hover': {
-                  backgroundColor: '#f9872f',
+                  background: 'rgba(255, 159, 67, 0.1)',
                 }
               }}
             >
-              {t('auth.logout')}
-            </Button>
-          </DialogActions>
+              <MenuIcon />
+            </IconButton>
+          </Toolbar>
+        </Container>
+      </NavbarContainer>
+
+      {/* Mobile Drawer Menu - presne ako v Home.tsx */}
+      <Drawer
+        anchor="right"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: '70%',
+            maxWidth: '300px',
+            background: isDarkMode 
+              ? 'linear-gradient(135deg, #0F0C29 0%, #302B63 100%)' 
+              : 'linear-gradient(135deg, #f5f7fa 0%, #e4e5e6 100%)',
+            boxShadow: '0 0 25px rgba(0, 0, 0, 0.15)',
+            padding: '20px',
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <IconButton 
+            onClick={() => setMobileMenuOpen(false)}
+            sx={{ color: isDarkMode ? '#fff' : '#333' }}
+          >
+            <CloseIcon />
+          </IconButton>
         </Box>
+        
+        <List>
+          <ListItemButton 
+            onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <DashboardIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('navigation.dashboard')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={() => { navigate('/business-cases'); setMobileMenuOpen(false); }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <BusinessIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('navigation.cases')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={() => { navigate('/orders'); setMobileMenuOpen(false); }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <ReceiptIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('navigation.orders')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={() => { navigate('/tracked-shipments'); setMobileMenuOpen(false); }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <VisibilityIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('tracking.vehicleTracking')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={() => { navigate('/vehicle-map'); setMobileMenuOpen(false); }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <LocationOnIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('tracking.liveLocation')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={() => { navigate('/team'); setMobileMenuOpen(false); }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <PeopleIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('navigation.team')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={() => { navigate('/settings'); setMobileMenuOpen(false); }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <SettingsIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('navigation.settings')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <Divider sx={{ my: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
+          
+          <ListItemButton 
+            onClick={toggleChat}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <Badge 
+                badgeContent={unreadConversationsCount} 
+                color="error"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    backgroundColor: '#ff9f43',
+                    color: '#ffffff',
+                  },
+                }}
+              >
+                <ChatIcon />
+              </Badge>
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('common.chat')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={() => {
+              toggleTheme();
+              setMobileMenuOpen(false);
+            }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              '&:hover': {
+                background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  {t('settings.toggleTheme')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={handleLogoutClick}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              background: 'rgba(255, 159, 67, 0.1)',
+              '&:hover': {
+                background: 'rgba(255, 159, 67, 0.2)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: '#ff9f43', minWidth: '40px' }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: '#ff9f43',
+                    fontWeight: 600,
+                  }}
+                >
+                  {t('auth.logout')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+        </List>
+      </Drawer>
+
+      {/* Logout Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={handleLogoutCancel}
+        PaperProps={{
+          sx: {
+            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(10px)',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
+          {t('auth.confirmLogout')}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>
+            {t('auth.logoutConfirmation')}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLogoutCancel} sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
+            {t('common.cancel')}
+          </Button>
+          <Button onClick={handleLogoutConfirm} color="error" variant="contained">
+            {t('auth.logout')}
+          </Button>
+        </DialogActions>
       </Dialog>
 
+      {/* Notifications Popover */}
       <Popover
         open={Boolean(notificationsAnchorEl)}
         anchorEl={notificationsAnchorEl}

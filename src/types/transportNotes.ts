@@ -21,9 +21,9 @@ export interface TransportNotesFormData {
 }
 
 export const SUPPORTED_LANGUAGES = [
-  { code: 'sk', name: 'Slovenčina', flag: '🇸🇰' },
-  { code: 'en', name: 'Angličtina', flag: '🇬🇧' },
-  { code: 'de', name: 'Nemčina', flag: '🇩🇪' },
-  { code: 'cs', name: 'Čeština', flag: '🇨🇿' },
-  { code: 'pl', name: 'Polština', flag: '��🇱' }
+  { code: 'sk', name: 'Slovenčina', flag: 'https://flagcdn.com/sk.svg' },
+  { code: 'en', name: 'Angličtina', flag: 'https://flagcdn.com/gb.svg' },
+  { code: 'de', name: 'Nemčina', flag: 'https://flagcdn.com/de.svg' },
+  { code: 'cs', name: 'Čeština', flag: 'https://flagcdn.com/cz.svg' },
+  { code: 'pl', name: 'Polština', flag: 'https://flagcdn.com/pl.svg' }
 ] as const; 
