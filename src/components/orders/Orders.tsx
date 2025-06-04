@@ -1591,6 +1591,28 @@ const OrdersList: React.FC = () => {
       // Real-time listener automaticky aktualizuje zoznam dopravcov
       console.log("🔄 Real-time listener automaticky aktualizuje dopravcov");
       
+      // Resetujeme formulárové dáta
+      setCarrierFormData({
+        companyName: '',
+        street: '',
+        city: '',
+        zip: '',
+        country: 'Slovensko',
+        contactName: '',
+        contactSurname: '',
+        contactEmail: '',
+        contactPhone: '',
+        ico: '',
+        dic: '',
+        icDph: '',
+        vehicleTypes: '',
+        notes: '',
+        paymentTermDays: '60' // Default 60 dní ako string pre TextField
+      });
+      
+      // Resetujeme aj selectedCarrierForEdit
+      setSelectedCarrierForEdit(null);
+      
       // Až potom zatvoríme formulár
       setShowCarrierForm(false);
     } catch (error) {
@@ -1904,29 +1926,7 @@ const OrdersList: React.FC = () => {
     }));
   };
 
-  const handleCarrierFormSubmit = () => {
-    console.log('Formulár pre dopravcu odoslaný');
-    setCarrierFormData({
-      companyName: '',
-      street: '',
-      city: '',
-      zip: '',
-      country: 'Slovensko',
-      contactName: '',
-      contactSurname: '',
-      contactEmail: '',
-      contactPhone: '',
-      ico: '',
-      dic: '',
-      icDph: '',
-      vehicleTypes: '',
-      notes: '',
-      paymentTermDays: '60' // Default 60 dní ako string pre TextField
-    });
-    
-    // Resetujeme aj selectedCarrierForEdit
-    setSelectedCarrierForEdit(null);
-  };
+  // Funkcia handleCarrierFormSubmit bola odstránená - namiesto toho sa používa _handleCarrierSubmit
 
   const handleSubmitOrderRating = async (rating: OrderRating) => {
     if (!selectedOrderForRating?.id) return;
@@ -3868,7 +3868,7 @@ const OrdersList: React.FC = () => {
             {t('common.cancel')}
           </Button>
           <Button 
-            onClick={handleCarrierFormSubmit} 
+            onClick={() => _handleCarrierSubmit(carrierFormData)} 
             variant="contained" 
             sx={{ 
               backgroundColor: '#ff9f43',
