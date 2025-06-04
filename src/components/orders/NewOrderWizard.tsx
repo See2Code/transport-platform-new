@@ -682,7 +682,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         generateOrderNumber();
       }
     }
-  }, [open, userData?.companyID, isEdit]); // Odstránené problematické závislosti
+  }, [open, userData?.companyID, isEdit, fetchCustomers, fetchCarriers, fetchSavedData, fetchTeamMembers, generateOrderNumber]);
 
   // Load edit data
   useEffect(() => {

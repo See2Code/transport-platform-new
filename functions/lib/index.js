@@ -1278,11 +1278,26 @@ function generateOrderHtml(orderData, settings, carrierData, dispatcherData, tra
     else {
         unloadingPlacesHtml = `<p>${t.noUnloadingPlaces}</p>`;
     }
-    // Výpočet dátumu splatnosti
+    // Výpočet dátumu splatnosti - konverzia na slovenský čas
     const currentDate = new Date();
-    const dueDate = new Date(currentDate);
-    dueDate.setDate(currentDate.getDate() + paymentTermDays);
+    // Konverzia UTC na stredoeurópsky čas (CET/CEST)
+    const utcTime = currentDate.getTime() + (currentDate.getTimezoneOffset() * 60000);
+    const year = currentDate.getFullYear();
+    const marchLastSunday = new Date(year, 2, 31 - new Date(year, 2, 31).getDay());
+    const octoberLastSunday = new Date(year, 9, 31 - new Date(year, 9, 31).getDay());
+    const localCurrentDate = currentDate >= marchLastSunday && currentDate < octoberLastSunday ?
+        new Date(utcTime + (2 * 3600000)) : // UTC+2 pre CEST (letný čas)
+        new Date(utcTime + (1 * 3600000)); // UTC+1 pre CET (zimný čas)
+    const dueDate = new Date(localCurrentDate);
+    dueDate.setTime(localCurrentDate.getTime() + (paymentTermDays * 24 * 60 * 60 * 1000));
     const dueDateFormatted = formatDate(dueDate, 'dd.MM.yyyy');
+    // Debug log pre sledovanie výpočtu dátumu splatnosti
+    console.log('PDF Generation - Date calculation:');
+    console.log('Current UTC date:', currentDate.toISOString());
+    console.log('Local current date:', localCurrentDate.toISOString());
+    console.log('Payment term days:', paymentTermDays);
+    console.log('Due date:', dueDate.toISOString());
+    console.log('Due date formatted:', dueDateFormatted);
     // Generovanie kompletného HTML pre PDF - verzia pre dopravcu
     return `
     <!DOCTYPE html>
