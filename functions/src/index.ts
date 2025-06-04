@@ -772,21 +772,34 @@ const formatDate = (date: any, format: string = 'dd.MM.yyyy'): string => {
   const d = convertToDate(date);
   if (!d) return 'Neurčený';
   
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+  // Konverzia na stredoeurópsky čas (CET/CEST)
+  // UTC+1 v zime, UTC+2 v lete (automaticky spracované browserom)
+  const utcTime = d.getTime() + (d.getTimezoneOffset() * 60000);
+  
+  // V letnom čase (od poslednej nedele v marci do poslednej nedele v októbri) pridáme ešte hodinu
   const year = d.getFullYear();
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const marchLastSunday = new Date(year, 2, 31 - new Date(year, 2, 31).getDay());
+  const octoberLastSunday = new Date(year, 9, 31 - new Date(year, 9, 31).getDay());
+  
+  const localDate = d >= marchLastSunday && d < octoberLastSunday ? 
+    new Date(utcTime + (2 * 3600000)) : // UTC+2 pre CEST (letný čas)
+    new Date(utcTime + (1 * 3600000));  // UTC+1 pre CET (zimný čas)
+  
+  const day = String(localDate.getDate()).padStart(2, '0');
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const yearStr = localDate.getFullYear();
+  const hours = String(localDate.getHours()).padStart(2, '0');
+  const minutes = String(localDate.getMinutes()).padStart(2, '0');
   
   if (format === 'dd.MM.yyyy') {
-    return `${day}.${month}.${year}`;
+    return `${day}.${month}.${yearStr}`;
   } else if (format === 'dd.MM.yyyy HH:mm') {
-    return `${day}.${month}.${year} ${hours}:${minutes}`;
+    return `${day}.${month}.${yearStr} ${hours}:${minutes}`;
   } else if (format === 'HH:mm') {
     return `${hours}:${minutes}`;
   }
   
-  return `${day}.${month}.${year}`;
+  return `${day}.${month}.${yearStr}`;
 };
 
 // Funkcia pre bezpečný text
@@ -1105,6 +1118,31 @@ export const generateOrderPdf = functions
           console.error("Chyba pri načítaní loga zo Storage:", storageError);
         }
         
+        // Načítame základné údaje o firme z kolekcie companies
+        console.log("Načítavam základné údaje o firme z kolekcie companies pre ID:", orderData.companyID);
+        try {
+          const companyDoc = await admin.firestore().collection('companies').doc(orderData.companyID).get();
+          if (companyDoc.exists) {
+            const companyData = companyDoc.data();
+            console.log("Základné údaje o firme nájdené:", companyData?.companyName);
+            // Pridáme základné údaje o firme do nastavení
+            companySettings = { 
+              ...companySettings, 
+              companyName: companyData?.companyName,
+              street: companyData?.street,
+              city: companyData?.city,
+              zip: companyData?.zip,
+              businessID: companyData?.ico || companyData?.businessID,
+              vatID: companyData?.icDph || companyData?.vatID,
+              companyID: orderData.companyID
+            };
+          } else {
+            console.log("Základné údaje o firme nenájdené v kolekci companies");
+          }
+        } catch (companyError) {
+          console.error('Chyba pri načítaní základných údajov o firme:', companyError);
+        }
+
         // Ak sme nenašli logo v Storage, skúsime nastavenia spoločnosti a iné metódy
         if (!companySettings.logoBase64) {
           // Skúsime získať nastavenia z companySettings kolekcie
@@ -1116,7 +1154,7 @@ export const generateOrderPdf = functions
           
           if (!settingsQuery.empty) {
             const settingsData = settingsQuery.docs[0].data();
-            // Zlúčime existujúce nastavenia s novými
+            // Zlúčime existujúce nastavenia s novými (companySettings prekryjú company údaje)
             companySettings = { ...companySettings, ...settingsData };
             console.log("Nastavenia spoločnosti nájdené v kolekcii companySettings");
             
@@ -1217,6 +1255,14 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
   
   // Debug informácie o nastaveniach spoločnosti a logu
   console.log("Company settings:", settings ? Object.keys(settings) : 'No settings');
+  console.log("Company data used for PDF:", {
+    companyName: settings?.companyName,
+    street: settings?.street,
+    city: settings?.city,
+    zip: settings?.zip,
+    businessID: settings?.businessID,
+    vatID: settings?.vatID
+  });
   const hasLogo = settings?.logoBase64 && typeof settings.logoBase64 === 'string';
   console.log("Has logo:", hasLogo);
   
@@ -1241,17 +1287,17 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
   }
   
   // Informácie o zadávateľovi (z nastavení spoločnosti)
-  const companyName = settings?.companyName || 'AESA Group, SE';
+  const companyName = settings?.companyName || 'Nezadaná firma';
   const companyFullName = companyName;
   
   const companyAddress = formatAddress(
-    settings?.street || 'Pekárska 11',
-    settings?.city || 'Trnava',
-    settings?.zip || 'SK91701',
+    settings?.street,
+    settings?.city,
+    settings?.zip,
     'Slovensko'
   );
-  const companyID = settings?.businessID || '55361731';
-  const companyVatID = settings?.vatID || 'SK2121966220';
+  const companyID = settings?.businessID || 'N/A';
+  const companyVatID = settings?.vatID || 'N/A';
   
   // Kontakt špeditéra ktorý vytvoril objednávku
   const dispatcherContact = orderData.createdByName || 'N/A';
@@ -1380,6 +1426,8 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           margin: 0;
           padding: 0;
           font-size: 11px;
+          orphans: 3;
+          widows: 3;
         }
         .container {
           max-width: 100%;
@@ -1388,12 +1436,14 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           box-sizing: border-box;
         }
         .header {
-          margin-bottom: 20px;
+          margin-bottom: 15px;
           border-bottom: 2px solid #333;
-          padding-bottom: 15px;
+          padding-bottom: 10px;
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
+          page-break-after: avoid;
+          break-after: avoid;
         }
         .company-section {
           flex: 1;
@@ -1422,18 +1472,22 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           text-align: center;
           font-size: 18px;
           font-weight: bold;
-          margin: 25px 0 20px 0;
+          margin: 15px 0 15px 0;
           color: #333;
           border: 2px solid #333;
           padding: 8px;
           background-color: #f8f8f8;
           border-radius: 8px;
+          page-break-after: avoid;
+          break-after: avoid;
         }
         .info-section {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 20px;
-          gap: 20px;
+          margin-bottom: 15px;
+          gap: 15px;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .info-box {
           background-color: #f9f9f9;
@@ -1493,17 +1547,20 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
         }
         .transport-section {
           margin: 15px 0;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .section-title {
           background-color: #333;
           color: white;
           padding: 6px 12px;
-          margin: 15px 0 10px 0;
+          margin: 10px 0 8px 0;
           font-size: 12px;
           font-weight: bold;
           border-radius: 6px;
           page-break-after: avoid;
           break-after: avoid;
+          page-break-before: auto;
         }
         .place-box-compact {
           background-color: #f9f9f9;
@@ -1563,6 +1620,8 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           padding: 10px;
           border-radius: 8px;
           border-left: 4px solid #333;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .vehicle-section p {
           margin: 5px 0;
@@ -1577,6 +1636,8 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           padding: 12px;
           border-radius: 8px;
           border: 1px solid #ddd;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
         .payment-item {
           font-size: 11px;
@@ -1589,14 +1650,34 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
           color: #777;
           border-top: 1px solid #eee;
           padding-top: 10px;
+          page-break-inside: avoid;
+          break-inside: avoid;
+          orphans: 2;
+          widows: 2;
         }
         @page {
-          margin: 15mm;
+          margin: 12mm;
+          orphans: 3;
+          widows: 3;
         }
         @media print {
           .container {
-            padding: 10px;
+            padding: 8px;
           }
+          body {
+            font-size: 10px;
+          }
+        }
+        /* Avoid breaking between related elements */
+        .section-title + .place-box-compact,
+        .section-title + .transport-notes-box {
+          page-break-before: avoid;
+          break-before: avoid;
+        }
+        /* Keep transport notes together */
+        .transport-notes-box {
+          orphans: 3;
+          widows: 3;
         }
       </style>
     </head>

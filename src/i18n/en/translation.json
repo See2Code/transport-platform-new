@@ -46,7 +46,9 @@
     "alreadyHaveAccount": "Already have an account?",
     "dontHaveAccount": "Don't have an account?",
     "loginBtn": "Sign In",
-    "registerBtn": "Sign Up"
+    "registerBtn": "Sign Up",
+    "confirmLogout": "Confirm Logout",
+    "logoutConfirmation": "Are you sure you want to logout?"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -104,6 +106,7 @@
     "creationDate": "Creation Date",
     "actions": "Actions",
     "edit": "Edit",
+    "duplicate": "Duplicate", 
     "delete": "Delete",
     "preview": "Preview",
     "download": "Download",

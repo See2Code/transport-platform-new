@@ -729,7 +729,7 @@ const OrdersList: React.FC = () => {
       
       // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        console.log('🔄 Real-time aktualizácia zákazníkov - počet dokumentov:', querySnapshot.docs.length);
+        // console.log('🔄 Real-time aktualizácia zákazníkov - počet dokumentov:', querySnapshot.docs.length);
         
         const customersData = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -776,12 +776,12 @@ const OrdersList: React.FC = () => {
       
       // Používame onSnapshot namiesto getDocs pre real-time aktualizácie
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        console.log('🔄 Real-time aktualizácia dopravcov - počet dokumentov:', querySnapshot.docs.length);
-        console.log('📋 Typ zmeny dokumentov:', querySnapshot.docChanges().map(change => ({
-          type: change.type,
-          id: change.doc.id,
-          data: change.doc.data()
-        })));
+        // console.log('🔄 Real-time aktualizácia dopravcov - počet dokumentov:', querySnapshot.docs.length);
+        // console.log('📋 Typ zmeny dokumentov:', querySnapshot.docChanges().map(change => ({
+        //   type: change.type,
+        //   id: change.doc.id,
+        //   data: change.doc.data()
+        // })));
         
         const carriersData = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -790,12 +790,12 @@ const OrdersList: React.FC = () => {
             ...data,
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
           } as Carrier;
-          console.log("🚛 Mapping carrier:", {
-            id: carrier.id,
-            companyName: carrier.companyName,
-            vehicleTypes: carrier.vehicleTypes,
-            paymentTermDays: carrier.paymentTermDays
-          }); // Logujeme kľúčové údaje
+          // console.log("🚛 Mapping carrier:", {
+          //   id: carrier.id,
+          //   companyName: carrier.companyName,
+          //   vehicleTypes: carrier.vehicleTypes,
+          //   paymentTermDays: carrier.paymentTermDays
+          // }); // Logujeme kľúčové údaje
           return carrier;
         });
         
@@ -845,7 +845,7 @@ const OrdersList: React.FC = () => {
       
       // Používama onSnapshot namiesto getDocs pre real-time aktualizácie
       const unsubscribe = onSnapshot(ordersQuery, (querySnapshot) => {
-        console.log('🔄 Real-time aktualizácia objednávok - počet dokumentov:', querySnapshot.docs.length);
+        // console.log('🔄 Real-time aktualizácia objednávok - počet dokumentov:', querySnapshot.docs.length);
         
         const currentTeamMembers = teamMembers;
         const ordersData: OrderFormData[] = querySnapshot.docs.map(doc => {
@@ -922,13 +922,13 @@ const OrdersList: React.FC = () => {
               });
               
               if (!hasChanges) {
-                console.log('⚡ Žiadne zmeny v orders - preskakujem update');
+                // console.log('⚡ Žiadne zmeny v orders - preskakujem update');
                 return prevOrders; // Vráť existujúce orders bez zmeny
               }
             }
           }
           
-          console.log('📋 Aktualizujem orders - nájdené zmeny');
+          // console.log('📋 Aktualizujem orders - nájdené zmeny');
           return ordersData;
         });
         
@@ -970,7 +970,7 @@ const OrdersList: React.FC = () => {
       
       // Používame onSnapshot pre real-time aktualizácie
       const unsubscribeLocations = onSnapshot(q, (querySnapshot) => {
-        console.log('🔄 Real-time aktualizácia miest - počet dokumentov:', querySnapshot.docs.length);
+        // console.log('🔄 Real-time aktualizácia miest - počet dokumentov:', querySnapshot.docs.length);
         
         const locationsData = querySnapshot.docs.map(doc => {
           const data = doc.data();

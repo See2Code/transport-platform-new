@@ -671,14 +671,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
   // Initialize data
   useEffect(() => {
-    console.log('🚀 NewOrderWizard useEffect triggered:', { 
-      open, 
-      companyID: userData?.companyID,
-      userDataExists: !!userData 
-    });
-    
     if (open && userData?.companyID) {
-      console.log('✅ Conditions met, calling fetch functions...');
       fetchCustomers();
       fetchCarriers();
       fetchSavedData();
@@ -688,14 +681,8 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       if (!isEdit) {
         generateOrderNumber();
       }
-    } else {
-      console.log('❌ Conditions NOT met:', {
-        open,
-        hasCompanyID: !!userData?.companyID,
-        userData: userData
-      });
     }
-  }, [open, userData?.companyID, userData, fetchCustomers, fetchCarriers, fetchSavedData, fetchTeamMembers, generateOrderNumber, isEdit]);
+  }, [open, userData?.companyID, isEdit]); // Odstránené problematické závislosti
 
   // Load edit data
   useEffect(() => {

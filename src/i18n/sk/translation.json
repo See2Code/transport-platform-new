@@ -46,7 +46,9 @@
     "alreadyHaveAccount": "Už máte účet?",
     "dontHaveAccount": "Nemáte účet?",
     "loginBtn": "Prihlásiť sa",
-    "registerBtn": "Zaregistrovať sa"
+    "registerBtn": "Zaregistrovať sa",
+    "confirmLogout": "Potvrdiť odhlásenie",
+    "logoutConfirmation": "Naozaj sa chcete odhlásiť?"
   },
   "navigation": {
     "dashboard": "Prehľad",
@@ -105,6 +107,7 @@
     "creationDate": "Dátum vytvorenia",
     "actions": "Akcie",
     "edit": "Upraviť",
+    "duplicate": "Duplikovať",
     "delete": "Vymazať",
     "preview": "Náhľad",
     "download": "Stiahnuť",

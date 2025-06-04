@@ -126,7 +126,7 @@ const MessageContainer = styled(Box)(({ _theme }) => ({
     maxHeight: 'calc(100dvh - 200px)',
     overflowX: 'hidden',
     overflowY: 'auto',
-    '-webkit-overflow-scrolling': 'touch',
+    WebkitOverflowScrolling: 'touch',
   }
 }));
 

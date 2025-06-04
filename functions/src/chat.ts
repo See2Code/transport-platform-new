@@ -284,27 +284,45 @@ export const markMessagesAsRead = functions.region(REGION).https.onCall(
         [currentUserId]: 0
       };
 
-      await db.collection('conversations').doc(conversationId).update({
-        unreadMessages: updatedUnreadMessages
-      });
+      try {
+        await db.collection('conversations').doc(conversationId).update({
+          unreadMessages: updatedUnreadMessages,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (updateError) {
+        console.error('Chyba pri aktualizácii konverzácie:', updateError);
+        throw new functions.https.HttpsError(
+          'internal',
+          `Chyba pri aktualizácii konverzácie: ${updateError}`
+        );
+      }
 
       // Označíme všetky neprečítané správy od ostatných používateľov ako prečítané
-      const unreadMessagesQuery = await db
-        .collection('conversations')
-        .doc(conversationId)
-        .collection('messages')
-        .where('senderId', '!=', currentUserId)
-        .where('read', '==', false)
-        .get();
+      let markedCount = 0;
+      try {
+        const unreadMessagesQuery = await db
+          .collection('conversations')
+          .doc(conversationId)
+          .collection('messages')
+          .where('senderId', '!=', currentUserId)
+          .where('read', '==', false)
+          .get();
 
-      const batch = db.batch();
-      unreadMessagesQuery.forEach((doc) => {
-        batch.update(doc.ref, { read: true });
-      });
+        if (!unreadMessagesQuery.empty) {
+          const batch = db.batch();
+          unreadMessagesQuery.forEach((doc) => {
+            batch.update(doc.ref, { read: true });
+          });
 
-      await batch.commit();
+          await batch.commit();
+          markedCount = unreadMessagesQuery.size;
+        }
+      } catch (messagesError) {
+        console.error('Chyba pri označovaní správ ako prečítané:', messagesError);
+        // Nekončíme s chybou, len zalogujeme - konverzácia už bola aktualizovaná
+      }
 
-      return { success: true, markedCount: unreadMessagesQuery.size };
+      return { success: true, markedCount: markedCount };
     } catch (error) {
       console.error('Chyba pri označovaní správ ako prečítané:', error);
       throw new functions.https.HttpsError(
