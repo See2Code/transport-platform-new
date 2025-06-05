@@ -20,7 +20,6 @@ import {
   Chip,
   Divider,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   CircularProgress,
@@ -441,6 +440,9 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const [originalDispatcher, setOriginalDispatcher] = useState<{id: string, name: string} | null>(null);
   const [editedDispatcher, setEditedDispatcher] = useState<{id: string, name: string} | null>(null);
 
+  // Carrier payment terms editing
+  const [isEditingCarrierPaymentTerms, setIsEditingCarrierPaymentTerms] = useState(false);
+
   // Reserved order number for new orders
   const [reservedOrderNumber, setReservedOrderNumber] = useState<string | null>(null);
   const [isGeneratingOrderNumber, setIsGeneratingOrderNumber] = useState(false);
@@ -840,6 +842,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       ...prev,
       carrierCompany: carrier?.companyName || '',
       carrierContact: carrier ? `${carrier.contactName} ${carrier.contactSurname}`.trim() : '',
+      carrierPaymentTermDays: carrier?.paymentTermDays || 60, // Načítame splatnosť dopravcu
     }));
   };
 
@@ -2108,6 +2111,83 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                       inputProps={{ min: 0, step: "0.01" }}
                     />
                   </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ position: 'relative' }}>
+                      {isEditingCarrierPaymentTerms ? (
+                        <TextField
+                          fullWidth
+                          id="carrier-payment-terms-edit"
+                          name="carrierPaymentTermDays"
+                          label="Splatnosť dopravcu (dni)"
+                          type="number"
+                          value={formData.carrierPaymentTermDays || 60}
+                          onChange={handleCarrierPaymentTermsChange}
+                          InputProps={{
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <BareTooltip title="Uložiť">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => setIsEditingCarrierPaymentTerms(false)}
+                                      sx={{ color: '#4caf50' }}
+                                    >
+                                      <CheckIcon fontSize="small" />
+                                    </IconButton>
+                                  </BareTooltip>
+                                  <BareTooltip title="Zrušiť">
+                                    <IconButton
+                                      size="small"
+                                      onClick={handleCancelEditCarrierPaymentTerms}
+                                      sx={{ color: '#f44336' }}
+                                    >
+                                      <CloseIcon fontSize="small" />
+                                    </IconButton>
+                                  </BareTooltip>
+                                </Box>
+                              </InputAdornment>
+                            ),
+                          }}
+                          inputProps={{ min: 1, max: 365 }}
+                          autoFocus
+                        />
+                      ) : (
+                        <TextField
+                          fullWidth
+                          id="carrier-payment-terms"
+                          name="carrierPaymentTerms"
+                          label="Splatnosť dopravcu (dni)"
+                          value={formData.carrierPaymentTermDays || 60}
+                          InputProps={{
+                            readOnly: true,
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <AccessTimeIcon sx={{ color: 'text.secondary' }} />
+                              </InputAdornment>
+                            ),
+                            endAdornment: userData?.role === 'admin' ? (
+                              <InputAdornment position="end">
+                                <BareTooltip title="Upraviť splatnosť pre túto objednávku">
+                                  <IconButton
+                                    size="small"
+                                    onClick={handleStartEditCarrierPaymentTerms}
+                                    sx={{ color: '#ff9f43' }}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </BareTooltip>
+                              </InputAdornment>
+                            ) : null,
+                          }}
+                          helperText={userData?.role === 'admin' 
+                            ? "Kliknite na ikonu pera pre úpravu len tejto objednávky" 
+                            : "Automaticky načítané z dopravcu"
+                          }
+                        />
+                      )}
+                    </Box>
+                  </Grid>
                 </Grid>
               </CardContent>
             </StyledCard>
@@ -2258,6 +2338,23 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
   const handleDispatcherChange = (newDispatcher: {id: string, name: string} | null) => {
     setEditedDispatcher(newDispatcher);
+  };
+
+  // Carrier payment terms editing functions
+  const handleStartEditCarrierPaymentTerms = () => {
+    setIsEditingCarrierPaymentTerms(true);
+  };
+
+  const handleCancelEditCarrierPaymentTerms = () => {
+    setIsEditingCarrierPaymentTerms(false);
+  };
+
+  const handleCarrierPaymentTermsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(event.target.value) || 60;
+    setFormData(prev => ({
+      ...prev,
+      carrierPaymentTermDays: value
+    }));
   };
 
   return (

@@ -7,7 +7,8 @@ import { normalizeVatId } from '../../utils/helpers';
 import {
   Box, Typography, TextField, Button, Grid, FormControl, InputLabel,
   Select, MenuItem, useTheme, Checkbox, FormControlLabel,
-  Autocomplete, IconButton, Divider, CircularProgress, SelectChangeEvent} from '@mui/material';
+  Autocomplete, IconButton, Divider, CircularProgress, SelectChangeEvent, 
+  InputAdornment, Tooltip} from '@mui/material';
 
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -15,6 +16,10 @@ import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';
 import { sk } from 'date-fns/locale';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { collection, addDoc, query, where, getDocs, Timestamp, doc, updateDoc, runTransaction, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -103,6 +108,7 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
     const [isCarrierDialogOpen, setIsCarrierDialogOpen] = useState(false);
     const [carriers, setCarriers] = useState<Carrier[]>([]);
     const [isCarrierLoading, setIsCarrierLoading] = useState(false);
+    const [isEditingCarrierPaymentTerms, setIsEditingCarrierPaymentTerms] = useState(false);
 
     // Pridáme funkcie pre načítanie dopravcov
     const fetchCarriers = useCallback(async () => {
@@ -601,6 +607,7 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                 ...prev,
                 carrierCompany: '',
                 carrierContact: '',
+                carrierPaymentTermDays: 60,
             }));
             return;
         }
@@ -609,6 +616,7 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             ...prev,
             carrierCompany: newValue.companyName,
             carrierContact: `${newValue.contactName || ''} ${newValue.contactSurname || ''} ${newValue.contactPhone || ''}`.trim(),
+            carrierPaymentTermDays: newValue.paymentTermDays || 60,
         }));
     };
 
@@ -673,6 +681,23 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             console.error('Chyba pri pridávaní dopravcu:', error);
             alert('Nepodarilo sa pridať dopravcu');
         }
+    };
+
+    // Carrier payment terms editing functions
+    const handleStartEditCarrierPaymentTerms = () => {
+        setIsEditingCarrierPaymentTerms(true);
+    };
+
+    const handleCancelEditCarrierPaymentTerms = () => {
+        setIsEditingCarrierPaymentTerms(false);
+    };
+
+    const handleCarrierPaymentTermsChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value) || 60;
+        setFormData(prev => ({
+            ...prev,
+            carrierPaymentTermDays: value
+        }));
     };
 
     return (
@@ -1092,6 +1117,78 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                     <Grid item xs={12} sm={6}><TextField fullWidth label="Kontakt na dopravcu" name="carrierContact" value={formData.carrierContact || ''} onChange={handleInputChange} /></Grid>
                     <Grid item xs={12} sm={6}><TextField fullWidth label="EČV Vozidla" name="carrierVehicleReg" value={formData.carrierVehicleReg || ''} onChange={handleInputChange} /></Grid>
                     <Grid item xs={12} sm={6}><TextField fullWidth label="Cena za prepravu (€)" name="carrierPrice" type="number" value={formData.carrierPrice || ''} onChange={handleInputChange} inputProps={{ min: 0, step: "0.01" }}/></Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box sx={{ position: 'relative' }}>
+                            {isEditingCarrierPaymentTerms ? (
+                                <TextField
+                                    fullWidth
+                                    label="Splatnosť dopravcu (dni)"
+                                    type="number"
+                                    value={formData.carrierPaymentTermDays || 60}
+                                    onChange={handleCarrierPaymentTermsChange}
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                    <Tooltip title="Uložiť">
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => setIsEditingCarrierPaymentTerms(false)}
+                                                            sx={{ color: '#4caf50' }}
+                                                        >
+                                                            <CheckIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Zrušiť">
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={handleCancelEditCarrierPaymentTerms}
+                                                            sx={{ color: '#f44336' }}
+                                                        >
+                                                            <CloseIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                    inputProps={{ min: 1, max: 365 }}
+                                    autoFocus
+                                />
+                            ) : (
+                                <TextField
+                                    fullWidth
+                                    label="Splatnosť dopravcu (dni)"
+                                    value={formData.carrierPaymentTermDays || 60}
+                                    InputProps={{
+                                        readOnly: true,
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <AccessTimeIcon sx={{ color: 'text.secondary' }} />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: userData?.role === 'admin' ? (
+                                            <InputAdornment position="end">
+                                                <Tooltip title="Upraviť splatnosť pre túto objednávku">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={handleStartEditCarrierPaymentTerms}
+                                                        sx={{ color: '#ff9f43' }}
+                                                    >
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </InputAdornment>
+                                        ) : null,
+                                    }}
+                                    helperText={userData?.role === 'admin' 
+                                        ? "Kliknite na ikonu pera pre úpravu len tejto objednávky" 
+                                        : "Automaticky načítané z dopravcu"
+                                    }
+                                />
+                            )}
+                        </Box>
+                    </Grid>
                 </Grid>
             </Box>
             

@@ -1273,6 +1273,13 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
   let recipientContact = 'N/A';
   let paymentTermDays = 60; // Default 60 dní
   
+  // Priorita pre splatnosť: 1. Individuálna splatnosť z objednávky, 2. Splatnosť dopravcu, 3. Default 60 dní
+  if (orderData.carrierPaymentTermDays) {
+    paymentTermDays = orderData.carrierPaymentTermDays;
+  } else if (carrierData && carrierData.paymentTermDays) {
+    paymentTermDays = carrierData.paymentTermDays;
+  }
+  
   if (carrierData) {
     recipientCompany = carrierData.companyName || 'N/A';
     recipientAddress = formatAddress(
@@ -1283,7 +1290,6 @@ function generateOrderHtml(orderData: any, settings: any, carrierData: any, disp
     );
     recipientVatID = carrierData.icDph || carrierData.vatId || 'N/A';
     recipientContact = `${carrierData.contactName || ''} ${carrierData.contactSurname || ''}`.trim() || 'N/A';
-    paymentTermDays = carrierData.paymentTermDays || 60;
   }
   
   // Informácie o zadávateľovi (z nastavení spoločnosti)

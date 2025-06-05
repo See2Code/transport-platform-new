@@ -79,6 +79,7 @@ export interface OrderFormData {
   carrierContact: string;
   carrierVehicleReg: string;
   carrierPrice: string;
+  carrierPaymentTermDays?: number; // Individuálna splatnosť pre túto objednávku
   companyID?: string;
   createdBy?: string;
   createdByName?: string;
