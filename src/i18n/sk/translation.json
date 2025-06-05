@@ -290,7 +290,10 @@
       "call": "Hovor",
       "email": "Mail",
       "videoCall": "Videohovor"
-    }
+    },
+    "filterByStatus": "Filtrovať podľa statusu",
+    "selectStatuses": "Vybrať statusy",
+    "allStatuses": "Všetky statusy"
   },
   "dashboard": {
     "businessCases": "Obchodné prípady",

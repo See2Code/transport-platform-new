@@ -28,7 +28,8 @@ import {
   CircularProgress,
   Collapse,
   TablePagination,
-  SelectChangeEvent
+  SelectChangeEvent,
+  Autocomplete
 } from '@mui/material';
 import { createPortal } from 'react-dom';
 import { useThemeMode } from '../../contexts/ThemeContext';
@@ -568,6 +569,7 @@ export default function BusinessCases() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
   const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
+  const [statusFilter, setStatusFilter] = useState<CaseStatusKey[]>([]);
   const [formData, setFormData] = useState({
     companyName: '', vatNumber: '', companyAddress: '',
     contactPerson: { firstName: '', lastName: '', phone: '', email: '' },
@@ -700,12 +702,18 @@ export default function BusinessCases() {
   }, [userData?.companyID, filterStartDate, filterEndDate]);
 
   const getFilteredCases = useCallback(() => {
-    return cases.filter(c => 
-      c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${c.contactPerson.firstName} ${c.contactPerson.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.internalNote?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [cases, searchTerm]);
+    return cases.filter(c => {
+      // Text search filter
+      const matchesText = c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        `${c.contactPerson.firstName} ${c.contactPerson.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.internalNote?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Status filter
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(c.status);
+      
+      return matchesText && matchesStatus;
+    });
+  }, [cases, searchTerm, statusFilter]);
 
   const handleRowClick = useCallback((id: string) => {
     setExpandedCaseId(prevId => (prevId === id ? null : id));
@@ -1249,6 +1257,7 @@ export default function BusinessCases() {
         />
       </SearchWrapper>
 
+      {/* Filtre */}
       <Box sx={{ display: 'flex', gap: 2, marginBottom: 3, alignItems: 'center', flexWrap: 'wrap' }}>
           <Typography variant="body1" fontWeight="medium">{t('common.filterByDate')}:</Typography>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
@@ -1292,6 +1301,62 @@ export default function BusinessCases() {
             >
               {t('common.clearFilter')}
             </Button>
+
+          {/* Status filter na rovnakom riadku */}
+          <Typography variant="body1" fontWeight="medium" sx={{ ml: 3 }}>{t('business.filterByStatus')}:</Typography>
+          <Autocomplete
+              multiple
+              size="small"
+              options={Object.keys(caseStatuses) as CaseStatusKey[]}
+              value={statusFilter}
+              onChange={(_, newValue) => setStatusFilter(newValue)}
+              getOptionLabel={(option) => caseStatuses[option].label}
+              renderOption={(props, option) => (
+                  <li {...props} key={option}>
+                      <Chip 
+                          label={caseStatuses[option].label} 
+                          color={caseStatuses[option].color}
+                          size="small"
+                          sx={{ mr: 1 }}
+                      />
+                  </li>
+              )}
+              renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                      <Chip
+                          {...getTagProps({ index })}
+                          key={option}
+                          label={caseStatuses[option].label}
+                          color={caseStatuses[option].color}
+                          size="small"
+                      />
+                  ))
+              }
+              sx={{ 
+                  minWidth: 300,
+                  '& .MuiOutlinedInput-root': {
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.8)' : '#ffffff',
+                      color: isDarkMode ? '#fff' : 'inherit'
+                  },
+                  '& .MuiInputLabel-root': {
+                      color: isDarkMode ? 'rgba(255,255,255,0.7)' : 'inherit'
+                  }
+              }}
+              renderInput={(params) => (
+                  <TextField
+                      {...params}
+                      label={t('business.selectStatuses')}
+                      placeholder={statusFilter.length === 0 ? t('business.allStatuses') : ''}
+                  />
+              )}
+          />
+          <Button 
+              onClick={() => setStatusFilter([])} 
+              size="small"
+              sx={{ color: isDarkMode ? colors.text.secondary : 'inherit' }}
+          >
+              {t('common.clearFilter')}
+          </Button>
       </Box>
 
       {loading && (

@@ -707,7 +707,7 @@ const OrdersList: React.FC = () => {
     } finally {
       setIsLoadingTeamMembers(false);
     }
-  }, [userData?.companyID, userData?.uid, userData?.email]); // Optimalizované dependencies
+  }, [userData]); // Pridaná celá userData dependency
 
   const fetchCustomers = useCallback(() => {
     console.log("Attempting to fetch customers..."); // Log začiatku
@@ -1119,7 +1119,7 @@ const OrdersList: React.FC = () => {
     if (userData?.companyID) {
       fetchTeamMembers();
     }
-  }, [userData?.companyID]); // Odstraňujem fetchTeamMembers z dependencies
+  }, [userData?.companyID, fetchTeamMembers]); // Pridaná fetchTeamMembers dependency
 
   // Hlavný useEffect pre inicializáciu základných real-time listeners (len pre customers, carriers, locations)
   useEffect(() => {
@@ -1153,7 +1153,7 @@ const OrdersList: React.FC = () => {
         unsubscribeLocations();
       }
     };
-  }, [userData?.companyID]); // Odstraňujem fetch funkcie z dependencies
+  }, [userData?.companyID, fetchCustomers, fetchCarriers, fetchLocations]); // Pridané fetch funkcie dependencies
 
   // Samostatný useEffect pre fetchOrders s dátumovými filtrami
   useEffect(() => {
@@ -1171,7 +1171,7 @@ const OrdersList: React.FC = () => {
         unsubscribeOrders();
       }
     };
-  }, [userData?.companyID, startDate, endDate]); // Odstraňujem fetchOrders z dependencies
+  }, [userData?.companyID, startDate, endDate, fetchOrders]); // Pridaná fetchOrders dependency
 
   // useEffect pre dispatchers - spúšťa sa len pri zmene relevantných filtrov
   useEffect(() => {
@@ -1179,7 +1179,7 @@ const OrdersList: React.FC = () => {
       console.log("📊 Running fetchDispatchers due to filter change");
       fetchDispatchers();
     }
-  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]); // Odstraňujem fetchDispatchers z dependencies
+  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers, fetchDispatchers]); // Pridaná fetchDispatchers dependency
 
 
   // --- OSTATNÉ FUNKCIE --- 

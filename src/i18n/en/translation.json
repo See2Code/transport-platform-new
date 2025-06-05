@@ -282,7 +282,10 @@
       "call": "Call",
       "email": "Email",
       "videoCall": "Video Call"
-    }
+    },
+    "filterByStatus": "Filter by status",
+    "selectStatuses": "Select statuses",
+    "allStatuses": "All statuses"
   },
   "dashboard": {
     "businessCases": "Business Cases",
