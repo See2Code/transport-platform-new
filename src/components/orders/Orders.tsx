@@ -662,6 +662,10 @@ const OrdersList: React.FC = () => {
   const [languageMenuAnchor, setLanguageMenuAnchor] = useState<null | HTMLElement>(null);
   const [languageMenuAction, setLanguageMenuAction] = useState<'preview' | 'download'>('preview');
   const [orderForLanguageSelection, setOrderForLanguageSelection] = useState<OrderFormData | null>(null);
+  
+  // PDF loading dialog state
+  const [showPdfLoadingDialog, setShowPdfLoadingDialog] = useState(false);
+  const [pdfLoadingMessage, setPdfLoadingMessage] = useState('');
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   
@@ -1119,7 +1123,8 @@ const OrdersList: React.FC = () => {
     if (userData?.companyID) {
       fetchTeamMembers();
     }
-  }, [userData?.companyID]); // Odstránená fetchTeamMembers dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.companyID]); // Odstránená fetchTeamMembers dependency aby sme zabránili nekonečným loop
 
   // Hlavný useEffect pre inicializáciu základných real-time listeners (len pre customers, carriers, locations)
   useEffect(() => {
@@ -1153,7 +1158,8 @@ const OrdersList: React.FC = () => {
         unsubscribeLocations();
       }
     };
-  }, [userData?.companyID]); // Odstránené fetch funkcie dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.companyID]); // Odstránené fetch funkcie dependencies aby sme zabránili nekonečným loop
 
   // Samostatný useEffect pre fetchOrders s dátumovými filtrami
   useEffect(() => {
@@ -1171,7 +1177,8 @@ const OrdersList: React.FC = () => {
         unsubscribeOrders();
       }
     };
-  }, [userData?.companyID, startDate, endDate]); // Odstránená fetchOrders dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.companyID, startDate, endDate]); // Odstránená fetchOrders dependency aby sme zabránili nekonečným loop
 
   // useEffect pre dispatchers - spúšťa sa len pri zmene relevantných filtrov
   useEffect(() => {
@@ -1179,7 +1186,8 @@ const OrdersList: React.FC = () => {
       console.log("📊 Running fetchDispatchers due to filter change");
       fetchDispatchers();
     }
-  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]); // Odstránená fetchDispatchers dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]); // Odstránená fetchDispatchers dependency aby sme zabránili nekonečným loop
 
 
   // --- OSTATNÉ FUNKCIE --- 
@@ -1427,7 +1435,7 @@ const OrdersList: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = fileName || `objednavka_${order.id.substring(0, 8)}.pdf`;
+      link.download = fileName || `order_${order.orderNumber || order.id.substring(0, 8)}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -2002,8 +2010,11 @@ const OrdersList: React.FC = () => {
         return;
       }
       
+      // Zobraziť loading dialog
+      setShowPdfLoadingDialog(true);
+      setPdfLoadingMessage('Generujem PDF náhľad...');
+      
       setLoadingPdf(true);
-      setShowPdfPreview(true);
       setPreviewOrder(order);
       
       // Volanie serverovej funkcie pre generovanie PDF s jazykom
@@ -2012,6 +2023,10 @@ const OrdersList: React.FC = () => {
       
       // @ts-ignore - výsledok obsahuje pdfBase64 a fileName
       const { pdfBase64 } = result.data;
+      
+      if (!pdfBase64) {
+        throw new Error('PDF data not received from server');
+      }
       
       // Konverzia base64 na Blob
       const byteCharacters = atob(pdfBase64);
@@ -2026,12 +2041,18 @@ const OrdersList: React.FC = () => {
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
       
+      // Teraz otvoríme preview dialog keď je PDF pripravené
+      setShowPdfPreview(true);
       setLoadingPdf(false);
+      // Zavrieť loading dialog
+      setShowPdfLoadingDialog(false);
     } catch (error) {
       console.error('Chyba pri generovaní náhľadu PDF:', error);
       alert('Nastala chyba pri generovaní PDF objednávky: ' + (error as Error).message);
       setLoadingPdf(false);
       setShowPdfPreview(false);
+      // Zavrieť loading dialog aj pri chybe
+      setShowPdfLoadingDialog(false);
     }
   };
 
@@ -2041,6 +2062,10 @@ const OrdersList: React.FC = () => {
         alert('Objednávka nemá priradené ID. Prosím, uložte objednávku a skúste znovu.');
         return;
       }
+      
+      // Zobraziť loading dialog
+      setShowPdfLoadingDialog(true);
+      setPdfLoadingMessage('Generujem PDF na stiahnutie...');
       
       setLoading(true);
       
@@ -2064,17 +2089,21 @@ const OrdersList: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = fileName || `objednavka_${order.id.substring(0, 8)}.pdf`;
+      link.download = fileName || `order_${order.orderNumber || order.id.substring(0, 8)}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
       setLoading(false);
+      // Zavrieť loading dialog
+      setShowPdfLoadingDialog(false);
     } catch (error) {
       console.error('Chyba pri sťahovaní PDF:', error);
       alert('Nastala chyba pri generovaní PDF objednávky: ' + (error as Error).message);
       setLoading(false);
+      // Zavrieť loading dialog aj pri chybe
+      setShowPdfLoadingDialog(false);
     }
   };
 
@@ -2089,7 +2118,7 @@ const OrdersList: React.FC = () => {
 
   return (
     <PageWrapper>
-      <DialogGlobalStyles open={showNewOrderWizard || showCustomerForm || showCarrierForm || showDeleteConfirm || showCustomerDeleteConfirm || showCarrierDeleteConfirm} />
+      <DialogGlobalStyles open={showNewOrderWizard || showCustomerForm || showCarrierForm || showDeleteConfirm || showCustomerDeleteConfirm || showCarrierDeleteConfirm || showPdfLoadingDialog} />
       <PageHeader>
         <PageTitle isDarkMode={isDarkMode}>{t('navigation.orders')}</PageTitle>
               <PageDescription>
@@ -3436,7 +3465,7 @@ const OrdersList: React.FC = () => {
                       if (pdfUrl) {
                         const a = document.createElement('a');
                         a.href = pdfUrl;
-                        a.download = `objednavka-${previewOrder?.id?.substring(0, 8) || 'preview'}.pdf`;
+                        a.download = `order_${previewOrder?.orderNumber || previewOrder?.id?.substring(0, 8) || 'preview'}.pdf`;
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
@@ -4062,6 +4091,71 @@ const OrdersList: React.FC = () => {
       onClose={handleCloseLanguageMenu}
       onLanguageSelect={handleLanguageSelect}
     />
+
+    {/* PDF Loading Dialog */}
+    <Dialog
+      open={showPdfLoadingDialog}
+      PaperProps={{
+        sx: { 
+          background: 'none', 
+          boxShadow: 'none', 
+          margin: { xs: '8px', sm: '16px' }, 
+          borderRadius: '24px',
+          minWidth: '320px'
+        }
+      }}
+      BackdropProps={{
+        sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+      }}
+    >
+      <Box
+        sx={{
+          background: isDarkMode 
+            ? 'linear-gradient(135deg, rgba(28, 28, 45, 0.95) 0%, rgba(42, 42, 75, 0.95) 100%)' 
+            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '24px',
+          border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+          padding: '32px',
+          textAlign: 'center',
+          minHeight: '200px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '24px'
+        }}
+      >
+        <CircularProgress 
+          size={48} 
+          sx={{ 
+            color: '#ff9f43',
+            '& .MuiCircularProgress-circle': {
+              strokeLinecap: 'round',
+            }
+          }} 
+        />
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: isDarkMode ? '#ffffff' : '#000000',
+            fontWeight: 600,
+            fontSize: '1.1rem'
+          }}
+        >
+          {pdfLoadingMessage}
+        </Typography>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+            fontSize: '0.9rem'
+          }}
+        >
+          Prosím čakajte, generujeme váš dokument...
+        </Typography>
+      </Box>
+    </Dialog>
     </PageWrapper>
   );
 };
