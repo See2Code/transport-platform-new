@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText,
   DialogActions,
   CircularProgress,
   Alert,
@@ -304,7 +303,7 @@ const DialogGlobalStyles = ({ open }: { open: boolean }) => (
         max-height: 100vh !important;
         overflow: hidden !important;
       }
-      .MuiDialog-root .MuiDialogContent-root {
+      .MuiDialog-root .MuiDialogContent-root:not([data-delete-dialog]) {
         overflow: auto !important;
         padding: 0 !important;
         display: flex !important;
@@ -318,37 +317,7 @@ const DialogGlobalStyles = ({ open }: { open: boolean }) => (
   </style>
 );
 
-const StyledDialogContent = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-  color: isDarkMode ? '#ffffff' : '#000000',
-  padding: '0px',
-  borderRadius: '24px', // Zmenené na 24px
-  // border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, // Odstránený border
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-  overflow: 'hidden',
-  margin: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  '& .MuiDialogTitle-root': {
-    color: isDarkMode ? '#ffffff' : '#000000',
-    padding: '24px 24px 16px 24px',
-    // borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, // Odstránený border
-    fontSize: '1.25rem',
-    fontWeight: 600,
-    flexShrink: 0,
-  },
-  '& .MuiDialogContent-root': {
-    padding: '16px 24px',
-    color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
-    overflowY: 'auto',
-    flexGrow: 1,
-  },
-  '& .MuiDialogActions-root': {
-      padding: '16px 24px 24px 24px',
-      // borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, // Odstránený border
-      flexShrink: 0,
-  }
-}));
+
 
 const StyledTableRow = styled(TableRow, {
   shouldForwardProp: (prop) => prop !== 'isDarkMode',
@@ -418,7 +387,11 @@ const OrderRow = React.memo<OrderRowProps>(({
         </Box>
       </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{(order as any).zakaznik || order.customerCompany || '-'}</StyledTableCell>
-      <StyledTableCell isDarkMode={isDarkMode}>{(order as any).kontaktnaOsoba || '-'}</StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>
+        {(order as any).kontaktnaOsoba || 
+         `${(order as any).customerContactName || ''} ${(order as any).customerContactSurname || ''}`.trim() || 
+         '-'}
+      </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>
         {order.loadingPlaces?.[0] ? (
           <Box>
@@ -549,6 +522,8 @@ const OrderRow = React.memo<OrderRowProps>(({
     (prevOrder as any).orderNumberFormatted === (nextOrder as any).orderNumberFormatted &&
     (prevOrder as any).zakaznik === (nextOrder as any).zakaznik &&
     (prevOrder as any).kontaktnaOsoba === (nextOrder as any).kontaktnaOsoba &&
+    (prevOrder as any).customerContactName === (nextOrder as any).customerContactName &&
+    (prevOrder as any).customerContactSurname === (nextOrder as any).customerContactSurname &&
     prevOrder.loadingPlaces?.[0]?.city === nextOrder.loadingPlaces?.[0]?.city &&
     prevOrder.unloadingPlaces?.[0]?.city === nextOrder.unloadingPlaces?.[0]?.city &&
     prevOrder.loadingPlaces?.[0]?.goods?.[0]?.name === nextOrder.loadingPlaces?.[0]?.goods?.[0]?.name &&
@@ -584,6 +559,15 @@ const OrdersList: React.FC = () => {
   const [dispatcherFilter, setDispatcherFilter] = useState<'all' | 'thisMonth' | 'thisYear' | 'custom'>('all');
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+
+  // Synchronizácia filtrov špeditérov s hlavnými filtrami
+  useEffect(() => {
+    if (startDate && endDate) {
+      setDispatcherFilter('custom');
+      setCustomStartDate(startDate);
+      setCustomEndDate(endDate);
+    }
+  }, [startDate, endDate]);
   const [showFilters, setShowFilters] = useState(false);
   const [showNewOrderWizard, setShowNewOrderWizard] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Record<string, any>>({});
@@ -1001,120 +985,118 @@ const OrdersList: React.FC = () => {
     }
   }, [userData?.companyID]); // Optimalizované dependencies
 
-  const fetchDispatchers = useCallback(async () => {
-    if (!userData?.companyID) {
+  // Nová, jednoduchá funkcia na výpočet štatistík špeditérov z existujúcich objednávok
+  const calculateDispatcherStats = useCallback(() => {
+    if (!orders || orders.length === 0) {
+      console.log('🔍 Žiadne objednávky na spracovanie pre špeditérov');
+      setDispatchers([]);
       setIsLoadingDispatchers(false);
       return;
     }
+
+    console.log('📊 Počítam štatistiky špeditérov z', orders.length, 'objednávok s filtrom:', dispatcherFilter);
     
-    setIsLoadingDispatchers(true);
-    try {
-      const ordersRef = collection(db, 'orders');
+    // Aplikujeme filtrovanie podľa dispatcherFilter
+    let filteredOrders = orders;
+    
+    if (dispatcherFilter === 'thisMonth') {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       
-      // Základná podmienka pre firmu
-      const whereClause = [where('companyID', '==', userData.companyID)];
+      filteredOrders = orders.filter(order => {
+        const orderDate = order.createdAt instanceof Timestamp 
+          ? order.createdAt.toDate() 
+          : new Date(order.createdAt || new Date());
+        return orderDate >= startOfMonth && orderDate <= endOfMonth;
+      });
       
-      // Dátumové filtre
-      if (dispatcherFilter === 'thisMonth') {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-        whereClause.push(where('createdAt', '>=', Timestamp.fromDate(startOfMonth)));
-        whereClause.push(where('createdAt', '<=', Timestamp.fromDate(endOfMonth)));
-      } else if (dispatcherFilter === 'thisYear') {
-        const now = new Date();
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-        whereClause.push(where('createdAt', '>=', Timestamp.fromDate(startOfYear)));
-        whereClause.push(where('createdAt', '<=', Timestamp.fromDate(endOfYear)));
-      } else if (dispatcherFilter === 'custom' && customStartDate && customEndDate) {
-        const startDate = new Date(customStartDate);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(customEndDate);
-        endDate.setHours(23, 59, 59, 999);
-        whereClause.push(where('createdAt', '>=', Timestamp.fromDate(startDate)));
-        whereClause.push(where('createdAt', '<=', Timestamp.fromDate(endDate)));
-      }
+      console.log('📅 Filtered for thisMonth:', filteredOrders.length, 'objednávok');
+    } else if (dispatcherFilter === 'thisYear') {
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
       
-      // Vytvoríme query s všetkými where podmienkami naraz
-      const q = query(ordersRef, ...whereClause, orderBy('createdAt', 'desc'));
-      console.log('🔍 Spúšťam query s', whereClause.length, 'podmienkami');
+      filteredOrders = orders.filter(order => {
+        const orderDate = order.createdAt instanceof Timestamp 
+          ? order.createdAt.toDate() 
+          : new Date(order.createdAt || new Date());
+        return orderDate >= startOfYear && orderDate <= endOfYear;
+      });
       
-      const querySnapshot = await getDocs(q);
-      console.log('📦 Nájdené objednávky:', querySnapshot.docs.length);
+      console.log('📅 Filtered for thisYear:', filteredOrders.length, 'objednávok');
+    } else if (dispatcherFilter === 'custom' && customStartDate && customEndDate) {
+      const startDate = new Date(customStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(customEndDate);
+      endDate.setHours(23, 59, 59, 999);
       
-      const dispatcherStats: { [key: string]: any } = {};
+      filteredOrders = orders.filter(order => {
+        const orderDate = order.createdAt instanceof Timestamp 
+          ? order.createdAt.toDate() 
+          : new Date(order.createdAt || new Date());
+        return orderDate >= startDate && orderDate <= endDate;
+      });
       
-      querySnapshot.docs.forEach(doc => {
-        const orderData = doc.data();
-        const createdBy = orderData.createdBy;
-        const customerPrice = parseFloat(orderData.suma || orderData.customerPrice || '0');
-        const carrierPrice = parseFloat(orderData.carrierPrice || '0');
-        const profit = customerPrice - carrierPrice;
-        const profitMargin = customerPrice > 0 ? ((profit / customerPrice) * 100) : 0;
+      console.log('📅 Filtered for custom range:', filteredOrders.length, 'objednávok');
+    }
+
+    const dispatcherStats: { [key: string]: any } = {};
+    
+    filteredOrders.forEach(order => {
+      const createdBy = order.createdBy;
+      const createdByName = (order as any).createdByName;
+      const customerPrice = parseFloat((order as any).suma || order.customerPrice || '0');
+      const carrierPrice = parseFloat(order.carrierPrice || '0');
+      const profit = customerPrice - carrierPrice;
+      
+      if (createdBy && !isNaN(profit)) {
+        if (!dispatcherStats[createdBy]) {
+          dispatcherStats[createdBy] = {
+            id: createdBy,
+            name: createdByName || teamMembers[createdBy]?.name || 'Neznámy',
+            email: teamMembers[createdBy]?.email || '',
+            totalOrders: 0,
+            totalRevenue: 0,
+            totalCosts: 0,
+            totalProfit: 0,
+            avgProfit: 0,
+            avgProfitMargin: 0,
+            orders: []
+          };
+        }
         
-        // Debug informácie pre každú objednávku
-        const orderDate = orderData.createdAt instanceof Timestamp 
-          ? orderData.createdAt.toDate() 
-          : new Date(orderData.createdAt);
-        console.log('📋 Spracovávam objednávku:', {
-          id: doc.id.substring(0, 8),
-          createdBy: orderData.createdByName || createdBy,
-          date: orderDate.toLocaleDateString('sk-SK'),
+        dispatcherStats[createdBy].totalOrders += 1;
+        dispatcherStats[createdBy].totalRevenue += customerPrice;
+        dispatcherStats[createdBy].totalCosts += carrierPrice;
+        dispatcherStats[createdBy].totalProfit += profit;
+        dispatcherStats[createdBy].orders.push({
+          id: order.id,
           customerPrice,
           carrierPrice,
-          profit
+          profit,
+          profitMargin: customerPrice > 0 ? ((profit / customerPrice) * 100) : 0,
+          date: order.createdAt
         });
-        
-        if (createdBy && !isNaN(profit)) {
-          if (!dispatcherStats[createdBy]) {
-            dispatcherStats[createdBy] = {
-              id: createdBy,
-              name: (orderData.createdBy && teamMembers[orderData.createdBy]?.name) || orderData.createdByName || 'Neznámy',
-              email: teamMembers[createdBy]?.email || '',
-              totalOrders: 0,
-              totalRevenue: 0,
-              totalCosts: 0,
-              totalProfit: 0,
-              avgProfit: 0,
-              avgProfitMargin: 0,
-              orders: []
-            };
-          }
-          
-          dispatcherStats[createdBy].totalOrders += 1;
-          dispatcherStats[createdBy].totalRevenue += customerPrice;
-          dispatcherStats[createdBy].totalCosts += carrierPrice;
-          dispatcherStats[createdBy].totalProfit += profit;
-          dispatcherStats[createdBy].orders.push({
-            id: doc.id,
-            customerPrice,
-            carrierPrice,
-            profit,
-            profitMargin,
-            date: orderData.createdAt
-          });
-        }
-      });
-      
-      // Vypočítame priemerný zisk a priemerná marža
-      Object.values(dispatcherStats).forEach((dispatcher: any) => {
-        dispatcher.avgProfit = dispatcher.totalOrders > 0 
-          ? dispatcher.totalProfit / dispatcher.totalOrders 
-          : 0;
-        dispatcher.avgProfitMargin = dispatcher.totalRevenue > 0 
-          ? ((dispatcher.totalProfit / dispatcher.totalRevenue) * 100) 
-          : 0;
-      });
-      
-      console.log('👥 Finálne štatistiky špeditérov:', Object.values(dispatcherStats).length, 'špeditérov');
-      setDispatchers(Object.values(dispatcherStats));
-    } catch (error) {
-      console.error('❌ Chyba pri načítaní špeditérov:', error);
-    } finally {
-      setIsLoadingDispatchers(false);
-    }
-  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]);
+      }
+    });
+    
+    // Vypočítame priemerné hodnoty
+    Object.values(dispatcherStats).forEach((dispatcher: any) => {
+      dispatcher.avgProfit = dispatcher.totalOrders > 0 
+        ? dispatcher.totalProfit / dispatcher.totalOrders 
+        : 0;
+      dispatcher.avgProfitMargin = dispatcher.totalRevenue > 0 
+        ? ((dispatcher.totalProfit / dispatcher.totalRevenue) * 100) 
+        : 0;
+    });
+    
+    const resultArray = Object.values(dispatcherStats);
+    console.log('👥 Vypočítané štatistiky pre', resultArray.length, 'špeditérov');
+    
+    setDispatchers(resultArray);
+    setIsLoadingDispatchers(false);
+  }, [orders, dispatcherFilter, customStartDate, customEndDate, teamMembers]);
 
   // --- useEffect HOOKY (optimalizované pre zamedzenie duplicitných načítaní) ---
 
@@ -1183,11 +1165,11 @@ const OrdersList: React.FC = () => {
   // useEffect pre dispatchers - spúšťa sa len pri zmene relevantných filtrov
   useEffect(() => {
     if (userData?.companyID && Object.keys(teamMembers).length > 0) {
-      console.log("📊 Running fetchDispatchers due to filter change");
-      fetchDispatchers();
+      console.log("📊 Running calculateDispatcherStats due to filter change");
+      calculateDispatcherStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]); // Odstránená fetchDispatchers dependency aby sme zabránili nekonečným loop
+  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers, orders]); // Pridané orders dependency
 
 
   // --- OSTATNÉ FUNKCIE --- 
@@ -1335,7 +1317,7 @@ const OrdersList: React.FC = () => {
       // Obnovíme štatistiky špeditérov po vymazaní objednávky
       if (userData?.companyID && Object.keys(teamMembers).length > 0) {
         console.log("📊 Obnova štatistík špeditérov po vymazaní objednávky");
-        fetchDispatchers();
+        calculateDispatcherStats();
       }
     } catch (err) {
       console.error('Chyba pri mazaní objednávky:', err);
@@ -1360,7 +1342,7 @@ const OrdersList: React.FC = () => {
     // Obnovíme štatistiky špeditérov po uložení/úprave objednávky
     if (userData?.companyID && Object.keys(teamMembers).length > 0) {
       console.log("📊 Obnova štatistík špeditérov po uložení objednávky");
-      fetchDispatchers();
+      calculateDispatcherStats();
     }
   };
 
@@ -2199,34 +2181,84 @@ const OrdersList: React.FC = () => {
               </Box>
           </Box>
 
-          <Collapse in={showFilters}>
-              <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
-                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                      <DatePicker
-                          label={t('common.from')}
-                          value={startDate}
-                          onChange={(newValue) => setStartDate(newValue)}
-                          slotProps={{ textField: { size: 'small' } }}
-                      />
-                      <DatePicker
-                          label={t('common.to')}
-                          value={endDate}
-                          onChange={(newValue) => setEndDate(newValue)}
-                          slotProps={{ textField: { size: 'small' } }}
-                      />
-                  </LocalizationProvider>
-                  <Button 
-                    onClick={() => { setStartDate(null); setEndDate(null); }} 
-                    size="small"
-                    sx={{ 
-                      color: '#ff9f43',
-                      '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
-                    }}
-                  >
-{t('common.clearFilter')}
-                  </Button>
-              </Box>
-          </Collapse>
+                        <Collapse in={showFilters}>
+                  <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            const now = new Date();
+                            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                            setStartDate(startOfMonth);
+                            setEndDate(endOfMonth);
+                          }}
+                          sx={{
+                            borderColor: '#ff9f43',
+                            color: '#ff9f43',
+                            '&:hover': {
+                              backgroundColor: 'rgba(255, 159, 67, 0.1)',
+                            }
+                          }}
+                        >
+                          {t('common.thisMonth')}
+                        </Button>
+                        
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            const now = new Date();
+                            const startOfYear = new Date(now.getFullYear(), 0, 1);
+                            const endOfYear = new Date(now.getFullYear(), 11, 31);
+                            setStartDate(startOfYear);
+                            setEndDate(endOfYear);
+                          }}
+                          sx={{
+                            borderColor: '#ff9f43',
+                            color: '#ff9f43',
+                            '&:hover': {
+                              backgroundColor: 'rgba(255, 159, 67, 0.1)',
+                            }
+                          }}
+                        >
+                          {t('common.thisYear')}
+                        </Button>
+                      </Box>
+
+                      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                          <DatePicker
+                              label={t('common.from')}
+                              value={startDate}
+                              onChange={(newValue) => setStartDate(newValue)}
+                              slotProps={{ textField: { size: 'small' } }}
+                          />
+                          <DatePicker
+                              label={t('common.to')}
+                              value={endDate}
+                              onChange={(newValue) => setEndDate(newValue)}
+                              slotProps={{ textField: { size: 'small' } }}
+                          />
+                      </LocalizationProvider>
+                      <Button 
+                        onClick={() => { 
+                          setStartDate(null); 
+                          setEndDate(null);
+                          setDispatcherFilter('all');
+                          setCustomStartDate(null); 
+                          setCustomEndDate(null); 
+                        }} 
+                        size="small"
+                        sx={{ 
+                          color: '#ff9f43',
+                          '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.04)' }
+                        }}
+                      >
+                        {t('common.clearFilter')}
+                      </Button>
+                  </Box>
+              </Collapse>
           
           {isLoadingOrders ? (
             <Box display="flex" justifyContent="center" mt={4}>
@@ -3340,51 +3372,108 @@ const OrdersList: React.FC = () => {
         onClose={handleDeleteCancel}
         aria-labelledby="confirm-order-delete-title"
         aria-describedby="confirm-order-delete-description"
-        // Props pre vzhľad z Contacts.tsx
         PaperProps={{
           sx: {
-            background: 'none', // Priehľadné pozadie samotného dialógu
+            background: 'none',
             boxShadow: 'none',
             margin: { xs: '8px', sm: '16px' },
-            borderRadius: '24px' // Použité väčšie zaoblenie
+            borderRadius: '24px'
           }
         }}
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(8px)', // Blur pozadia
-            backgroundColor: 'rgba(0, 0, 0, 0.6)' // Tmavé priehľadné pozadie
+            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)'
           }
         }}
       >
-        <StyledDialogContent isDarkMode={isDarkMode}>
-          <DialogTitle id="confirm-order-delete-title">{t('common.confirmDelete')}</DialogTitle>
-        <DialogContent>
-            <DialogContentText id="confirm-order-delete-description"> 
-            {t('orders.deleteConfirmation')}
-            </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={handleDeleteCancel}
+        <Box sx={{
+            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : '#000000',
+            padding: '0px',
+            borderRadius: '24px',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: '400px',
+            maxWidth: '500px'
+         }}>
+          <DialogTitle id="confirm-order-delete-title" 
             sx={{ 
-                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', }
+              padding: '24px 24px 16px 24px',
+              fontSize: '1.25rem',
+              fontWeight: 600
             }}
           >
-            {t('common.cancel')}
-          </Button>
-          <Button 
-            onClick={handleDeleteConfirmed} 
-              variant="contained" 
-              color="error" 
-              disabled={loading} 
-              autoFocus // Vrátenie autoFocus
-              sx={{ color: '#ffffff' }}
+            📋 {t('common.confirmDelete')}
+          </DialogTitle>
+          <DialogContent 
+            data-delete-dialog="true"
+            sx={{ 
+              padding: '0 24px 16px 24px !important'
+            }}>
+            <Typography
+              sx={{
+                textAlign: 'left !important',
+                display: 'block !important',
+                lineHeight: 1.6,
+                fontSize: '0.95rem',
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+                margin: '0 !important',
+                paddingLeft: '0 !important',
+                paddingRight: '0 !important',
+                paddingTop: '0 !important',
+                paddingBottom: '0 !important'
+              }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')} 
-          </Button>
-        </DialogActions>
-        </StyledDialogContent>
+              {t('orders.deleteConfirmation') || 'Naozaj chcete vymazať túto objednávku? Táto akcia je nenávratná.'}
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ 
+            padding: '0 24px 20px 24px',
+            justifyContent: 'space-between'
+          }}>
+            <Button 
+              onClick={handleDeleteCancel} 
+              variant="outlined"
+              sx={{ 
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                color: isDarkMode ? '#ffffff' : '#000000',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                }
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button 
+              onClick={handleDeleteConfirmed} 
+              variant="contained"
+              disabled={loading}
+              autoFocus
+              sx={{ 
+                backgroundColor: '#f44336',
+                color: '#ffffff',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  backgroundColor: '#d32f2f'
+                }
+              }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')}
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
 
       <Dialog
@@ -3465,7 +3554,7 @@ const OrdersList: React.FC = () => {
                       if (pdfUrl) {
                         const a = document.createElement('a');
                         a.href = pdfUrl;
-                        a.download = `order_${previewOrder?.orderNumber || previewOrder?.id?.substring(0, 8) || 'preview'}.pdf`;
+                        a.download = `order_${(previewOrder as any)?.orderNumberFormatted || previewOrder?.id?.substring(0, 8) || 'preview'}.pdf`;
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
@@ -3915,37 +4004,108 @@ const OrdersList: React.FC = () => {
         onClose={handleCustomerDeleteCancel}
         aria-labelledby="confirm-customer-delete-title"
         aria-describedby="confirm-customer-delete-description"
-        // Props pre vzhľad z Contacts.tsx
         PaperProps={{
-          sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '24px' }
+          sx: {
+            background: 'none',
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            borderRadius: '24px'
+          }
         }}
         BackdropProps={{
-          sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+          sx: {
+            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)'
+          }
         }}
       >
-        <StyledDialogContent isDarkMode={isDarkMode}>
-          <DialogTitle id="confirm-customer-delete-title">{t('common.confirmDelete')}</DialogTitle>
-          <DialogContent>
-            <DialogContentText id="confirm-customer-delete-description"> 
-              {t('orders.deleteCustomerConfirmation')}
-            </DialogContentText>
+        <Box sx={{
+            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : '#000000',
+            padding: '0px',
+            borderRadius: '24px',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: '400px',
+            maxWidth: '500px'
+         }}>
+          <DialogTitle id="confirm-customer-delete-title" 
+            sx={{ 
+              padding: '24px 24px 16px 24px',
+              fontSize: '1.25rem',
+              fontWeight: 600
+            }}
+          >
+            🗑️ {t('common.confirmDelete')}
+          </DialogTitle>
+          <DialogContent 
+            data-delete-dialog="true"
+            sx={{ 
+              padding: '0 24px 16px 24px !important'
+            }}>
+            <Typography
+              sx={{
+                textAlign: 'left !important',
+                display: 'block !important',
+                lineHeight: 1.6,
+                fontSize: '0.95rem',
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+                margin: '0 !important',
+                paddingLeft: '0 !important',
+                paddingRight: '0 !important',
+                paddingTop: '0 !important',
+                paddingBottom: '0 !important'
+              }}
+            >
+              {t('orders.deleteCustomerConfirmation') || 'Naozaj chcete vymazať tohto zákazníka? Táto akcia je nenávratná.'}
+            </Typography>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCustomerDeleteCancel} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)', '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', } }}>
+          <DialogActions sx={{ 
+            padding: '0 24px 20px 24px',
+            justifyContent: 'space-between'
+          }}>
+            <Button 
+              onClick={handleCustomerDeleteCancel} 
+              variant="outlined"
+              sx={{ 
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                color: isDarkMode ? '#ffffff' : '#000000',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                }
+              }}
+            >
               {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleCustomerDeleteConfirmed} 
-              variant="contained" 
-              color="error" 
-              disabled={loading} 
-              autoFocus // Vrátenie autoFocus
-              sx={{ color: '#ffffff' }}
+              variant="contained"
+              disabled={loading}
+              autoFocus
+              sx={{ 
+                backgroundColor: '#f44336',
+                color: '#ffffff',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  backgroundColor: '#d32f2f'
+                }
+              }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')} 
+              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')}
             </Button>
           </DialogActions>
-        </StyledDialogContent>
+        </Box>
       </Dialog>
 
     {/* Potvrdzovací dialóg pre vymazanie DOPRAVCU */}
@@ -3954,37 +4114,108 @@ const OrdersList: React.FC = () => {
         onClose={handleCarrierDeleteCancel}
         aria-labelledby="confirm-carrier-delete-title"
         aria-describedby="confirm-carrier-delete-description"
-        // Props pre vzhľad z Contacts.tsx
         PaperProps={{
-          sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '24px' }
+          sx: {
+            background: 'none',
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            borderRadius: '24px'
+          }
         }}
         BackdropProps={{
-          sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+          sx: {
+            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)'
+          }
         }}
       >
-        <StyledDialogContent isDarkMode={isDarkMode}>
-          <DialogTitle id="confirm-carrier-delete-title">{t('common.confirmDelete')}</DialogTitle>
-          <DialogContent>
-            <DialogContentText id="confirm-carrier-delete-description"> 
-              {t('orders.deleteCarrierConfirmation')}
-            </DialogContentText>
+        <Box sx={{
+            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : '#000000',
+            padding: '0px',
+            borderRadius: '24px',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: '400px',
+            maxWidth: '500px'
+         }}>
+          <DialogTitle id="confirm-carrier-delete-title" 
+            sx={{ 
+              padding: '24px 24px 16px 24px',
+              fontSize: '1.25rem',
+              fontWeight: 600
+            }}
+          >
+            🚛 {t('common.confirmDelete')}
+          </DialogTitle>
+          <DialogContent 
+            data-delete-dialog="true"
+            sx={{ 
+              padding: '0 24px 16px 24px !important'
+            }}>
+            <Typography
+              sx={{
+                textAlign: 'left !important',
+                display: 'block !important',
+                lineHeight: 1.6,
+                fontSize: '0.95rem',
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+                margin: '0 !important',
+                paddingLeft: '0 !important',
+                paddingRight: '0 !important',
+                paddingTop: '0 !important',
+                paddingBottom: '0 !important'
+              }}
+            >
+              {t('orders.deleteCarrierConfirmation') || 'Naozaj chcete vymazať tohto dopravcu? Táto akcia je nenávratná.'}
+            </Typography>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCarrierDeleteCancel} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)', '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', } }}>
+          <DialogActions sx={{ 
+            padding: '0 24px 20px 24px',
+            justifyContent: 'space-between'
+          }}>
+            <Button 
+              onClick={handleCarrierDeleteCancel} 
+              variant="outlined"
+              sx={{ 
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                color: isDarkMode ? '#ffffff' : '#000000',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                }
+              }}
+            >
               {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleCarrierDeleteConfirmed} 
-              variant="contained" 
-              color="error" 
-              disabled={loading} 
-              autoFocus // Vrátenie autoFocus
-              sx={{ color: '#ffffff' }}
+              variant="contained"
+              disabled={loading}
+              autoFocus
+              sx={{ 
+                backgroundColor: '#f44336',
+                color: '#ffffff',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  backgroundColor: '#d32f2f'
+                }
+              }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')} 
+              {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')}
             </Button>
           </DialogActions>
-        </StyledDialogContent>
+        </Box>
     </Dialog>
 
     <OrderDetail 
@@ -4003,7 +4234,7 @@ const OrdersList: React.FC = () => {
         // Callback po úspešnom uložení objednávky
         if (userData?.companyID && Object.keys(teamMembers).length > 0) {
           console.log("📊 Callback: Obnova štatistík špeditérov po uložení");
-          fetchDispatchers();
+          calculateDispatcherStats();
         }
       }}
     />
@@ -4025,35 +4256,107 @@ const OrdersList: React.FC = () => {
       aria-labelledby="confirm-location-delete-title"
       aria-describedby="confirm-location-delete-description"
       PaperProps={{
-        sx: { background: 'none', boxShadow: 'none', margin: { xs: '8px', sm: '16px' }, borderRadius: '24px' }
+        sx: {
+          background: 'none',
+          boxShadow: 'none',
+          margin: { xs: '8px', sm: '16px' },
+          borderRadius: '24px'
+        }
       }}
       BackdropProps={{
-        sx: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.6)' }
+        sx: {
+          backdropFilter: 'blur(8px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)'
+        }
       }}
     >
-      <StyledDialogContent isDarkMode={isDarkMode}>
-        <DialogTitle id="confirm-location-delete-title">{t('common.confirmDelete')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="confirm-location-delete-description"> 
-            {t('orders.deleteLocationConfirmation') || 'Ste si istý, že chcete vymazať toto miesto?'}
-          </DialogContentText>
+      <Box sx={{
+          backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+          color: isDarkMode ? '#ffffff' : '#000000',
+          padding: '0px',
+          borderRadius: '24px',
+          border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: '400px',
+          maxWidth: '500px'
+       }}>
+        <DialogTitle id="confirm-location-delete-title" 
+          sx={{ 
+            padding: '24px 24px 16px 24px',
+            fontSize: '1.25rem',
+            fontWeight: 600
+          }}
+        >
+          📍 {t('common.confirmDelete')}
+        </DialogTitle>
+        <DialogContent 
+          data-delete-dialog="true"
+          sx={{ 
+            padding: '0 24px 16px 24px !important'
+          }}>
+          <Typography
+            sx={{
+              textAlign: 'left !important',
+              display: 'block !important',
+              lineHeight: 1.6,
+              fontSize: '0.95rem',
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+              margin: '0 !important',
+              paddingLeft: '0 !important',
+              paddingRight: '0 !important',
+              paddingTop: '0 !important',
+              paddingBottom: '0 !important'
+            }}
+          >
+            {t('orders.deleteLocationConfirmation') || 'Ste si istý, že chcete vymazať toto miesto? Táto akcia je nenávratná.'}
+          </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleLocationDeleteCancel} sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)', '&:hover': { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', } }}>
+        <DialogActions sx={{ 
+          padding: '0 24px 20px 24px',
+          justifyContent: 'space-between'
+        }}>
+          <Button 
+            onClick={handleLocationDeleteCancel} 
+            variant="outlined"
+            sx={{ 
+              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+              color: isDarkMode ? '#ffffff' : '#000000',
+              fontWeight: 600,
+              borderRadius: '12px',
+              paddingX: 3,
+              paddingY: 1.2,
+              '&:hover': {
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+              }
+            }}
+          >
             {t('common.cancel')}
           </Button>
           <Button 
             onClick={handleLocationDeleteConfirmed} 
-            variant="contained" 
-            color="error" 
-            disabled={loading} 
+            variant="contained"
+            disabled={loading}
             autoFocus
-            sx={{ color: '#ffffff' }}
+            sx={{ 
+              backgroundColor: '#f44336',
+              color: '#ffffff',
+              fontWeight: 600,
+              borderRadius: '12px',
+              paddingX: 3,
+              paddingY: 1.2,
+              '&:hover': {
+                backgroundColor: '#d32f2f'
+              }
+            }}
           >
-            {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')} 
+            {loading ? <CircularProgress size={24} color="inherit" /> : t('common.confirmDelete')}
           </Button>
         </DialogActions>
-      </StyledDialogContent>
+      </Box>
     </Dialog>
 
     {/* Dialógy pre hodnotenie */}
