@@ -1234,7 +1234,7 @@ export const generateOrderPdf = functions
       return { 
         success: true, 
         pdfBase64: base64Data,
-        fileName: `objednavka_${orderData.orderNumberFormatted || orderData.id?.substring(0, 8) || 'temp'}.pdf`
+        fileName: `order_${orderData.orderNumberFormatted || orderData.id?.substring(0, 8) || 'temp'}.pdf`
       };
     } catch (error: any) {
       console.error('Chyba pri generovaní PDF:', error);

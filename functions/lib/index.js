@@ -1132,7 +1132,7 @@ exports.generateOrderPdf = functions
         return {
             success: true,
             pdfBase64: base64Data,
-            fileName: `objednavka_${orderData.orderNumberFormatted || ((_a = orderData.id) === null || _a === void 0 ? void 0 : _a.substring(0, 8)) || 'temp'}.pdf`
+            fileName: `order_${orderData.orderNumberFormatted || ((_a = orderData.id) === null || _a === void 0 ? void 0 : _a.substring(0, 8)) || 'temp'}.pdf`
         };
     }
     catch (error) {
