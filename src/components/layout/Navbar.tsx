@@ -132,6 +132,7 @@ const Navbar: FC = () => {
   const { isDarkMode, toggleTheme } = useThemeMode();
   const { toggleChat, chatOpen } = useChatUI();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutSuccessOpen, setLogoutSuccessOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t, i18n } = useTranslation();
@@ -232,7 +233,12 @@ const Navbar: FC = () => {
     try {
       await logout();
       setLogoutDialogOpen(false);
-      navigate('/login');
+      setLogoutSuccessOpen(true);
+      // Automaticky presmeruj po 2 sekundách
+      setTimeout(() => {
+        setLogoutSuccessOpen(false);
+        navigate('/login');
+      }, 2000);
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -943,30 +949,171 @@ const Navbar: FC = () => {
       <Dialog
         open={logoutDialogOpen}
         onClose={handleLogoutCancel}
+        aria-labelledby="logout-dialog-title"
+        aria-describedby="logout-dialog-description"
         PaperProps={{
           sx: {
-            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : 'rgba(255, 255, 255, 0.98)',
-            backdropFilter: 'blur(10px)',
-            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-          },
+            background: 'none',
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            borderRadius: '24px'
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)'
+          }
         }}
       >
-        <DialogTitle sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
-          {t('auth.confirmLogout')}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }}>
-            {t('auth.logoutConfirmation')}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleLogoutCancel} sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={handleLogoutConfirm} color="error" variant="contained">
-            {t('auth.logout')}
-          </Button>
-        </DialogActions>
+        <Box sx={{
+            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : '#000000',
+            padding: '0px',
+            borderRadius: '24px',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+         }}>
+          <DialogTitle id="logout-dialog-title" 
+            sx={{ 
+              padding: '24px 24px 16px 24px',
+              fontSize: '1.25rem',
+              fontWeight: 600
+            }}
+          >
+            {t('auth.confirmLogout')}
+          </DialogTitle>
+          <DialogContent sx={{ padding: '0 24px 16px 24px' }}>
+            <DialogContentText id="logout-dialog-description" sx={{ 
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+              fontSize: '0.95rem',
+              lineHeight: 1.6
+            }}>
+              {t('auth.logoutConfirmation')}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ 
+            padding: '0 16px 20px 16px',
+            justifyContent: 'space-between'
+          }}>
+            <Button 
+              onClick={handleLogoutCancel} 
+              variant="outlined"
+              sx={{ 
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                color: isDarkMode ? '#ffffff' : '#000000',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                }
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button 
+              onClick={handleLogoutConfirm} 
+              variant="contained"
+              sx={{ 
+                backgroundColor: '#f44336',
+                color: '#ffffff',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  backgroundColor: '#d32f2f'
+                }
+              }}
+            >
+              {t('auth.logout')}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      {/* Success Dialog po odhlásení */}
+      <Dialog
+        open={logoutSuccessOpen}
+        onClose={() => setLogoutSuccessOpen(false)}
+        aria-labelledby="logout-success-dialog-title"
+        aria-describedby="logout-success-dialog-description"
+        PaperProps={{
+          sx: {
+            background: 'none',
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            borderRadius: '24px'
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)'
+          }
+        }}
+      >
+        <Box sx={{
+            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : '#000000',
+            padding: '0px',
+            borderRadius: '24px',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+         }}>
+          <DialogTitle id="logout-success-dialog-title" 
+            sx={{ 
+              padding: '24px 24px 16px 24px',
+              fontSize: '1.25rem',
+              fontWeight: 600
+            }}
+          >
+            {"✅ Úspešné odhlásenie"}
+          </DialogTitle>
+          <DialogContent sx={{ padding: '0 24px 16px 24px' }}>
+            <DialogContentText sx={{ 
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+              fontSize: '0.95rem',
+              lineHeight: 1.6
+            }}>
+              Boli ste úspešne odhlásení z vášho účtu.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ 
+            padding: '0 16px 20px 16px',
+            justifyContent: 'center'
+          }}>
+            <Button 
+              onClick={() => {
+                setLogoutSuccessOpen(false);
+                navigate('/login');
+              }}
+              variant="contained"
+              sx={{ 
+                backgroundColor: '#4caf50',
+                color: '#ffffff',
+                fontWeight: 600,
+                borderRadius: '12px',
+                paddingX: 3,
+                paddingY: 1.2,
+                '&:hover': {
+                  backgroundColor: '#45a049'
+                }
+              }}
+            >
+              {"Pokračovať"}
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
 
       {/* Notifications Popover */}
