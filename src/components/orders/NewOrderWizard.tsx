@@ -69,6 +69,7 @@ import { Customer } from '../../types/customers';
 import { Carrier } from '../../types/carriers';
 import { countries } from '../../constants/countries';
 import CustomerForm, { CustomerData } from '../management/CustomerForm';
+import CarrierDialog from '../dialogs/CarrierDialog';
 
 import { createPortal } from 'react-dom';
 
@@ -1884,9 +1885,9 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             label="Množstvo *"
                             type="number"
                             value={item.quantity}
-                            onChange={(e) => updateGoods(type, index, goodsIndex, 'quantity', parseInt(e.target.value) || 1)}
+                            onChange={(e) => updateGoods(type, index, goodsIndex, 'quantity', parseFloat(e.target.value) || 1)}
                             required
-                            inputProps={{ min: 1 }}
+                            inputProps={{ step: 0.01 }}
                           />
                         </Grid>
                         
@@ -2653,18 +2654,73 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         }}
       />
 
-      {/* Carrier Dialog - placeholder for now */}
-      <Dialog open={newCarrierDialog} onClose={() => setNewCarrierDialog(false)}>
-        <DialogTitle>Pridať nového dopravcu</DialogTitle>
-        <DialogContent>
-          <Alert severity="info">
-            Funkcia pridania nového dopravcu bude implementovaná v ďalšej verzii.
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewCarrierDialog(false)}>Zavrieť</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Carrier Dialog */}
+      <CarrierDialog
+        open={newCarrierDialog}
+        onClose={() => setNewCarrierDialog(false)}
+        onSubmit={async (carrierData: Carrier) => {
+          try {
+            if (!userData?.companyID) {
+              alert("Chyba: Nemáte priradenú firmu.");
+              return;
+            }
+            
+            // Uložíme nového dopravcu do databázy
+            const carrierRef = collection(db, 'carriers');
+            const newCarrier = {
+              companyName: carrierData.companyName,
+              street: carrierData.street,
+              city: carrierData.city,
+              zip: carrierData.zip,
+              country: carrierData.country,
+              contactName: carrierData.contactName,
+              contactSurname: carrierData.contactSurname,
+              contactEmail: carrierData.contactEmail,
+              contactPhone: carrierData.contactPhone,
+              ico: carrierData.ico || '',
+              dic: carrierData.dic || '',
+              icDph: carrierData.icDph || '',
+              vehicleTypes: carrierData.vehicleTypes || [],
+              notes: carrierData.notes || '',
+              paymentTermDays: carrierData.paymentTermDays || 60,
+              companyID: userData.companyID,
+              createdAt: Timestamp.fromDate(new Date())
+            };
+            
+            const docRef = await addDoc(carrierRef, newCarrier);
+            
+            // Vytvoríme Carrier objekt pre select
+            const newCarrierOption: Carrier = {
+              id: docRef.id,
+              companyName: carrierData.companyName,
+              street: carrierData.street,
+              city: carrierData.city,
+              zip: carrierData.zip,
+              country: carrierData.country,
+              contactName: carrierData.contactName,
+              contactSurname: carrierData.contactSurname,
+              contactEmail: carrierData.contactEmail,
+              contactPhone: carrierData.contactPhone,
+              ico: carrierData.ico || '',
+              dic: carrierData.dic || '',
+              icDph: carrierData.icDph || '',
+              vehicleTypes: carrierData.vehicleTypes || [],
+              notes: carrierData.notes || '',
+              paymentTermDays: carrierData.paymentTermDays || 60,
+              companyID: userData.companyID
+            };
+            
+            // Pridáme ho do zoznamu a vyberieme
+            setCarriers(prev => [...prev, newCarrierOption]);
+            handleCarrierChange(newCarrierOption);
+            setNewCarrierDialog(false);
+            
+          } catch (error) {
+            console.error('Chyba pri ukladaní dopravcu:', error);
+            alert('Nastala chyba pri ukladaní dopravcu: ' + (error as Error).message);
+          }
+        }}
+      />
 
       {/* Validation Errors Snackbar */}
       <Snackbar
