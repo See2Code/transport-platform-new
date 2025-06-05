@@ -117,7 +117,7 @@ const colors = {
 };
 
 // Typ pre status možnosti
-type CaseStatusKey = 'CALLED' | 'NOT_CALLED' | 'EMAIL_SENT' | 'IN_PROGRESS' | 'CALL_LATER' | 'MEETING' | 'CALL' | 'INTERESTED' | 'NOT_INTERESTED';
+type CaseStatusKey = 'CALLED' | 'NOT_CALLED' | 'EMAIL_SENT' | 'IN_PROGRESS' | 'CALL_LATER' | 'MEETING' | 'CALL' | 'INTERESTED' | 'NOT_INTERESTED' | 'INQUIRY' | 'REALIZED';
 
 interface BusinessCase {
   id?: string;
@@ -594,7 +594,9 @@ export default function BusinessCases() {
     MEETING: { label: t('business.status.meeting'), color: 'info' as const },
     CALL: { label: t('business.status.call'), color: 'info' as const },
     INTERESTED: { label: t('business.status.interested'), color: 'success' as const },
-    NOT_INTERESTED: { label: t('business.status.notInterested'), color: 'error' as const }
+    NOT_INTERESTED: { label: t('business.status.notInterested'), color: 'error' as const },
+    INQUIRY: { label: t('business.status.inquiry'), color: 'secondary' as const },
+    REALIZED: { label: t('business.status.realized'), color: 'success' as const }
   }), [t]);
 
   const fetchCases = useCallback(() => {

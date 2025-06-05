@@ -273,7 +273,9 @@
       "meeting": "Meeting",
       "call": "Call", 
       "interested": "Interested", 
-      "notInterested": "Not Interested"
+      "notInterested": "Not Interested",
+      "inquiry": "Inquiry",
+      "realized": "Realized"
     },
     "phaseTypes": {
       "meeting": "Meeting", 

@@ -281,7 +281,9 @@
       "meeting": "Stretnutie",
       "call": "Telefonát", 
       "interested": "Záujem", 
-      "notInterested": "Nezáujem"
+      "notInterested": "Nezáujem",
+      "inquiry": "Dopyt",
+      "realized": "Realizované"
     },
     "phaseTypes": {
       "meeting": "Stretnutie", 
