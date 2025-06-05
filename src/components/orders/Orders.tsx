@@ -707,7 +707,7 @@ const OrdersList: React.FC = () => {
     } finally {
       setIsLoadingTeamMembers(false);
     }
-  }, [userData]);
+  }, [userData?.companyID, userData?.uid, userData?.email]); // Optimalizované dependencies
 
   const fetchCustomers = useCallback(() => {
     console.log("Attempting to fetch customers..."); // Log začiatku
@@ -754,7 +754,7 @@ const OrdersList: React.FC = () => {
       setIsLoadingCustomers(false);
       return () => {}; // Return empty cleanup function
     }
-  }, [userData]);
+  }, [userData?.companyID]); // Optimalizované dependencies
   
   const fetchCarriers = useCallback(() => {
     console.log("Attempting to fetch carriers..."); // Log začiatku
@@ -813,7 +813,7 @@ const OrdersList: React.FC = () => {
       setIsLoadingCarriers(false);
       return () => {}; // Return empty cleanup function
     }
-  }, [userData]);
+  }, [userData?.companyID]); // Optimalizované dependencies
 
   const fetchOrders = useCallback(() => {
     if (!userData?.companyID) { 
@@ -949,7 +949,7 @@ const OrdersList: React.FC = () => {
       setIsLoadingOrders(false);
       return () => {}; // Return empty cleanup function
     }
-  }, [userData, startDate, endDate, teamMembers]);
+  }, [userData?.companyID, startDate, endDate, teamMembers]); // Optimalizované dependencies
 
   const fetchLocations = useCallback(async () => {
     if (!userData?.companyID) {
@@ -995,7 +995,7 @@ const OrdersList: React.FC = () => {
       setIsLoadingLocations(false);
       return () => {};
     }
-  }, [userData]);
+  }, [userData?.companyID]); // Optimalizované dependencies
 
   const fetchDispatchers = useCallback(async () => {
     if (!userData?.companyID) {
@@ -1112,16 +1112,16 @@ const OrdersList: React.FC = () => {
     }
   }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]);
 
-  // --- useEffect HOOKY (teraz sú definované PO fetch funkciách) ---
+  // --- useEffect HOOKY (optimalizované pre zamedzenie duplicitných načítaní) ---
 
   // Jeden centrálny useEffect pre načítanie team members
   useEffect(() => {
     if (userData?.companyID) {
       fetchTeamMembers();
     }
-  }, [userData?.companyID, fetchTeamMembers]);
+  }, [userData?.companyID]); // Odstraňujem fetchTeamMembers z dependencies
 
-  // Hlavný useEffect pre inicializáciu real-time listeners (spúšťa sa len raz keď je userData dostupné)
+  // Hlavný useEffect pre inicializáciu základných real-time listeners (len pre customers, carriers, locations)
   useEffect(() => {
     if (!userData?.companyID) {
       console.log("❌ No companyID available, skipping data fetch");
@@ -1130,10 +1130,9 @@ const OrdersList: React.FC = () => {
 
     console.log("✅ Running initial data fetch on component mount for company:", userData.companyID);
     
-    // Nastavíme real-time listenery
+    // Nastavíme real-time listenery len pre statické data (customers, carriers, locations)
     const unsubscribeCustomers = fetchCustomers(); 
     const unsubscribeCarriers = fetchCarriers();
-    const unsubscribeOrders = fetchOrders();
     
     // Osobitne spracujeme async fetchLocations
     let unsubscribeLocations: (() => void) | undefined;
@@ -1141,7 +1140,7 @@ const OrdersList: React.FC = () => {
       unsubscribeLocations = unsubscribe;
     });
     
-    // Cleanup funkcie pre všetky real-time listenery
+    // Cleanup funkcie pre real-time listenery
     return () => {
       console.log("🧹 Cleaning up real-time listeners");
       if (typeof unsubscribeCustomers === 'function') {
@@ -1150,16 +1149,13 @@ const OrdersList: React.FC = () => {
       if (typeof unsubscribeCarriers === 'function') {
         unsubscribeCarriers();
       }
-      if (typeof unsubscribeOrders === 'function') {
-        unsubscribeOrders();
-      }
       if (typeof unsubscribeLocations === 'function') {
         unsubscribeLocations();
       }
     };
-  }, [userData?.companyID, fetchCarriers, fetchCustomers, fetchLocations, fetchOrders]);
+  }, [userData?.companyID]); // Odstraňujem fetch funkcie z dependencies
 
-  // Separátny useEffect pre fetchOrders pri zmene filtrov (startDate, endDate)
+  // Samostatný useEffect pre fetchOrders s dátumovými filtrami
   useEffect(() => {
     if (!userData?.companyID) {
       return;
@@ -1175,7 +1171,7 @@ const OrdersList: React.FC = () => {
         unsubscribeOrders();
       }
     };
-  }, [startDate, endDate, fetchOrders, userData?.companyID]);
+  }, [userData?.companyID, startDate, endDate]); // Odstraňujem fetchOrders z dependencies
 
   // useEffect pre dispatchers - spúšťa sa len pri zmene relevantných filtrov
   useEffect(() => {
@@ -1183,7 +1179,7 @@ const OrdersList: React.FC = () => {
       console.log("📊 Running fetchDispatchers due to filter change");
       fetchDispatchers();
     }
-  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers, fetchDispatchers]);
+  }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers]); // Odstraňujem fetchDispatchers z dependencies
 
 
   // --- OSTATNÉ FUNKCIE --- 
