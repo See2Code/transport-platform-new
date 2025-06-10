@@ -127,6 +127,10 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
   const [documentType, setDocumentType] = useState<DocumentType>('customer_order');
   const [error, setError] = useState<string | null>(null);
 
+  // Preview dialog state
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<OrderDocument | null>(null);
+
   // Fetch documents
   useEffect(() => {
     if (!open || !orderId || !userData?.companyID) return;
@@ -282,8 +286,13 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
   };
 
   const handlePreview = (document: OrderDocument) => {
-    // Otvoríme náhľad dokumentu v novom okne/tabe
-    window.open(document.fileUrl, '_blank');
+    setPreviewDocument(document);
+    setPreviewOpen(true);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setPreviewDocument(null);
   };
 
   const handleDelete = async (document: OrderDocument) => {
@@ -310,6 +319,118 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  };
+
+  const getFileType = (document: OrderDocument): 'pdf' | 'image' | 'document' | 'other' => {
+    const contentType = document.contentType.toLowerCase();
+    if (contentType === 'application/pdf') return 'pdf';
+    if (contentType.startsWith('image/')) return 'image';
+    if (contentType.includes('word') || contentType.includes('document')) return 'document';
+    return 'other';
+  };
+
+  const renderPreviewContent = () => {
+    if (!previewDocument) return null;
+
+    const fileType = getFileType(previewDocument);
+    const config = DOCUMENT_TYPE_CONFIG[previewDocument.type];
+
+    switch (fileType) {
+      case 'pdf':
+        return (
+          <Box sx={{ width: '100%', height: '70vh' }}>
+            <iframe
+              src={previewDocument.fileUrl}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                borderRadius: '8px'
+              }}
+              title={`Náhľad: ${previewDocument.name}`}
+            />
+          </Box>
+        );
+
+      case 'image':
+        return (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            maxHeight: '70vh',
+            overflow: 'auto'
+          }}>
+            <img
+              src={previewDocument.fileUrl}
+              alt={previewDocument.name}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                borderRadius: '8px'
+              }}
+            />
+          </Box>
+        );
+
+      case 'document':
+      case 'other':
+      default:
+        return (
+          <Box sx={{ 
+            textAlign: 'center', 
+            py: 6,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 3
+          }}>
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: '16px',
+                backgroundColor: config.bgColor,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '2rem'
+              }}
+            >
+              {config.icon}
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                {previewDocument.name}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                Tento typ súboru sa nedá zobraziť v náhľade
+              </Typography>
+              <Chip
+                label={config.label}
+                sx={{
+                  backgroundColor: config.bgColor,
+                  color: config.color,
+                  fontWeight: 500,
+                  mb: 3
+                }}
+              />
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<DownloadIcon />}
+              onClick={() => handleDownload(previewDocument)}
+              sx={{ 
+                backgroundColor: '#ff9f43',
+                '&:hover': { backgroundColor: '#f7b067' }
+              }}
+            >
+              Stiahnuť súbor
+            </Button>
+          </Box>
+        );
+    }
   };
 
   // Renderovanie triggeru bez počtu dokumentov a oranžovej farby
@@ -665,6 +786,120 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
               Zavrieť
             </Button>
           </DialogActions>
+        </StyledDialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog
+        open={previewOpen}
+        onClose={handleClosePreview}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'none',
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            maxHeight: '90vh',
+            overflow: 'hidden'
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(10px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)'
+          }
+        }}
+      >
+        <StyledDialogContent isDarkMode={isDarkMode}>
+          <DialogTitle>
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexShrink: 0
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <VisibilityIcon sx={{ color: '#2196f3' }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Náhľad dokumentu
+                </Typography>
+                {previewDocument && (
+                  <Chip 
+                    label={DOCUMENT_TYPE_CONFIG[previewDocument.type].label}
+                    size="small"
+                    sx={{ 
+                      backgroundColor: DOCUMENT_TYPE_CONFIG[previewDocument.type].bgColor,
+                      color: DOCUMENT_TYPE_CONFIG[previewDocument.type].color
+                    }}
+                  />
+                )}
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                {previewDocument && (
+                  <>
+                    <BareTooltip title="Stiahnuť">
+                      <IconButton
+                        onClick={() => handleDownload(previewDocument)}
+                        sx={{ 
+                          color: '#4caf50',
+                          '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' }
+                        }}
+                      >
+                        <DownloadIcon />
+                      </IconButton>
+                    </BareTooltip>
+                    <BareTooltip title="Otvoriť v novom okne">
+                      <IconButton
+                        onClick={() => window.open(previewDocument.fileUrl, '_blank')}
+                        sx={{ 
+                          color: '#ff9f43',
+                          '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.1)' }
+                        }}
+                      >
+                        <DescriptionIcon />
+                      </IconButton>
+                    </BareTooltip>
+                  </>
+                )}
+                <IconButton 
+                  onClick={handleClosePreview} 
+                  edge="end" 
+                  aria-label="close"
+                  sx={{
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+            </Box>
+          </DialogTitle>
+          
+          <Divider sx={{ borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', flexShrink: 0 }} />
+
+          <DialogContent sx={{ p: 3, overflow: 'auto' }}>
+            {previewDocument && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  {previewDocument.name}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    Veľkosť: {formatFileSize(previewDocument.fileSize)}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    Nahral: {previewDocument.uploadedByName}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    Dátum: {previewDocument.createdAt.toDate().toLocaleDateString('sk-SK')}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            
+            {renderPreviewContent()}
+          </DialogContent>
         </StyledDialogContent>
       </Dialog>
     </>

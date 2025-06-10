@@ -1,0 +1,149 @@
+[debug] [2025-06-10T09:48:36.037Z] ----------------------------------------------------------------------
+[debug] [2025-06-10T09:48:36.038Z] Command:       /Users/macbookm3pro/.nvm/versions/node/v20.19.0/bin/node /Users/macbookm3pro/.nvm/versions/node/v20.19.0/bin/firebase deploy
+[debug] [2025-06-10T09:48:36.038Z] CLI Version:   14.6.0
+[debug] [2025-06-10T09:48:36.038Z] Platform:      darwin
+[debug] [2025-06-10T09:48:36.038Z] Node Version:  v20.19.0
+[debug] [2025-06-10T09:48:36.038Z] Time:          Tue Jun 10 2025 11:48:36 GMT+0200 (Central European Summer Time)
+[debug] [2025-06-10T09:48:36.038Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-06-10T09:48:36.124Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-10T09:48:36.124Z] > authorizing via signed-in user (webpostup@gmail.com)
+[debug] [2025-06-10T09:48:36.124Z] [iam] checking project core-app-423c7 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasedatabase.instances.update","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]
+[debug] [2025-06-10T09:48:36.125Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:36.125Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:36.125Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/core-app-423c7:testIamPermissions [none]
+[debug] [2025-06-10T09:48:36.125Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/core-app-423c7:testIamPermissions x-goog-quota-user=projects/core-app-423c7
+[debug] [2025-06-10T09:48:36.125Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/core-app-423c7:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasedatabase.instances.update","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]}
+[debug] [2025-06-10T09:48:36.907Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/core-app-423c7:testIamPermissions 200
+[debug] [2025-06-10T09:48:36.908Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/core-app-423c7:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasedatabase.instances.update","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]}
+[debug] [2025-06-10T09:48:36.908Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:36.908Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:36.908Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/core-app-423c7/serviceAccounts/core-app-423c7@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-06-10T09:48:36.908Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/core-app-423c7/serviceAccounts/core-app-423c7@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-06-10T09:48:37.689Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/core-app-423c7/serviceAccounts/core-app-423c7@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2025-06-10T09:48:37.689Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/core-app-423c7/serviceAccounts/core-app-423c7@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-06-10T09:48:37.689Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:37.689Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:37.689Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7 [none]
+[debug] [2025-06-10T09:48:38.007Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7 200
+[debug] [2025-06-10T09:48:38.007Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7 {"projectId":"core-app-423c7","projectNumber":"869167769685","displayName":"core-app","name":"projects/core-app-423c7","resources":{"hostingSite":"core-app-423c7","realtimeDatabaseInstance":"core-app-423c7-default-rtdb"},"state":"ACTIVE","etag":"1_bd207049-36f5-4a17-a92d-f5cec609dfee"}
+[debug] [2025-06-10T09:48:38.008Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:38.008Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:38.008Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7 [none]
+[debug] [2025-06-10T09:48:38.253Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7 200
+[debug] [2025-06-10T09:48:38.253Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7 {"projectId":"core-app-423c7","projectNumber":"869167769685","displayName":"core-app","name":"projects/core-app-423c7","resources":{"hostingSite":"core-app-423c7","realtimeDatabaseInstance":"core-app-423c7-default-rtdb"},"state":"ACTIVE","etag":"1_bd207049-36f5-4a17-a92d-f5cec609dfee"}
+[info] 
+[info] === Deploying to 'core-app-423c7'...
+[info] 
+[info] i  deploying database, storage, firestore, functions, hosting 
+[info] Running command: npm --prefix "$RESOURCE_DIR" run build
+[info] ✔  functions: Finished running predeploy script. 
+[info] i  database: checking rules syntax... 
+[debug] [2025-06-10T09:48:39.319Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:39.319Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:39.319Z] >>> [apiv2][query] GET https://firebasedatabase.googleapis.com/v1beta/projects/core-app-423c7/locations/-/instances/core-app-423c7-default-rtdb [none]
+[debug] [2025-06-10T09:48:40.208Z] <<< [apiv2][status] GET https://firebasedatabase.googleapis.com/v1beta/projects/core-app-423c7/locations/-/instances/core-app-423c7-default-rtdb 200
+[debug] [2025-06-10T09:48:40.208Z] <<< [apiv2][body] GET https://firebasedatabase.googleapis.com/v1beta/projects/core-app-423c7/locations/-/instances/core-app-423c7-default-rtdb {"name":"projects/869167769685/locations/europe-west1/instances/core-app-423c7-default-rtdb","project":"projects/869167769685","databaseUrl":"https://core-app-423c7-default-rtdb.europe-west1.firebasedatabase.app","type":"DEFAULT_DATABASE","state":"ACTIVE"}
+[debug] [2025-06-10T09:48:40.209Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:40.209Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:40.210Z] >>> [apiv2][query] PUT https://core-app-423c7-default-rtdb.europe-west1.firebasedatabase.app/.settings/rules.json dryRun=true
+[debug] [2025-06-10T09:48:40.210Z] >>> [apiv2][body] PUT https://core-app-423c7-default-rtdb.europe-west1.firebasedatabase.app/.settings/rules.json "{\n  \"rules\": {\n    \".read\": \"auth != null\",\n    \".write\": \"auth != null\",\n    \"vehicles\": {\n      \".read\": \"auth != null\",\n      \".write\": \"auth != null\",\n      \"$vehicleId\": {\n        \".validate\": \"newData.hasChildren(['info', 'location', 'status', 'history', 'geofenceEvents'])\",\n        \"info\": {\n          \".validate\": \"newData.hasChildren(['plateNumber', 'type', 'driverId', 'companyId'])\"\n        },\n        \"location\": {\n          \".validate\": \"newData.hasChildren(['latitude', 'longitude', 'accuracy', 'speed', 'heading', 'timestamp', 'batteryLevel', 'isBatterySavingMode'])\",\n          \"latitude\": {\n            \".validate\": \"newData.isNumber() && newData.val() >= -90 && newData.val() <= 90\"\n          },\n          \"longitude\": {\n            \".validate\": \"newData.isNumber() && newData.val() >= -180 && newData.val() <= 180\"\n          },\n          \"accuracy\": {\n            \".validate\": \"newData.isNumber() && newData.val() >= 0\"\n          },\n          \"speed\": {\n            \".validate\": \"newData.isNumber() && newData.val() >= 0\"\n          },\n          \"heading\": {\n            \".validate\": \"newData.isNumber() && newData.val() >= 0 && newData.val() <= 360\"\n          },\n          \"timestamp\": {\n            \".validate\": \"newData.isNumber()\"\n          },\n          \"batteryLevel\": {\n            \".validate\": \"newData.isNumber() && newData.val() >= 0 && newData.val() <= 100\"\n          },\n          \"isBatterySavingMode\": {\n            \".validate\": \"newData.isBoolean()\"\n          }\n        },\n        \"status\": {\n          \".validate\": \"newData.hasChildren(['isActive', 'lastUpdate', 'batteryLevel', 'batterySavingMode'])\",\n          \"isActive\": {\n            \".validate\": \"newData.isBoolean()\"\n          },\n          \"lastUpdate\": {\n            \".validate\": \"newData.isNumber()\"\n          },\n          \"batteryLevel\": {\n            \".validate\": \"newData.isNumber() && newData.val() >= 0 && newData.val() <= 100\"\n          },\n          \"batterySavingMode\": {\n            \".validate\": \"newData.isBoolean()\"\n          }\n        },\n        \"history\": {\n          \".read\": \"auth != null\",\n          \".write\": \"auth != null\",\n          \"$timestamp\": {\n            \".validate\": \"newData.hasChildren(['latitude', 'longitude', 'speed', 'heading', 'batteryLevel', 'isBatterySavingMode'])\"\n          }\n        },\n        \"geofenceEvents\": {\n          \".read\": \"auth != null\",\n          \".write\": \"auth != null\",\n          \"$eventId\": {\n            \".validate\": \"newData.hasChildren(['regionId', 'type', 'timestamp'])\",\n            \"regionId\": {\n              \".validate\": \"newData.isString()\"\n            },\n            \"type\": {\n              \".validate\": \"newData.isString() && (newData.val() == 'entry' || newData.val() == 'exit')\"\n            },\n            \"timestamp\": {\n              \".validate\": \"newData.isNumber()\"\n            }\n          }\n        }\n      }\n    },\n    \"companies\": {\n      \".read\": \"auth != null\",\n      \".write\": \"auth != null\",\n      \"$companyId\": {\n        \".validate\": \"newData.hasChildren(['name', 'address', 'contact'])\"\n      }\n    }\n  }\n} "
+[debug] [2025-06-10T09:48:40.355Z] <<< [apiv2][status] PUT https://core-app-423c7-default-rtdb.europe-west1.firebasedatabase.app/.settings/rules.json 200
+[debug] [2025-06-10T09:48:40.356Z] <<< [apiv2][body] PUT https://core-app-423c7-default-rtdb.europe-west1.firebasedatabase.app/.settings/rules.json {"status":"ok"}
+[info] ✔  database: rules syntax for database core-app-423c7-default-rtdb is valid 
+[info] i  storage: ensuring required API firebasestorage.googleapis.com is enabled... 
+[debug] [2025-06-10T09:48:40.357Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:40.357Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:40.358Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/firebasestorage.googleapis.com [none]
+[debug] [2025-06-10T09:48:40.358Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/firebasestorage.googleapis.com x-goog-quota-user=projects/core-app-423c7
+[debug] [2025-06-10T09:48:41.291Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/firebasestorage.googleapis.com 200
+[debug] [2025-06-10T09:48:41.291Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/firebasestorage.googleapis.com [omitted]
+[info] ✔  storage: required API firebasestorage.googleapis.com is enabled 
+[debug] [2025-06-10T09:48:41.291Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:41.291Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:41.291Z] >>> [apiv2][query] GET https://firebasestorage.googleapis.com/v1alpha/projects/core-app-423c7/defaultBucket [none]
+[debug] [2025-06-10T09:48:41.680Z] <<< [apiv2][status] GET https://firebasestorage.googleapis.com/v1alpha/projects/core-app-423c7/defaultBucket 200
+[debug] [2025-06-10T09:48:41.680Z] <<< [apiv2][body] GET https://firebasestorage.googleapis.com/v1alpha/projects/core-app-423c7/defaultBucket {"name":"projects/core-app-423c7/defaultBucket","location":"US-CENTRAL1","bucket":{"name":"projects/core-app-423c7/buckets/core-app-423c7.firebasestorage.app"},"storageClass":"REGIONAL"}
+[info] i  firebase.storage: checking storage.rules for compilation errors... 
+[debug] [2025-06-10T09:48:41.682Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:41.682Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:41.682Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/core-app-423c7:test [none]
+[debug] [2025-06-10T09:48:41.682Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/core-app-423c7:test [omitted]
+[debug] [2025-06-10T09:48:41.991Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/core-app-423c7:test 200
+[debug] [2025-06-10T09:48:41.992Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/core-app-423c7:test {}
+[info] ✔  firebase.storage: rules file storage.rules compiled successfully 
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2025-06-10T09:48:41.996Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:41.996Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:41.996Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/core-app-423c7:test [none]
+[debug] [2025-06-10T09:48:41.996Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/core-app-423c7:test [omitted]
+[debug] [2025-06-10T09:48:42.684Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/core-app-423c7:test 200
+[debug] [2025-06-10T09:48:42.684Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/core-app-423c7:test {"issues":[{"sourcePosition":{"fileName":"firestore.rules","line":16,"column":14,"currentOffset":448,"endOffset":455},"description":"Unused function: isDriver.","severity":"WARNING"},{"sourcePosition":{"fileName":"firestore.rules","line":18,"column":9,"currentOffset":504,"endOffset":509},"description":"Invalid function name: exists.","severity":"WARNING"},{"sourcePosition":{"fileName":"firestore.rules","line":18,"column":57,"currentOffset":552,"endOffset":558},"description":"Invalid variable name: request.","severity":"WARNING"},{"sourcePosition":{"fileName":"firestore.rules","line":19,"column":9,"currentOffset":582,"endOffset":584},"description":"Invalid function name: get.","severity":"WARNING"},{"sourcePosition":{"fileName":"firestore.rules","line":19,"column":54,"currentOffset":627,"endOffset":633},"description":"Invalid variable name: request.","severity":"WARNING"}]}
+[warn] ⚠  [W] 16:14 - Unused function: isDriver. 
+[warn] ⚠  [W] 18:9 - Invalid function name: exists. 
+[warn] ⚠  [W] 18:57 - Invalid variable name: request. 
+[warn] ⚠  [W] 19:9 - Invalid function name: get. 
+[warn] ⚠  [W] 19:54 - Invalid variable name: request. 
+[info] ✔  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2025-06-10T09:48:42.685Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:42.685Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:42.685Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudresourcemanager.googleapis.com [none]
+[debug] [2025-06-10T09:48:42.685Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudresourcemanager.googleapis.com x-goog-quota-user=projects/core-app-423c7
+[debug] [2025-06-10T09:48:43.057Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudresourcemanager.googleapis.com 200
+[debug] [2025-06-10T09:48:43.058Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudresourcemanager.googleapis.com [omitted]
+[debug] [2025-06-10T09:48:43.058Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:43.058Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:43.058Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/core-app-423c7 [none]
+[debug] [2025-06-10T09:48:43.817Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/core-app-423c7 200
+[debug] [2025-06-10T09:48:43.818Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/core-app-423c7 {"projectNumber":"869167769685","projectId":"core-app-423c7","lifecycleState":"ACTIVE","name":"core-app","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-03-23T09:54:58.346881Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[debug] [2025-06-10T09:48:43.819Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:43.819Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:43.819Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:43.819Z] Checked if tokens are valid: true, expires at: 1749551293957
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2025-06-10T09:48:43.819Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:43.819Z] Checked if tokens are valid: true, expires at: 1749551293957
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2025-06-10T09:48:43.820Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:43.820Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:43.820Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-06-10T09:48:43.820Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/core-app-423c7
+[debug] [2025-06-10T09:48:43.821Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/runtimeconfig.googleapis.com [none]
+[debug] [2025-06-10T09:48:43.821Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/runtimeconfig.googleapis.com x-goog-quota-user=projects/core-app-423c7
+[debug] [2025-06-10T09:48:43.823Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudbuild.googleapis.com [none]
+[debug] [2025-06-10T09:48:43.823Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudbuild.googleapis.com x-goog-quota-user=projects/core-app-423c7
+[debug] [2025-06-10T09:48:43.825Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/artifactregistry.googleapis.com [none]
+[debug] [2025-06-10T09:48:43.826Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/artifactregistry.googleapis.com x-goog-quota-user=projects/core-app-423c7
+[debug] [2025-06-10T09:48:44.158Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudfunctions.googleapis.com 200
+[debug] [2025-06-10T09:48:44.158Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudfunctions.googleapis.com [omitted]
+[info] ✔  functions: required API cloudfunctions.googleapis.com is enabled 
+[debug] [2025-06-10T09:48:44.715Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudbuild.googleapis.com 200
+[debug] [2025-06-10T09:48:44.715Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/cloudbuild.googleapis.com [omitted]
+[info] ✔  functions: required API cloudbuild.googleapis.com is enabled 
+[debug] [2025-06-10T09:48:44.726Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/artifactregistry.googleapis.com 200
+[debug] [2025-06-10T09:48:44.726Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/artifactregistry.googleapis.com [omitted]
+[info] ✔  artifactregistry: required API artifactregistry.googleapis.com is enabled 
+[debug] [2025-06-10T09:48:44.757Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/runtimeconfig.googleapis.com 200
+[debug] [2025-06-10T09:48:44.757Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/core-app-423c7/services/runtimeconfig.googleapis.com [omitted]
+[debug] [2025-06-10T09:48:44.757Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:44.757Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:44.757Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7/adminSdkConfig [none]
+[debug] [2025-06-10T09:48:45.280Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7/adminSdkConfig 200
+[debug] [2025-06-10T09:48:45.280Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/core-app-423c7/adminSdkConfig {"projectId":"core-app-423c7","databaseURL":"https://core-app-423c7-default-rtdb.europe-west1.firebasedatabase.app","storageBucket":"core-app-423c7.firebasestorage.app"}
+[debug] [2025-06-10T09:48:45.281Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:45.281Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:45.281Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/core-app-423c7/configs [none]
+[debug] [2025-06-10T09:48:45.558Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/core-app-423c7/configs 200
+[debug] [2025-06-10T09:48:45.558Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/core-app-423c7/configs {"configs":[{"name":"projects/core-app-423c7/configs/email"},{"name":"projects/core-app-423c7/configs/google"},{"name":"projects/core-app-423c7/configs/smtp"}]}
+[debug] [2025-06-10T09:48:45.558Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:45.558Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:45.559Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:45.559Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:45.559Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:45.559Z] Checked if tokens are valid: true, expires at: 1749551293957
+[debug] [2025-06-10T09:48:45.559Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/core-app-423c7/configs/email/variables [none]
+[debug] [2025-06-10T09:48:45.559Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/core-app-423c7/configs/google/variables [none]
+[debug] [2025-06-10T09:48:45.562Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/core-app-423c7/configs/smtp/variables [none]
