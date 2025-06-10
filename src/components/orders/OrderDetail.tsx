@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -27,13 +27,19 @@ import {
   LocationOn as LocationOnIcon,
   Euro as EuroIcon,
   Notes as NotesIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Star as StarIcon
 } from '@mui/icons-material';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import { Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { sk } from 'date-fns/locale';
 import { OrderFormData } from '../../types/orders';
+import { countries } from '../../constants/countries';
+import { useAuth } from '../../contexts/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { Carrier } from '../../types/carriers';
 
 const StyledDialogContent = styled(DialogContent)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
@@ -83,6 +89,10 @@ const InfoValue = styled(Typography, {
 })<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? '#ffffff' : '#000000',
   wordBreak: 'break-word',
+  '& p': {
+    margin: 0,
+    display: 'inline',
+  }
 }));
 
 const StyledPaper = styled(Paper, {
@@ -123,14 +133,127 @@ function formatDate(date: Date | Timestamp | null | undefined) {
   return format(dateObj, 'dd.MM.yyyy HH:mm', { locale: sk });
 }
 
+// Komponent pre zobrazenie hodnotenia
+const RatingIndicator = ({ rating, size }: { rating: number; size?: string }) => {
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return '#2ecc71'; // Zelená
+    if (rating >= 3.5) return '#ff9f43'; // Oranžová
+    if (rating >= 2) return '#e74c3c'; // Červená
+    return '#95a5a6'; // Sivá
+  };
+
+  const getRatingText = (rating: number) => {
+    if (rating >= 4.5) return 'Výborné';
+    if (rating >= 3.5) return 'Dobré';
+    if (rating >= 2) return 'Slabé';
+    return 'Veľmi slabé';
+  };
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <StarIcon 
+        sx={{ 
+          color: getRatingColor(rating), 
+          fontSize: size === 'small' ? '1rem' : '1.2rem' 
+        }} 
+      />
+      <span 
+        style={{ 
+          color: getRatingColor(rating), 
+          fontWeight: 'bold',
+          fontSize: size === 'small' ? '0.75rem' : '0.875rem'
+        }}
+      >
+        {rating > 0 ? `${rating.toFixed(1)} (${getRatingText(rating)})` : 'Bez hodnotenia'}
+      </span>
+    </Box>
+  );
+};
+
 const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
   const { isDarkMode } = useThemeMode();
+  const { userData } = useAuth();
+  const [enhancedOrder, setEnhancedOrder] = useState<OrderFormData | null>(null);
+
+  // Doplnenie údajov dopravcu ak chýbajú
+  useEffect(() => {
+    const fetchCompleteCarrierData = async () => {
+      if (!order || !order.carrierCompany || !userData?.companyID) {
+        setEnhancedOrder(order);
+        return;
+      }
+
+      // Ak má objednávka dopravcu, ale chýbajú detaily
+      if (!order.carrierEmail || !order.carrierPhone || !order.carrierCountry) {
+        try {
+          // Načítame dopravcu z databázy
+          const carriersQuery = query(
+            collection(db, 'carriers'),
+            where('companyID', '==', userData.companyID),
+            where('companyName', '==', order.carrierCompany)
+          );
+          
+          const carriersSnapshot = await getDocs(carriersQuery);
+          
+          if (!carriersSnapshot.empty) {
+            const carrierDoc = carriersSnapshot.docs[0];
+            const carrierData = carrierDoc.data() as Carrier;
+            
+
+            
+            // Vypočítame priemerné hodnotenie dopravcu
+            const getCarrierAverageRating = (carrier: Carrier): number => {
+              if (!carrier.rating) return 0;
+              const { reliability, communication, serviceQuality, timeManagement } = carrier.rating;
+              if (reliability === 0 && communication === 0 && serviceQuality === 0 && timeManagement === 0) return 0;
+              return Math.round((reliability + communication + serviceQuality + timeManagement) / 4);
+            };
+
+            // Vytvoríme rozšírenú objednávku s kompletými údajmi dopravcu
+            const enhanced = {
+              ...order,
+              carrierEmail: order.carrierEmail || carrierData.contactEmail || '',
+              carrierPhone: order.carrierPhone || carrierData.contactPhone || '',
+              carrierIco: order.carrierIco || carrierData.ico || '',
+              carrierDic: order.carrierDic || carrierData.dic || '',
+              carrierIcDph: order.carrierIcDph || carrierData.icDph || '',
+              carrierStreet: order.carrierStreet || carrierData.street || '',
+              carrierCity: order.carrierCity || carrierData.city || '',
+              carrierZip: order.carrierZip || carrierData.zip || '',
+              carrierCountry: order.carrierCountry || carrierData.country || 'Slovensko',
+              carrierVehicleTypes: order.carrierVehicleTypes || carrierData.vehicleTypes || [],
+              carrierNotes: order.carrierNotes || carrierData.notes || '',
+              carrierRating: order.carrierRating || getCarrierAverageRating(carrierData),
+              carrierContact: order.carrierContact || `${carrierData.contactName} ${carrierData.contactSurname}`.trim() || '',
+            };
+            
+            setEnhancedOrder(enhanced);
+
+          } else {
+            setEnhancedOrder(order);
+          }
+        } catch (error) {
+          console.error('❌ Chyba pri načítaní údajov dopravcu:', error);
+          setEnhancedOrder(order);
+        }
+      } else {
+        setEnhancedOrder(order);
+      }
+    };
+
+    if (open && order) {
+      fetchCompleteCarrierData();
+    }
+  }, [open, order, userData?.companyID]);
+
+  // Použijeme enhancedOrder namiesto order v celom komponente
+  const displayOrder = enhancedOrder || order;
   
-  if (!order) return null;
+  if (!displayOrder) return null;
 
   // Vypočítame zisk
-  const customerPrice = parseFloat(order.customerPrice || order.suma || '0');
-  const carrierPrice = parseFloat(order.carrierPrice || '0');
+  const customerPrice = parseFloat(displayOrder.customerPrice || displayOrder.suma || '0');
+  const carrierPrice = parseFloat(displayOrder.carrierPrice || '0');
   const profit = !isNaN(customerPrice) && !isNaN(carrierPrice) ? customerPrice - carrierPrice : 0;
 
   return (
@@ -167,13 +290,13 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
           gap: 1
         }}>
           <BusinessIcon sx={{ color: '#ff9f43' }} />
-          Detail objednávky č. {order.orderNumberFormatted || 'N/A'}
+          Detail objednávky č. {displayOrder.orderNumberFormatted || 'N/A'}
         </DialogTitle>
 
         <Divider sx={{ mb: 3, borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
 
         <Grid container spacing={3}>
-          {/* Základné údaje o objednávke */}
+          {/* Zákazník - kompletné údaje */}
           <Grid item xs={12} md={6}>
             <StyledPaper isDarkMode={isDarkMode}>
               <SectionTitle isDarkMode={isDarkMode}>
@@ -182,42 +305,112 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               </SectionTitle>
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Spoločnosť:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>{(order.zakaznik || order.customerCompany) || '-'}</InfoValue>
+                <InfoValue isDarkMode={isDarkMode}>{(displayOrder.zakaznik || displayOrder.customerCompany) || '-'}</InfoValue>
               </InfoItem>
-              {order.customerVatId && (
-                <InfoItem>
-                  <InfoLabel isDarkMode={isDarkMode}>IČ DPH:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>{order.customerVatId}</InfoValue>
-                </InfoItem>
-              )}
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Kontaktná osoba:</InfoLabel>
                 <InfoValue isDarkMode={isDarkMode}>
-                  {(order.kontaktnaOsoba || `${order.customerContactName || ''} ${order.customerContactSurname || ''}`).trim() || '-'}
+                  {(displayOrder.kontaktnaOsoba || `${displayOrder.customerContactName || ''} ${displayOrder.customerContactSurname || ''}`).trim() || '-'}
                 </InfoValue>
               </InfoItem>
-              {order.customerEmail && (
+              {displayOrder.customerEmail && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Email:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>{order.customerEmail}</InfoValue>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.customerEmail}</InfoValue>
                 </InfoItem>
               )}
-              {order.customerPhone && (
+              {displayOrder.customerPhone && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Telefón:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>{order.customerPhone}</InfoValue>
+                  <InfoValue isDarkMode={isDarkMode}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {displayOrder.customerPhone.startsWith('+') && (
+                        <>
+                          <img 
+                            loading="lazy" 
+                            width="20" 
+                            height="15"
+                            src={`https://flagcdn.com/${(countries.find(c => displayOrder.customerPhone?.startsWith(c.prefix))?.code || 'sk').toLowerCase()}.svg`} 
+                            alt="Vlajka krajiny" 
+                            style={{ borderRadius: '2px', objectFit: 'cover' }}
+                          />
+                          <span>{displayOrder.customerPhone}</span>
+                        </>
+                      )}
+                      {!displayOrder.customerPhone.startsWith('+') && (
+                        <span>{displayOrder.customerPhone}</span>
+                      )}
+                    </Box>
+                  </InfoValue>
+                </InfoItem>
+              )}
+              {(displayOrder as any).customerIco && (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>IČO:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>{(displayOrder as any).customerIco}</InfoValue>
+                </InfoItem>
+              )}
+              {displayOrder.customerVatId && (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>IČ DPH:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.customerVatId}</InfoValue>
+                </InfoItem>
+              )}
+              {(displayOrder as any).customerDic && (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>DIČ:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>{(displayOrder as any).customerDic}</InfoValue>
+                </InfoItem>
+              )}
+              <InfoItem>
+                <InfoLabel isDarkMode={isDarkMode}>Krajina:</InfoLabel>
+                <InfoValue isDarkMode={isDarkMode}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <img 
+                      loading="lazy" 
+                      width="20" 
+                      height="15"
+                      src={`https://flagcdn.com/${(countries.find(c => c.name === displayOrder.customerCountry)?.code || 'sk').toLowerCase()}.svg`} 
+                      alt="Vlajka krajiny" 
+                      style={{ borderRadius: '2px', objectFit: 'cover' }}
+                    />
+                    <span>{displayOrder.customerCountry || 'Slovensko'}</span>
+                  </Box>
+                </InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel isDarkMode={isDarkMode}>Splatnosť:</InfoLabel>
+                <InfoValue isDarkMode={isDarkMode}>
+                  <Chip 
+                    label={`${displayOrder.customerPaymentTermDays || 30} dní`}
+                    color="primary"
+                    size="small"
+                    sx={{ 
+                      backgroundColor: '#ff9f43',
+                      color: '#ffffff',
+                      fontWeight: 'bold'
+                    }}
+                  />
+                </InfoValue>
+              </InfoItem>
+              {(displayOrder as any).customerRating && (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>Hodnotenie:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>
+                    <RatingIndicator rating={(displayOrder as any).customerRating} size="small" />
+                  </InfoValue>
                 </InfoItem>
               )}
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Adresa:</InfoLabel>
                 <InfoValue isDarkMode={isDarkMode}>
-                  {order.customerStreet ? `${order.customerStreet}, ${order.customerZip} ${order.customerCity}, ${order.customerCountry}` : '-'}
+                  {displayOrder.customerStreet ? `${displayOrder.customerStreet}, ${displayOrder.customerZip} ${displayOrder.customerCity}, ${displayOrder.customerCountry}` : '-'}
                 </InfoValue>
               </InfoItem>
             </StyledPaper>
           </Grid>
 
-          {/* Dopravca */}
+          {/* Dopravca - kompletné údaje */}
           <Grid item xs={12} md={6}>
             <StyledPaper isDarkMode={isDarkMode}>
               <SectionTitle isDarkMode={isDarkMode}>
@@ -226,20 +419,121 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               </SectionTitle>
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Spoločnosť:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>{order.carrierCompany || '-'}</InfoValue>
+                <InfoValue isDarkMode={isDarkMode}>{displayOrder.carrierCompany || '-'}</InfoValue>
               </InfoItem>
               <InfoItem>
-                <InfoLabel isDarkMode={isDarkMode}>Kontakt:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>{order.carrierContact || '-'}</InfoValue>
+                <InfoLabel isDarkMode={isDarkMode}>Kontaktná osoba:</InfoLabel>
+                <InfoValue isDarkMode={isDarkMode}>{displayOrder.carrierContact || '-'}</InfoValue>
               </InfoItem>
+              <InfoItem>
+                <InfoLabel isDarkMode={isDarkMode}>Email:</InfoLabel>
+                <InfoValue isDarkMode={isDarkMode}>{displayOrder.carrierEmail || '-'}</InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel isDarkMode={isDarkMode}>Telefón:</InfoLabel>
+                <InfoValue isDarkMode={isDarkMode}>
+                  {displayOrder.carrierPhone ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {displayOrder.carrierPhone.startsWith('+') && (
+                        <>
+                          <img 
+                            loading="lazy" 
+                            width="20" 
+                            height="15"
+                            src={`https://flagcdn.com/${(countries.find(c => displayOrder.carrierPhone?.startsWith(c.prefix))?.code || 'sk').toLowerCase()}.svg`} 
+                            alt="Vlajka krajiny" 
+                            style={{ borderRadius: '2px', objectFit: 'cover' }}
+                          />
+                          <span>{displayOrder.carrierPhone}</span>
+                        </>
+                      )}
+                      {!displayOrder.carrierPhone.startsWith('+') && (
+                        <span>{displayOrder.carrierPhone}</span>
+                      )}
+                    </Box>
+                  ) : (
+                    <span>-</span>
+                  )}
+                </InfoValue>
+              </InfoItem>
+              {displayOrder.carrierIco && (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>IČO:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.carrierIco}</InfoValue>
+                </InfoItem>
+              )}
+              {displayOrder.carrierIcDph && (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>IČ DPH:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.carrierIcDph}</InfoValue>
+                </InfoItem>
+              )}
+              {displayOrder.carrierDic && (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>DIČ:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.carrierDic}</InfoValue>
+                </InfoItem>
+              )}
+              <InfoItem>
+                <InfoLabel isDarkMode={isDarkMode}>Krajina:</InfoLabel>
+                <InfoValue isDarkMode={isDarkMode}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <img 
+                      loading="lazy" 
+                      width="20" 
+                      height="15"
+                      src={`https://flagcdn.com/${(countries.find(c => c.name === displayOrder.carrierCountry)?.code || 'sk').toLowerCase()}.svg`} 
+                      alt="Vlajka krajiny" 
+                      style={{ borderRadius: '2px', objectFit: 'cover' }}
+                    />
+                    <span>{displayOrder.carrierCountry || 'Slovensko'}</span>
+                  </Box>
+                </InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel isDarkMode={isDarkMode}>Splatnosť:</InfoLabel>
+                <InfoValue isDarkMode={isDarkMode}>
+                  <Chip 
+                    label={`${displayOrder.carrierPaymentTermDays || 60} dní`}
+                    color="primary"
+                    size="small"
+                    sx={{ 
+                      backgroundColor: '#ff9f43',
+                      color: '#ffffff',
+                      fontWeight: 'bold'
+                    }}
+                  />
+                </InfoValue>
+              </InfoItem>
+
+              {(displayOrder.carrierRating && displayOrder.carrierRating > 0) ? (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>Hodnotenie:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>
+                    <RatingIndicator rating={displayOrder.carrierRating} size="small" />
+                  </InfoValue>
+                </InfoItem>
+              ) : null}
+              <InfoItem>
+                <InfoLabel isDarkMode={isDarkMode}>Adresa:</InfoLabel>
+                <InfoValue isDarkMode={isDarkMode}>
+                  {displayOrder.carrierStreet ? `${displayOrder.carrierStreet}, ${displayOrder.carrierZip} ${displayOrder.carrierCity}, ${displayOrder.carrierCountry}` : '-'}
+                </InfoValue>
+              </InfoItem>
+              {displayOrder.carrierVehicleTypes && displayOrder.carrierVehicleTypes.length > 0 && (
+                <InfoItem>
+                  <InfoLabel isDarkMode={isDarkMode}>Typy vozidiel:</InfoLabel>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.carrierVehicleTypes.join(', ')}</InfoValue>
+                </InfoItem>
+              )}
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>ŠPZ vozidla:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>{order.carrierVehicleReg || '-'}</InfoValue>
+                <InfoValue isDarkMode={isDarkMode}>{displayOrder.carrierVehicleReg || '-'}</InfoValue>
               </InfoItem>
-              {order.vyzadujeSaTypNavesu && (
+              {displayOrder.vyzadujeSaTypNavesu && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Typ návesu:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>{order.vyzadujeSaTypNavesu}</InfoValue>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.vyzadujeSaTypNavesu}</InfoValue>
                 </InfoItem>
               )}
             </StyledPaper>
@@ -262,8 +556,8 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {order.loadingPlaces && order.loadingPlaces.length > 0 ? (
-                    order.loadingPlaces.map((place, index) => (
+                  {displayOrder.loadingPlaces && displayOrder.loadingPlaces.length > 0 ? (
+                    displayOrder.loadingPlaces.map((place, index) => (
                       <TableRow key={place.id || `loading-${index}`}>
                         <StyledTableCell isDarkMode={isDarkMode}>
                           {place.street}, {place.zip} {place.city}, {place.country}
@@ -308,8 +602,8 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {order.unloadingPlaces && order.unloadingPlaces.length > 0 ? (
-                    order.unloadingPlaces.map((place, index) => (
+                  {displayOrder.unloadingPlaces && displayOrder.unloadingPlaces.length > 0 ? (
+                    displayOrder.unloadingPlaces.map((place, index) => (
                       <TableRow key={place.id || `unloading-${index}`}>
                         <StyledTableCell isDarkMode={isDarkMode}>
                           {place.street}, {place.zip} {place.city}, {place.country}
@@ -357,8 +651,8 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {order.loadingPlaces && order.loadingPlaces.flatMap(place => place.goods).length > 0 ? (
-                    order.loadingPlaces.flatMap(place => 
+                  {displayOrder.loadingPlaces && displayOrder.loadingPlaces.flatMap(place => place.goods).length > 0 ? (
+                    displayOrder.loadingPlaces.flatMap(place => 
                       place.goods.map((item, index) => (
                         <TableRow key={item.id || `goods-${index}`}>
                           <StyledTableCell isDarkMode={isDarkMode}>{item.name || '-'}</StyledTableCell>
@@ -393,13 +687,13 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Cena zákazníka:</InfoLabel>
                 <InfoValue isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>
-                  {(order.customerPrice || order.suma || '0')} € {order.mena ? `(${order.mena})` : ''}
+                  {(displayOrder.customerPrice || displayOrder.suma || '0')} € {displayOrder.mena ? `(${displayOrder.mena})` : ''}
                 </InfoValue>
               </InfoItem>
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Cena dopravcu:</InfoLabel>
                 <InfoValue isDarkMode={isDarkMode} sx={{ color: '#1976d2', fontWeight: 'bold' }}>
-                  {order.carrierPrice || '0'} €
+                  {displayOrder.carrierPrice || '0'} €
                 </InfoValue>
               </InfoItem>
               <InfoItem>
@@ -411,7 +705,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                   {profit.toFixed(2)} €
                 </InfoValue>
               </InfoItem>
-              {order.vyuctovaniePodlaMnozstva && (
+              {displayOrder.vyuctovaniePodlaMnozstva && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Vyúčtovanie:</InfoLabel>
                   <InfoValue isDarkMode={isDarkMode}>
@@ -437,22 +731,22 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                 <NotesIcon />
                 Poznámky a ďalšie údaje
               </SectionTitle>
-              {order.cisloNakladuZakaznika && (
+              {displayOrder.cisloNakladuZakaznika && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Číslo zákazníka:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>{order.cisloNakladuZakaznika}</InfoValue>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.cisloNakladuZakaznika}</InfoValue>
                 </InfoItem>
               )}
-              {order.poziadavky && (
+              {displayOrder.poziadavky && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Požiadavky:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>{order.poziadavky}</InfoValue>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.poziadavky}</InfoValue>
                 </InfoItem>
               )}
-              {order.internaPoznamka && (
+              {displayOrder.internaPoznamka && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Interná poznámka:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>{order.internaPoznamka}</InfoValue>
+                  <InfoValue isDarkMode={isDarkMode}>{displayOrder.internaPoznamka}</InfoValue>
                 </InfoItem>
               )}
             </StyledPaper>
@@ -469,10 +763,10 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Vytvorená:</InfoLabel>
                   <InfoValue isDarkMode={isDarkMode}>
-                    {order.createdAt ? 
-                      (order.createdAt instanceof Timestamp ? 
-                        format(order.createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk }) : 
-                        format(new Date(order.createdAt), 'dd.MM.yyyy HH:mm', { locale: sk })) 
+                    {displayOrder.createdAt ? 
+                      (displayOrder.createdAt instanceof Timestamp ? 
+                        format(displayOrder.createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk }) : 
+                        format(new Date(displayOrder.createdAt), 'dd.MM.yyyy HH:mm', { locale: sk })) 
                       : '-'}
                   </InfoValue>
                 </InfoItem>
@@ -481,25 +775,25 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                   <InfoValue isDarkMode={isDarkMode}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <PersonIcon sx={{ fontSize: '1rem', color: '#ff9f43' }} />
-                      {order.createdByName || '-'}
+                      {displayOrder.createdByName || '-'}
                     </Box>
                   </InfoValue>
                 </InfoItem>
-                {order.updatedAt && (
+                {displayOrder.updatedAt && (
                   <>
                     <InfoItem>
                       <InfoLabel isDarkMode={isDarkMode}>Aktualizovaná:</InfoLabel>
                       <InfoValue isDarkMode={isDarkMode}>
-                        {format(order.updatedAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk })}
+                        {format(displayOrder.updatedAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk })}
                       </InfoValue>
                     </InfoItem>
-                    {order.updatedBy && (
+                    {displayOrder.updatedBy && (
                       <InfoItem>
                         <InfoLabel isDarkMode={isDarkMode}>Upravil:</InfoLabel>
                         <InfoValue isDarkMode={isDarkMode}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <EditIcon sx={{ fontSize: '1rem', color: '#1976d2' }} />
-                            ID: {order.updatedBy}
+                            ID: {displayOrder.updatedBy}
                           </Box>
                         </InfoValue>
                       </InfoItem>

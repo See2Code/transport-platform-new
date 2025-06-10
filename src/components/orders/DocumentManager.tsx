@@ -31,6 +31,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DescriptionIcon from '@mui/icons-material/Description';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 // Firebase
 import { collection, addDoc, query, where, deleteDoc, doc, Timestamp, onSnapshot } from 'firebase/firestore';
@@ -277,6 +278,11 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
 
   const handleDownload = (document: OrderDocument) => {
     // Otvoríme súbor v novom okne
+    window.open(document.fileUrl, '_blank');
+  };
+
+  const handlePreview = (document: OrderDocument) => {
+    // Otvoríme náhľad dokumentu v novom okne/tabe
     window.open(document.fileUrl, '_blank');
   };
 
@@ -602,6 +608,18 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
                           </Box>
 
                           <Box sx={{ display: 'flex', gap: 0.5 }}>
+                            <BareTooltip title="Náhľad">
+                              <IconButton
+                                size="small"
+                                onClick={() => handlePreview(document)}
+                                sx={{ 
+                                  color: '#2196f3',
+                                  '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.1)' }
+                                }}
+                              >
+                                <VisibilityIcon fontSize="small" />
+                              </IconButton>
+                            </BareTooltip>
                             <BareTooltip title="Stiahnuť">
                               <IconButton
                                 size="small"

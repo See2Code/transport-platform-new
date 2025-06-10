@@ -602,12 +602,32 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
 
     // Pridáme handleCarrierAutocompleteChange
     const handleCarrierAutocompleteChange = (event: any, newValue: Carrier | null) => {
+        // Vypočítame priemerné hodnotenie dopravcu
+        const getCarrierAverageRating = (carrier: Carrier): number => {
+            if (!carrier.rating) return 0;
+            const { reliability, communication, serviceQuality, timeManagement } = carrier.rating;
+            if (reliability === 0 && communication === 0 && serviceQuality === 0 && timeManagement === 0) return 0;
+            return Math.round((reliability + communication + serviceQuality + timeManagement) / 4);
+        };
+
         if (!newValue) {
             setFormData(prev => ({
                 ...prev,
                 carrierCompany: '',
                 carrierContact: '',
                 carrierPaymentTermDays: 60,
+                carrierEmail: '',
+                carrierPhone: '',
+                carrierIco: '',
+                carrierDic: '',
+                carrierIcDph: '',
+                carrierStreet: '',
+                carrierCity: '',
+                carrierZip: '',
+                carrierCountry: '',
+                carrierVehicleTypes: [],
+                carrierNotes: '',
+                carrierRating: 0,
             }));
             return;
         }
@@ -617,6 +637,19 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
             carrierCompany: newValue.companyName,
             carrierContact: `${newValue.contactName || ''} ${newValue.contactSurname || ''} ${newValue.contactPhone || ''}`.trim(),
             carrierPaymentTermDays: newValue.paymentTermDays || 60,
+            // Pridáme kompletné údaje dopravcu
+            carrierEmail: newValue.contactEmail || '',
+            carrierPhone: newValue.contactPhone || '',
+            carrierIco: newValue.ico || '',
+            carrierDic: newValue.dic || '',
+            carrierIcDph: newValue.icDph || '',
+            carrierStreet: newValue.street || '',
+            carrierCity: newValue.city || '',
+            carrierZip: newValue.zip || '',
+            carrierCountry: newValue.country || 'Slovensko',
+            carrierVehicleTypes: newValue.vehicleTypes || [],
+            carrierNotes: newValue.notes || '',
+            carrierRating: getCarrierAverageRating(newValue),
         }));
     };
 

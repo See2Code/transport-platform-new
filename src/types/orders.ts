@@ -80,6 +80,19 @@ export interface OrderFormData {
   carrierVehicleReg: string;
   carrierPrice: string;
   carrierPaymentTermDays?: number; // Individuálna splatnosť pre túto objednávku
+  // Kompletné údaje dopravcu (rovnako ako pre zákazníka)
+  carrierEmail?: string;
+  carrierPhone?: string;
+  carrierIco?: string;
+  carrierDic?: string;
+  carrierIcDph?: string;
+  carrierStreet?: string;
+  carrierCity?: string;
+  carrierZip?: string;
+  carrierCountry?: string;
+  carrierVehicleTypes?: string[];
+  carrierNotes?: string;
+  carrierRating?: number; // Priemerné hodnotenie dopravcu
   companyID?: string;
   createdBy?: string;
   createdByName?: string;

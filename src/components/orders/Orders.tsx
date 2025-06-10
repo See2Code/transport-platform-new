@@ -20,6 +20,7 @@ import {
   TableContainer, 
   TableHead, 
   TableRow, 
+  TablePagination,
   Tabs,
   Tab,
   Grid,
@@ -651,6 +652,18 @@ const OrdersList: React.FC = () => {
   const [showPdfLoadingDialog, setShowPdfLoadingDialog] = useState(false);
   const [pdfLoadingMessage, setPdfLoadingMessage] = useState('');
 
+  // State pre stránkovanie všetkých kariet
+  const [ordersPage, setOrdersPage] = useState(0);
+  const [ordersRowsPerPage, setOrdersRowsPerPage] = useState(25);
+  const [customersPage, setCustomersPage] = useState(0);
+  const [customersRowsPerPage, setCustomersRowsPerPage] = useState(25);
+  const [carriersPage, setCarriersPage] = useState(0);
+  const [carriersRowsPerPage, setCarriersRowsPerPage] = useState(25);
+  const [locationsPage, setLocationsPage] = useState(0);
+  const [locationsRowsPerPage, setLocationsRowsPerPage] = useState(25);
+  const [dispatchersPage, setDispatchersPage] = useState(0);
+  const [dispatchersRowsPerPage, setDispatchersRowsPerPage] = useState(25);
+
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   
   const fetchTeamMembers = useCallback(async () => {
@@ -871,6 +884,19 @@ const OrdersList: React.FC = () => {
             carrierContact: data.carrierContact || '', 
             carrierVehicleReg: data.carrierVehicleReg || '', 
             carrierPrice: data.carrierPrice || '', 
+            // Kompletné údaje dopravcu
+            carrierEmail: data.carrierEmail || '',
+            carrierPhone: data.carrierPhone || '',
+            carrierIco: data.carrierIco || '',
+            carrierDic: data.carrierDic || '',
+            carrierIcDph: data.carrierIcDph || '',
+            carrierStreet: data.carrierStreet || '',
+            carrierCity: data.carrierCity || '',
+            carrierZip: data.carrierZip || '',
+            carrierCountry: data.carrierCountry || '',
+            carrierVehicleTypes: data.carrierVehicleTypes || [],
+            carrierNotes: data.carrierNotes || '',
+            carrierRating: data.carrierRating || 0,
             reminderDateTime: convertToDate(data.reminderDateTime),
             rating: data.rating || null, // Pridám rating pole
           };
@@ -1518,6 +1544,10 @@ const OrdersList: React.FC = () => {
     );
   });
 
+  // Paginované verzie všetkých filtrov
+  const paginatedOrders = getFilteredCustomerOrders().slice(ordersPage * ordersRowsPerPage, ordersPage * ordersRowsPerPage + ordersRowsPerPage);
+  const paginatedCustomers = filteredCustomers.slice(customersPage * customersRowsPerPage, customersPage * customersRowsPerPage + customersRowsPerPage);
+
   const handleAddCarrier = () => {
     setSelectedCarrierForEdit(null); // Reset editácie
     setShowCarrierForm(true);
@@ -1903,6 +1933,33 @@ const OrdersList: React.FC = () => {
       (carrier.icDph || '').toLowerCase().includes(searchLower)
     );
   });
+
+  const paginatedCarriers = filteredCarriers.slice(carriersPage * carriersRowsPerPage, carriersPage * carriersRowsPerPage + carriersRowsPerPage);
+
+  // Filtrovanie miest
+  const filteredLocations = locations.filter(location => {
+    const searchLower = locationSearchQuery.toLowerCase();
+    return (
+      location.city?.toLowerCase().includes(searchLower) ||
+      location.street?.toLowerCase().includes(searchLower) ||
+      (location.contactPersonName || location.contactPerson)?.toLowerCase().includes(searchLower) ||
+      location.contactPersonPhone?.toLowerCase().includes(searchLower) ||
+      location.companyName?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const paginatedLocations = filteredLocations.slice(locationsPage * locationsRowsPerPage, locationsPage * locationsRowsPerPage + locationsRowsPerPage);
+
+  // Filtrovanie špeditérov
+  const filteredDispatchers = dispatchers.filter(dispatcher => {
+    const searchLower = dispatcherSearchQuery.toLowerCase();
+    return (
+      dispatcher.name?.toLowerCase().includes(searchLower) ||
+      dispatcher.email?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const paginatedDispatchers = filteredDispatchers.slice(dispatchersPage * dispatchersRowsPerPage, dispatchersPage * dispatchersRowsPerPage + dispatchersRowsPerPage);
 
   const handleCarrierFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -2341,7 +2398,7 @@ const OrdersList: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {getFilteredCustomerOrders().map((order) => (
+                  {paginatedOrders.map((order) => (
                     <OrderRow
                       key={order.id}
                       order={order}
@@ -2367,6 +2424,19 @@ const OrdersList: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                component="div"
+                count={getFilteredCustomerOrders().length}
+                page={ordersPage}
+                onPageChange={(e: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => setOrdersPage(newPage)}
+                rowsPerPage={ordersRowsPerPage}
+                onRowsPerPageChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                  setOrdersRowsPerPage(parseInt(e.target.value, 10));
+                  setOrdersPage(0);
+                }}
+                rowsPerPageOptions={[10, 25, 50, 100]}
+                labelRowsPerPage={t('business.rowsPerPage')}
+              />
             </TableContainer>
           )}
           </TabPanel>
@@ -2469,7 +2539,7 @@ const OrdersList: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredCustomers.map((customer) => (
+                      {paginatedCustomers.map((customer) => (
                         <TableRow key={customer.id}>
                           <TableCell>{customer.company || (customer as any).companyName || '-'}</TableCell>
                           <TableCell>{`${customer.contactName || ''} ${customer.contactSurname || ''}`.trim() || '-'}</TableCell>
@@ -2582,6 +2652,19 @@ const OrdersList: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    component="div"
+                    count={filteredCustomers.length}
+                    page={customersPage}
+                    onPageChange={(e: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => setCustomersPage(newPage)}
+                    rowsPerPage={customersRowsPerPage}
+                    onRowsPerPageChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                      setCustomersRowsPerPage(parseInt(e.target.value, 10));
+                      setCustomersPage(0);
+                    }}
+                    rowsPerPageOptions={[10, 25, 50, 100]}
+                    labelRowsPerPage={t('business.rowsPerPage')}
+                  />
                 </TableContainer>
               )}
             </Box>
@@ -2687,7 +2770,7 @@ const OrdersList: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredCarriers.map((carrier) => (
+                      {paginatedCarriers.map((carrier) => (
                         <TableRow key={carrier.id}>
                           <TableCell>{carrier.companyName}</TableCell>
                           <TableCell>{`${carrier.contactName} ${carrier.contactSurname}`}</TableCell>
@@ -2782,6 +2865,19 @@ const OrdersList: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    component="div"
+                    count={filteredCarriers.length}
+                    page={carriersPage}
+                    onPageChange={(e: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => setCarriersPage(newPage)}
+                    rowsPerPage={carriersRowsPerPage}
+                    onRowsPerPageChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                      setCarriersRowsPerPage(parseInt(e.target.value, 10));
+                      setCarriersPage(0);
+                    }}
+                    rowsPerPageOptions={[10, 25, 50, 100]}
+                    labelRowsPerPage={t('business.rowsPerPage')}
+                  />
                 </TableContainer>
               )}
             </Box>
@@ -2883,18 +2979,7 @@ const OrdersList: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {locations
-                        .filter(location => {
-                          const searchLower = locationSearchQuery.toLowerCase();
-                          return (
-                            location.city?.toLowerCase().includes(searchLower) ||
-                            location.street?.toLowerCase().includes(searchLower) ||
-                            (location.contactPersonName || location.contactPerson)?.toLowerCase().includes(searchLower) ||
-                            location.contactPersonPhone?.toLowerCase().includes(searchLower) ||
-                            location.companyName?.toLowerCase().includes(searchLower)
-                          );
-                        })
-                        .map((location) => (
+                      {paginatedLocations.map((location) => (
                           <TableRow key={location.id}>
                             <TableCell>
                               <Chip 
@@ -2945,6 +3030,19 @@ const OrdersList: React.FC = () => {
                         ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    component="div"
+                    count={filteredLocations.length}
+                    page={locationsPage}
+                    onPageChange={(e: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => setLocationsPage(newPage)}
+                    rowsPerPage={locationsRowsPerPage}
+                    onRowsPerPageChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                      setLocationsRowsPerPage(parseInt(e.target.value, 10));
+                      setLocationsPage(0);
+                    }}
+                    rowsPerPageOptions={[10, 25, 50, 100]}
+                    labelRowsPerPage={t('business.rowsPerPage')}
+                  />
                 </TableContainer>
               )}
             </Box>
@@ -3138,14 +3236,7 @@ const OrdersList: React.FC = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {dispatchers
-                          .filter(dispatcher => {
-                            const searchLower = dispatcherSearchQuery.toLowerCase();
-                            return (
-                              dispatcher.name?.toLowerCase().includes(searchLower) ||
-                              dispatcher.email?.toLowerCase().includes(searchLower)
-                            );
-                          })
+                        {paginatedDispatchers
                           .sort((a, b) => b.totalProfit - a.totalProfit) // Zoradenie podľa zisku
                           .map((dispatcher) => (
                             <TableRow key={dispatcher.id}>
@@ -3180,6 +3271,19 @@ const OrdersList: React.FC = () => {
                           ))}
                       </TableBody>
                     </Table>
+                    <TablePagination
+                      component="div"
+                      count={filteredDispatchers.length}
+                      page={dispatchersPage}
+                      onPageChange={(e: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => setDispatchersPage(newPage)}
+                      rowsPerPage={dispatchersRowsPerPage}
+                      onRowsPerPageChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                        setDispatchersRowsPerPage(parseInt(e.target.value, 10));
+                        setDispatchersPage(0);
+                      }}
+                      rowsPerPageOptions={[10, 25, 50, 100]}
+                      labelRowsPerPage={t('business.rowsPerPage')}
+                    />
                   </TableContainer>
 
                   {/* Motivačný graf špeditérov */}

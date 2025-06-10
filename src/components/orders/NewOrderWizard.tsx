@@ -414,6 +414,20 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     carrierContact: '',
     carrierVehicleReg: '',
     carrierPrice: '',
+    // Pridané kompletné polia dopravcu
+    carrierEmail: '',
+    carrierPhone: '',
+    carrierIco: '',
+    carrierDic: '',
+    carrierIcDph: '',
+    carrierStreet: '',
+    carrierCity: '',
+    carrierZip: '',
+    carrierCountry: 'Slovensko',
+    carrierVehicleTypes: [],
+    carrierNotes: '',
+    carrierRating: 0,
+    carrierPaymentTermDays: 60,
   });
 
   // Loading states
@@ -751,6 +765,49 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     }
   }, [isEdit, orderData, teamMembers]);
 
+  // Načítanie kompletných údajov dopravcu pri editácii objednávky
+  useEffect(() => {
+    if (isEdit && orderData && orderData.carrierCompany && carriers.length > 0) {
+      // Ak objednávka má dopravcu, ale chýbajú detaily (staré objednávky)
+      if (!orderData.carrierEmail || !orderData.carrierPhone || !orderData.carrierCountry) {
+        // Nájdeme dopravcu v zozname
+        const matchingCarrier = carriers.find(c => c.companyName === orderData.carrierCompany);
+        
+        if (matchingCarrier) {
+          console.log('🔄 Doplňujem chýbajúce údaje dopravcu z databázy:', matchingCarrier);
+          
+          // Vypočítame priemerné hodnotenie dopravcu
+          const getCarrierAverageRating = (carrier: Carrier): number => {
+            if (!carrier.rating) return 0;
+            const { reliability, communication, serviceQuality, timeManagement } = carrier.rating;
+            if (reliability === 0 && communication === 0 && serviceQuality === 0 && timeManagement === 0) return 0;
+            return Math.round((reliability + communication + serviceQuality + timeManagement) / 4);
+          };
+
+          // Doplníme chýbajúce údaje dopravcu
+          setFormData(prev => ({
+            ...prev,
+            carrierEmail: prev.carrierEmail || matchingCarrier.contactEmail || '',
+            carrierPhone: prev.carrierPhone || matchingCarrier.contactPhone || '',
+            carrierIco: prev.carrierIco || matchingCarrier.ico || '',
+            carrierDic: prev.carrierDic || matchingCarrier.dic || '',
+            carrierIcDph: prev.carrierIcDph || matchingCarrier.icDph || '',
+            carrierStreet: prev.carrierStreet || matchingCarrier.street || '',
+            carrierCity: prev.carrierCity || matchingCarrier.city || '',
+            carrierZip: prev.carrierZip || matchingCarrier.zip || '',
+            carrierCountry: prev.carrierCountry || matchingCarrier.country || 'Slovensko',
+            carrierVehicleTypes: prev.carrierVehicleTypes || matchingCarrier.vehicleTypes || [],
+            carrierNotes: prev.carrierNotes || matchingCarrier.notes || '',
+            carrierRating: prev.carrierRating || getCarrierAverageRating(matchingCarrier),
+            carrierContact: prev.carrierContact || `${matchingCarrier.contactName} ${matchingCarrier.contactSurname}`.trim() || '',
+          }));
+          
+          console.log('✅ Údaje dopravcu doplnené');
+        }
+      }
+    }
+  }, [isEdit, orderData, carriers]);
+
   // Handle functions
   const handleNext = () => {
     const validation = validateStep(activeStep);
@@ -792,6 +849,20 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       carrierContact: '',
       carrierVehicleReg: '',
       carrierPrice: '',
+      // Pridané kompletné polia dopravcu
+      carrierEmail: '',
+      carrierPhone: '',
+      carrierIco: '',
+      carrierDic: '',
+      carrierIcDph: '',
+      carrierStreet: '',
+      carrierCity: '',
+      carrierZip: '',
+      carrierCountry: 'Slovensko',
+      carrierVehicleTypes: [],
+      carrierNotes: '',
+      carrierRating: 0,
+      carrierPaymentTermDays: 60,
     });
     // Reset dispatcher editing states
     setIsEditingDispatcher(false);
@@ -838,11 +909,32 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   };
 
   const handleCarrierChange = (carrier: Carrier | null) => {
+    // Vypočítame priemerné hodnotenie dopravcu
+    const getCarrierAverageRating = (carrier: Carrier): number => {
+      if (!carrier.rating) return 0;
+      const { reliability, communication, serviceQuality, timeManagement } = carrier.rating;
+      if (reliability === 0 && communication === 0 && serviceQuality === 0 && timeManagement === 0) return 0;
+      return Math.round((reliability + communication + serviceQuality + timeManagement) / 4);
+    };
+
     setFormData(prev => ({
       ...prev,
       carrierCompany: carrier?.companyName || '',
       carrierContact: carrier ? `${carrier.contactName} ${carrier.contactSurname}`.trim() : '',
-      carrierPaymentTermDays: carrier?.paymentTermDays || 60, // Načítame splatnosť dopravcu
+      carrierPaymentTermDays: carrier?.paymentTermDays || 60,
+      // Pridáme kompletné údaje dopravcu (rovnako ako pri zákazníkovi)
+      carrierEmail: carrier?.contactEmail || '',
+      carrierPhone: carrier?.contactPhone || '',
+      carrierIco: carrier?.ico || '',
+      carrierDic: carrier?.dic || '',
+      carrierIcDph: carrier?.icDph || '',
+      carrierStreet: carrier?.street || '',
+      carrierCity: carrier?.city || '',
+      carrierZip: carrier?.zip || '',
+      carrierCountry: carrier?.country || 'Slovensko',
+      carrierVehicleTypes: carrier?.vehicleTypes || [],
+      carrierNotes: carrier?.notes || '',
+      carrierRating: carrier ? getCarrierAverageRating(carrier) : 0,
     }));
   };
 

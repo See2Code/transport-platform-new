@@ -63,6 +63,73 @@ input, textarea, [contenteditable="true"], .selectable {
   user-select: text !important;
 }
 
+/* Povoliť výber textu v tabuľkách a dôležitých oblastiach */
+.MuiTableCell-root,
+.MuiTableBody-root,
+p, span, div[role="cell"],
+[data-selectable="true"],
+/* Špecifické selektory pre často kopírované dáta */
+td, th, .order-number, .email, .phone, .company-name,
+.address, .price, .profit, .ico, .dic, .contact-name {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
+
+/* Kurzor text len pre konkrétne textové oblasti */
+.MuiTableCell-root,
+td, th,
+.MuiTypography-body1,
+.MuiTypography-body2,
+.MuiTypography-caption {
+  cursor: text;
+}
+
+/* Vrátiť správne kurzory pre interaktívne elementy */
+.MuiButton-root,
+.MuiIconButton-root,
+.MuiChip-root,
+.MuiTab-root,
+.MuiMenuItem-root,
+.MuiListItem-button,
+a, button,
+[role="button"],
+[data-testid*="button"] {
+  cursor: pointer !important;
+}
+
+/* Default kurzor pre kontajnery a non-interactive oblasti */
+.MuiBox-root:not(.MuiTableCell-root),
+.MuiPaper-root:not(.MuiTableCell-root),
+.MuiContainer-root,
+.MuiGrid-root {
+  cursor: default !important;
+}
+
+/* Typography, Chip, Box, Paper bez cursor: text - len user-select */
+.MuiTypography-root,
+.MuiChip-label,
+.MuiBox-root,
+.MuiPaper-root {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
+
+/* Pre mobilné zariadenia - povoliť aj dlhé stlačenie pre kopírovanie */
+@media (max-width: 768px) {
+  .MuiTableCell-root,
+  .MuiTypography-root,
+  .MuiChip-label {
+    -webkit-touch-callout: default !important;
+    -webkit-user-select: text !important;
+  }
+}
+
 /* Mobile klávesnica optimalizácie */
 @media (max-width: 600px) {
   /* Zabráni zoom pri focus na input */
