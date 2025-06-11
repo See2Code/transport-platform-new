@@ -3,7 +3,7 @@ import { Timestamp } from 'firebase/firestore';
 export type DocumentType = 
   | 'customer_order'       // Objednávka zákazníka - modrá
   | 'carrier_invoice'      // Faktúra od dopravcu - oranžová  
-  | 'our_invoice'          // Naša faktúra - zelená tmavá
+  | 'our_invoice'          // Naša faktúra - fialová
   | 'cmr'                 // CMR - zelená
   | 'insurance'           // Poistenie - fialová
   | 'credit_note'         // Dobropis - červená
@@ -48,8 +48,8 @@ export const DOCUMENT_TYPE_CONFIG: Record<DocumentType, DocumentTypeConfig> = {
   },
   our_invoice: {
     label: 'Naša faktúra',
-    color: '#2e7d32',
-    bgColor: 'rgba(46, 125, 50, 0.1)',
+    color: '#7b1fa2',
+    bgColor: 'rgba(123, 31, 162, 0.1)',
     icon: '📄'
   },
   cmr: {

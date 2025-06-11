@@ -346,7 +346,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
         return (
           <Box sx={{ width: '100%', height: '70vh' }}>
             <iframe
-              src={`${previewDocument.fileUrl}#zoom=page-fit&view=Fit&pagemode=none&toolbar=1&navpanes=0`}
+              src={`${previewDocument.fileUrl}#zoom=100&view=FitH&pagemode=none&toolbar=1&navpanes=0`}
               style={{
                 width: '100%',
                 height: '100%',

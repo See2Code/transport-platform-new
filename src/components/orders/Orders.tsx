@@ -28,7 +28,8 @@ import {
   useTheme,
   styled,
   Divider,
-  Collapse
+  Collapse,
+  Autocomplete
 } from '@mui/material';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import SearchIcon from '@mui/icons-material/Search';
@@ -44,6 +45,7 @@ import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import DescriptionIcon from '@mui/icons-material/Description';
 import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -59,6 +61,7 @@ import MobileOrderCard from './MobileOrderCard'; // Import nového komponentu
 import OrderDetail from './OrderDetail';
 import DocumentManager from './DocumentManager';
 import DocumentsIndicator from './DocumentsIndicator';
+import { DOCUMENT_TYPE_CONFIG } from '../../types/documents';
 // import RatingIndicator from '../common/RatingIndicator';
 import CustomerRatingDialog from '../dialogs/CustomerRatingDialog';
 import CarrierRatingDialog from '../dialogs/CarrierRatingDialog';
@@ -546,6 +549,7 @@ const OrdersList: React.FC = () => {
   
   // State pre objednávky, zákazníkov, dopravcov, filtre, atď.
   const [orders, setOrders] = useState<OrderFormData[]>([]);
+  const [orderDocuments, setOrderDocuments] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -559,6 +563,7 @@ const OrdersList: React.FC = () => {
   const [_isLoadingTeamMembers, setIsLoadingTeamMembers] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [documentFilter, setDocumentFilter] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [dispatcherFilter, setDispatcherFilter] = useState<'all' | 'thisMonth' | 'thisYear' | 'custom'>('all');
@@ -1138,6 +1143,41 @@ const OrdersList: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData?.companyID]); // Odstránená fetchTeamMembers dependency aby sme zabránili nekonečným loop
 
+  // useEffect pre načítanie dokumentov všetkých objednávok
+  useEffect(() => {
+    if (!userData?.companyID) return;
+
+    const documentsRef = collection(db, 'orderDocuments');
+    const q = query(
+      documentsRef,
+      where('companyID', '==', userData.companyID)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docsData: Record<string, any[]> = {};
+      
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const orderId = data.orderId;
+        
+        if (!docsData[orderId]) {
+          docsData[orderId] = [];
+        }
+        
+        docsData[orderId].push({
+          id: doc.id,
+          ...data
+        });
+      });
+      
+      setOrderDocuments(docsData);
+    }, (err) => {
+      console.error('Chyba pri načítaní dokumentov:', err);
+    });
+
+    return () => unsubscribe();
+  }, [userData?.companyID]);
+
   // Hlavný useEffect pre inicializáciu základných real-time listeners (len pre customers, carriers, locations)
   useEffect(() => {
     if (!userData?.companyID) {
@@ -1244,6 +1284,19 @@ const OrdersList: React.FC = () => {
         place.contactPersonPhone?.toLowerCase().includes(searchTermLower)
       ) ||
       order.id?.toLowerCase().includes(searchTermLower);
+
+    // Filter pre dokumenty - ak je nastavený dokumentový filter
+    if (documentFilter && order.id) {
+      const orderDocs = orderDocuments[order.id] || [];
+      const hasMatchingDocument = orderDocs.some((doc: any) => {
+        const documentTypeLabel = DOCUMENT_TYPE_CONFIG[doc.type as keyof typeof DOCUMENT_TYPE_CONFIG]?.label || '';
+        return documentTypeLabel.toLowerCase().includes(documentFilter.toLowerCase());
+      });
+      
+      if (!hasMatchingDocument) {
+        return false;
+      }
+    }
       
     return matchesSearch;
   });
@@ -2220,7 +2273,22 @@ const OrdersList: React.FC = () => {
 {t('orders.newOrder')}
           </Button>
         </Box>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 2, 
+                alignItems: 'center', 
+                flex: 1, 
+                justifyContent: 'flex-end',
+                flexWrap: 'wrap',
+                '@media (max-width: 900px)': {
+                  flexDirection: 'column',
+                  alignItems: 'stretch',
+                  '& > *': {
+                    width: '100%',
+                    maxWidth: 'none !important'
+                  }
+                }
+              }}>
               <TextField
                   id="search-order"
                   name="searchOrder"
@@ -2229,7 +2297,14 @@ const OrdersList: React.FC = () => {
                   size="small"
                   value={searchQuery}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  sx={{ flexGrow: 1, minWidth: '250px', maxWidth: '500px' }}
+                  sx={{ 
+                    flexGrow: 1, 
+                    minWidth: '220px', 
+                    maxWidth: '380px',
+                    '& .MuiOutlinedInput-root': {
+                      height: '40px',
+                    }
+                  }}
                   InputProps={{
                       startAdornment: (
                           <InputAdornment position="start">
@@ -2237,6 +2312,62 @@ const OrdersList: React.FC = () => {
                           </InputAdornment>
                       ),
                   }}
+              />
+              <Autocomplete
+                options={Object.values(DOCUMENT_TYPE_CONFIG).map(config => config.label)}
+                value={documentFilter}
+                onChange={(event, newValue) => setDocumentFilter(newValue || '')}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={t('orders.documentFilter')}
+                    variant="outlined"
+                    size="small"
+                    placeholder={t('orders.documentFilterPlaceholder')}
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <>
+                          <InputAdornment position="start">
+                            <DescriptionIcon />
+                          </InputAdornment>
+                          {params.InputProps.startAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                sx={{ 
+                  minWidth: '200px', 
+                  maxWidth: '220px',
+                  '& .MuiOutlinedInput-root': {
+                    height: '40px', // Rovnaká výška ako TextField
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    '& .MuiAutocomplete-input': {
+                      padding: '8.5px 4px 8.5px 0 !important', // Štandardný padding ako v TextField
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    transform: 'translate(52px, 12px) scale(1)', // Štandardná pozícia ako v TextField
+                    '&.MuiInputLabel-shrink': {
+                      transform: 'translate(14px, -9px) scale(0.75)', // Vrátim späť na normálnu pozíciu
+                    }
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    '& legend': {
+                      marginLeft: '2px', // Menší posun - z 4px na 2px aby F malo viac miesta
+                      paddingRight: '10px', // Zvýšim padding z 8px na 10px pre pravú čiaru
+                    }
+                  },
+                  '& .MuiInputAdornment-root': {
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.54)' : 'rgba(0, 0, 0, 0.54)', // Farba podľa témy
+                  }
+                }}
+                clearOnEscape
+                freeSolo
+                disableClearable={false}
               />
               <IconButton onClick={() => setShowFilters(!showFilters)}>
                   <FilterListIcon />
@@ -2310,7 +2441,8 @@ const OrdersList: React.FC = () => {
                           setEndDate(null);
                           setDispatcherFilter('all');
                           setCustomStartDate(null); 
-                          setCustomEndDate(null); 
+                          setCustomEndDate(null);
+                          setDocumentFilter('');
                         }} 
                         size="small"
                         sx={{ 
@@ -3735,7 +3867,7 @@ const OrdersList: React.FC = () => {
               </Box>
             ) : pdfUrl ? (
               <iframe 
-                src={`${pdfUrl}#zoom=page-fit&view=Fit&pagemode=none&toolbar=1&navpanes=0`}
+                src={`${pdfUrl}#zoom=100&view=FitH&pagemode=none&toolbar=1&navpanes=0`}
                 style={{ 
                   width: '100%', 
                   height: '100%', 

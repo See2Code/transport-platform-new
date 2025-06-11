@@ -92,6 +92,8 @@
     "searchCarrier": "Vyhľadať dopravcu",
     "searchLocation": "Hľadať miesto",
     "searchDispatcher": "Hľadať špeditéra",
+    "documentFilter": "Filter podľa dokumentov",
+    "documentFilterPlaceholder": "napr. naša faktúra",
     "orderNumber": "Číslo objednávky",
     "contactPerson": "Kontaktná osoba",
     "loading": "Nakládka",
