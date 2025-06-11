@@ -7,6 +7,7 @@ export type DocumentType =
   | 'cmr'                 // CMR - zelená
   | 'insurance'           // Poistenie - fialová
   | 'credit_note'         // Dobropis - červená
+  | 'our_payment'         // Naša úhrada - červená tmavá
   | 'other';              // Ostatné - sivá
 
 export interface OrderDocument {
@@ -68,6 +69,12 @@ export const DOCUMENT_TYPE_CONFIG: Record<DocumentType, DocumentTypeConfig> = {
     color: '#f44336',
     bgColor: 'rgba(244, 67, 54, 0.1)',
     icon: '💸'
+  },
+  our_payment: {
+    label: 'Naša úhrada',
+    color: '#d32f2f',
+    bgColor: 'rgba(211, 47, 47, 0.1)',
+    icon: '💳'
   },
   other: {
     label: 'Ostatné',

@@ -450,8 +450,8 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
                       value={notes.get(editingLanguage)?.content || ''}
                       onChange={(e) => handleFieldChange(editingLanguage, 'content', e.target.value)}
                       placeholder="Zadajte text poznámok, ktoré sa majú pridať do PDF dokumentov..."
-                      helperText={`${(notes.get(editingLanguage)?.content || '').length}/25000 znakov`}
-                      inputProps={{ maxLength: 25000 }}
+                      helperText={`${(notes.get(editingLanguage)?.content || '').length}/30000 znakov`}
+                      inputProps={{ maxLength: 30000 }}
                       sx={{
                         '& .MuiInputBase-inputMultiline': {
                           fontSize: '14px',

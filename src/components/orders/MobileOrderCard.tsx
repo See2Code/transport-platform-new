@@ -158,6 +158,18 @@ const MobileOrderCard: React.FC<MobileOrderCardProps> = ({
               <Typography variant="body2">{order.customerPrice} €</Typography>
            </InfoRow>
         )}
+        {order.carrierCompany && (
+           <InfoRow theme={theme}>
+              <Typography variant="body2">Dopravca:</Typography>
+              <Typography variant="body2">{order.carrierCompany}</Typography>
+           </InfoRow>
+        )}
+        {order.carrierContact && (
+           <InfoRow theme={theme}>
+              <Typography variant="body2">Kontakt dopravcu:</Typography>
+              <Typography variant="body2">{order.carrierContact}</Typography>
+           </InfoRow>
+        )}
          {(order as any).createdByName && (
             <InfoRow theme={theme}>
                  <PersonIcon fontSize="small" />
