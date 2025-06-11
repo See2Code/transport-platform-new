@@ -3735,7 +3735,7 @@ const OrdersList: React.FC = () => {
               </Box>
             ) : pdfUrl ? (
               <iframe 
-                src={`${pdfUrl}#zoom=FitH&view=FitH&pagemode=none&toolbar=1&navpanes=1`}
+                src={`${pdfUrl}#zoom=page-fit&view=Fit&pagemode=none&toolbar=1&navpanes=0`}
                 style={{ 
                   width: '100%', 
                   height: '100%', 

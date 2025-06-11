@@ -301,8 +301,14 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
     }
 
     try {
+      // Extrakcia cesty z Firebase Storage URL
+      const url = new URL(document.fileUrl);
+      const pathName = url.pathname;
+      // Odstránenie /v0/b/bucket-name/o/ z cesty a dekódovanie
+      const storagePath = decodeURIComponent(pathName.split('/o/')[1].split('?')[0]);
+      
       // Vymazanie zo Storage
-      const storageRef = ref(storage, document.fileUrl);
+      const storageRef = ref(storage, storagePath);
       await deleteObject(storageRef);
 
       // Vymazanie z Firestore
@@ -340,7 +346,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
         return (
           <Box sx={{ width: '100%', height: '70vh' }}>
             <iframe
-              src={previewDocument.fileUrl}
+              src={`${previewDocument.fileUrl}#zoom=page-fit&view=Fit&pagemode=none&toolbar=1&navpanes=0`}
               style={{
                 width: '100%',
                 height: '100%',
@@ -357,18 +363,23 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center', 
-            alignItems: 'center',
-            maxHeight: '70vh',
-            overflow: 'auto'
+            alignItems: 'flex-start',
+            width: '100%',
+            minHeight: '70vh',
+            overflow: 'auto',
+            p: 1
           }}>
             <img
               src={previewDocument.fileUrl}
               alt={previewDocument.name}
               style={{
+                width: 'auto',
+                height: 'auto',
                 maxWidth: '100%',
-                maxHeight: '100%',
+                maxHeight: 'none',
                 objectFit: 'contain',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
               }}
             />
           </Box>
@@ -793,14 +804,14 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
       <Dialog
         open={previewOpen}
         onClose={handleClosePreview}
-        maxWidth="lg"
+        maxWidth="xl"
         fullWidth
         PaperProps={{
           sx: {
             background: 'none',
             boxShadow: 'none',
             margin: { xs: '8px', sm: '16px' },
-            maxHeight: '90vh',
+            maxHeight: '95vh',
             overflow: 'hidden'
           }
         }}
@@ -878,7 +889,14 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
           
           <Divider sx={{ borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', flexShrink: 0 }} />
 
-          <DialogContent sx={{ p: 3, overflow: 'auto' }}>
+          <DialogContent sx={{ 
+            p: 2, 
+            overflow: 'auto',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0
+          }}>
             {previewDocument && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
