@@ -372,7 +372,7 @@ const SortableTableCell: React.FC<SortableTableCellProps> = ({
   
   const getTooltipText = () => {
     if (isActive) {
-      return sortDirection === 'desc' ? 'Zoradiť vzostupne' : 'Zoradiť zostupne';
+      return sortDirection === 'desc' ? 'Zoradiť vzostupne' : 'Zoradiť zostupne (ďalší klik resetuje)';
     }
     return 'Kliknite pre zoradenie';
   };
@@ -654,8 +654,15 @@ const OrdersList: React.FC = () => {
   const [dispatcherFilter, setDispatcherFilter] = useState<'all' | 'thisMonth' | 'thisYear' | 'custom'>('all');
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
-  const [sortField, setSortField] = useState<'orderNumber' | 'createdAt' | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  // Načítanie sort nastavení z localStorage
+  const [sortField, setSortField] = useState<'orderNumber' | 'createdAt' | null>(() => {
+    const saved = localStorage.getItem('orders-sort-field');
+    return saved ? (saved as 'orderNumber' | 'createdAt') : null;
+  });
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(() => {
+    const saved = localStorage.getItem('orders-sort-direction');
+    return saved ? (saved as 'asc' | 'desc') : 'desc';
+  });
 
   // Synchronizácia filtrov špeditérov s hlavnými filtrami
   useEffect(() => {
@@ -1337,12 +1344,23 @@ const OrdersList: React.FC = () => {
 
   const handleSort = (field: 'orderNumber' | 'createdAt') => {
     if (sortField === field) {
-      // Ak klikneme na rovnaký stĺpec, zmeníme smer
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      if (sortDirection === 'asc') {
+        // Tretí klik - resetujeme zoradenie
+        setSortField(null);
+        setSortDirection('desc');
+        localStorage.removeItem('orders-sort-field');
+        localStorage.removeItem('orders-sort-direction');
+      } else {
+        // Druhý klik - zmeníme smer na vzostupný
+        setSortDirection('asc');
+        localStorage.setItem('orders-sort-direction', 'asc');
+      }
     } else {
-      // Ak klikneme na nový stĺpec, nastavíme ho a defaultný smer
+      // Prvý klik na nový stĺpec - nastavíme zostupné zoradenie
       setSortField(field);
       setSortDirection('desc');
+      localStorage.setItem('orders-sort-field', field);
+      localStorage.setItem('orders-sort-direction', 'desc');
     }
   };
 

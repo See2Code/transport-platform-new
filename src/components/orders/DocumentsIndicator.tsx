@@ -92,6 +92,18 @@ const DocumentsIndicator: React.FC<DocumentsIndicatorProps> = ({ orderId }) => {
     };
   }, [orderId, companyID]); // Použijem memoizovaný companyID
 
+  // Definované poradie typov dokumentov (fixné pozície)
+  const documentTypeOrder: DocumentType[] = [
+    'our_invoice',      // 1. Naša faktúra (fialová)
+    'cmr',              // 2. CMR (zelená)
+    'carrier_invoice',  // 3. Faktúra od dopravcu (oranžová)
+    'customer_order',   // 4. Objednávka zákazníka (modrá)
+    'insurance',        // 5. Poistenie (fialová)
+    'credit_note',      // 6. Dobropis (červená)
+    'our_payment',      // 7. Naša úhrada (červená tmavá)
+    'other'             // 8. Ostatné (sivá)
+  ];
+
   // Memoizuj groupedDocs aby sa nepočítali zbytočne
   const groupedDocs = useMemo(() => {
     return documents.reduce((acc, doc) => {
@@ -110,11 +122,16 @@ const DocumentsIndicator: React.FC<DocumentsIndicatorProps> = ({ orderId }) => {
 
   return (
     <Stack direction="row" spacing={0.5} alignItems="center">
-      {Object.entries(groupedDocs).map(([type, docs]) => {
-        const config = DOCUMENT_TYPE_CONFIG[type as DocumentType];
-        const count = docs.length;
+      {documentTypeOrder.map((type) => {
+        const docs = groupedDocs[type];
+        const config = DOCUMENT_TYPE_CONFIG[type];
+        
+        // Ak tento typ dokumentu nie je nahraný, preskočíme ho
+        if (!docs || docs.length === 0) {
+          return null;
+        }
 
-        if (!config) return null;
+        const count = docs.length;
 
         // Tooltip text
         const tooltipText = count > 1 
