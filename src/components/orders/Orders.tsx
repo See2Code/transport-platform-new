@@ -2751,29 +2751,36 @@ const OrdersList: React.FC = () => {
               {/* Jedna tabuľka s fixným headerom */}
               <Box 
                 sx={{ 
-                  height: '100%',
+                  height: 'calc(100% - 120px)', // Odčítam footer výšku
                   overflow: 'auto',
-                  paddingBottom: '120px', // Miesto pre footer
-                  '&::-webkit-scrollbar': {
-                    width: '8px',
-                    height: '8px',
+                  // Pekné scrollbary
+                  '::-webkit-scrollbar': {
+                    width: '14px',
+                    height: '14px',
                   },
-                  '&::-webkit-scrollbar-track': {
+                  '::-webkit-scrollbar-track': {
                     backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                    borderRadius: '4px',
+                    borderRadius: '8px',
                   },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '4px',
+                  '::-webkit-scrollbar-thumb': {
+                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)',
+                    borderRadius: '8px',
+                    border: `2px solid ${isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff'}`,
                     '&:hover': {
-                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
                     },
                   },
+                  '::-webkit-scrollbar-corner': {
+                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                  },
+                  // Firefox fallback
+                  scrollbarWidth: 'auto',
+                  scrollbarColor: isDarkMode ? 'rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.4) rgba(0, 0, 0, 0.1)',
                 }}
               >
                 <Table 
                   sx={{ 
-                    minWidth: '2400px', 
+                    minWidth: '3000px', // Zväčším aby sa určite nevojšlo
                     width: 'max-content',
                     '& .MuiTableCell-root': {
                       color: isDarkMode ? '#ffffff' : '#000000',
@@ -5152,3 +5159,4 @@ function OrdersForm() {
 }
 
 export default OrdersForm; 
+
