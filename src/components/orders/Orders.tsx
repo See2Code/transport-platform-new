@@ -464,6 +464,25 @@ const OrderRow = React.memo<OrderRowProps>(({
       <StyledTableCell isDarkMode={isDarkMode}>{order.carrierCompany || '-'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{order.carrierContact || '-'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>
+        {order.carrierVehicleReg ? (
+          <Box
+            sx={{
+              backgroundColor: '#1976d2',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              minWidth: '60px',
+              fontFamily: 'monospace'
+            }}
+          >
+            {order.carrierVehicleReg}
+          </Box>
+        ) : '-'}
+      </StyledTableCell>
+      <StyledTableCell isDarkMode={isDarkMode}>
         {order.loadingPlaces?.[0] ? (
           <Box>
             {order.loadingPlaces[0].companyName && (
@@ -592,6 +611,7 @@ const OrderRow = React.memo<OrderRowProps>(({
     prevOrder.carrierPrice === nextOrder.carrierPrice &&
     prevOrder.carrierCompany === nextOrder.carrierCompany &&
     prevOrder.carrierContact === nextOrder.carrierContact &&
+    prevOrder.carrierVehicleReg === nextOrder.carrierVehicleReg &&
     (prevOrder as any).orderNumberFormatted === (nextOrder as any).orderNumberFormatted &&
     (prevOrder as any).zakaznik === (nextOrder as any).zakaznik &&
     (prevOrder as any).kontaktnaOsoba === (nextOrder as any).kontaktnaOsoba &&
@@ -1377,6 +1397,7 @@ const OrdersList: React.FC = () => {
       order.customerVatId?.toLowerCase().includes(searchTermLower) ||
       order.carrierCompany?.toLowerCase().includes(searchTermLower) ||
       order.carrierContact?.toLowerCase().includes(searchTermLower) ||
+      order.carrierVehicleReg?.toLowerCase().includes(searchTermLower) ||
       order.loadingPlaces?.[0]?.city?.toLowerCase().includes(searchTermLower) ||
       order.loadingPlaces?.some(place => 
         place.contactPersonName?.toLowerCase().includes(searchTermLower) ||
@@ -2635,6 +2656,7 @@ const OrdersList: React.FC = () => {
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.contactPerson')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>Dopravca</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>Kontaktná osoba dopravcu</StyledTableCell>
+                    <StyledTableCell isDarkMode={isDarkMode}>ŠPZ</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.loading')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.loadingTime')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.unloading')}</StyledTableCell>
@@ -2677,7 +2699,7 @@ const OrdersList: React.FC = () => {
                   ))}
                   {getFilteredCustomerOrders().length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={18} align="center">
+                      <TableCell colSpan={19} align="center">
                         {t('orders.noOrdersFound')}
                       </TableCell>
                     </TableRow>
