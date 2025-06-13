@@ -51,15 +51,26 @@ const DocumentsIndicator: React.FC<DocumentsIndicatorProps> = ({ orderId }) => {
       
       // Optimalizácia: Porovnaj nové dokumenty s existujúcimi
       setDocuments(prevDocs => {
-        // Ak sa počet dokumentov nezmenil a ID sú rovnaké, nepotrebujeme update
+        // Ak sa počet dokumentov nezmenil a ID sú rovnaké, skontroluj obsah
         if (prevDocs.length === docs.length && docs.length > 0) {
           const prevIds = prevDocs.map(d => d.id).sort();
           const newIds = docs.map(d => d.id).sort();
-          const hasChanges = prevIds.length !== newIds.length || 
+          const idsChanged = prevIds.length !== newIds.length || 
                             prevIds.some((id, index) => id !== newIds[index]);
           
-          if (!hasChanges) {
-            return prevDocs; // Vráť existujúce dokumenty bez zmeny
+          // Ak sa ID nezmenili, skontroluj obsah dokumentov (typ, názov)
+          if (!idsChanged) {
+            const contentChanged = docs.some(newDoc => {
+              const prevDoc = prevDocs.find(p => p.id === newDoc.id);
+              return !prevDoc || 
+                     prevDoc.type !== newDoc.type || 
+                     prevDoc.name !== newDoc.name ||
+                     prevDoc.updatedAt?.seconds !== newDoc.updatedAt?.seconds;
+            });
+            
+            if (!contentChanged) {
+              return prevDocs; // Vráť existujúce dokumenty bez zmeny
+            }
           }
         }
         

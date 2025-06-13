@@ -684,7 +684,22 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
                           {Object.entries(DOCUMENT_TYPE_CONFIG).map(([key, config]) => (
                             <MenuItem key={key} value={key}>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <span>{config.icon}</span>
+                                <Box
+                                  sx={{
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: '50%',
+                                    backgroundColor: config.color,
+                                    color: 'white',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  {config.icon}
+                                </Box>
                                 <span>{config.label}</span>
                               </Box>
                             </MenuItem>
@@ -751,12 +766,15 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
                               sx={{
                                 width: 40,
                                 height: 40,
-                                borderRadius: '8px',
-                                backgroundColor: config.bgColor,
+                                borderRadius: '50%',
+                                backgroundColor: config.color,
+                                color: 'white',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '1.2rem'
+                                fontSize: '1.2rem',
+                                fontWeight: 'bold',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                               }}
                             >
                               {config.icon}
@@ -991,89 +1009,135 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
         fullWidth
         PaperProps={{
           sx: {
-            background: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
-            backdropFilter: 'blur(20px)',
-            borderRadius: '20px',
-            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            background: 'none',
+            boxShadow: 'none',
+            margin: { xs: '8px', sm: '16px' },
+            maxHeight: '90vh',
+            overflow: 'hidden'
           }
         }}
         BackdropProps={{
           sx: {
             backdropFilter: 'blur(10px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+            backgroundColor: 'rgba(0, 0, 0, 0.8)'
           }
         }}
       >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <EditIcon sx={{ color: '#ff9f43' }} />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Upraviť dokument
-            </Typography>
-          </Box>
-        </DialogTitle>
-        
-        <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+        <StyledDialogContent isDarkMode={isDarkMode}>
+          <DialogTitle>
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexShrink: 0
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <EditIcon sx={{ color: '#ff9f43' }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Upraviť dokument
+                </Typography>
+              </Box>
+              <IconButton 
+                onClick={handleCloseEdit} 
+                edge="end" 
+                aria-label="close"
+                sx={{
+                  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </DialogTitle>
           
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Názov dokumentu *"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                required
-                disabled={updating}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Typ dokumentu</InputLabel>
-                <Select
-                  value={editType}
-                  label="Typ dokumentu"
-                  onChange={(e) => setEditType(e.target.value as DocumentType)}
+          <Divider sx={{ borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', flexShrink: 0 }} />
+          
+          <DialogContent sx={{ 
+            p: 3, 
+            overflow: 'auto',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0
+          }}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Názov dokumentu *"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
                   disabled={updating}
-                >
-                  {Object.entries(DOCUMENT_TYPE_CONFIG).map(([key, config]) => (
-                    <MenuItem key={key} value={key}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <span>{config.icon}</span>
-                        <span>{config.label}</span>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
+                />
+              </Grid>
 
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button 
-            onClick={handleCloseEdit}
-            disabled={updating}
-          >
-            Zrušiť
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleUpdateDocument}
-            disabled={!editName.trim() || updating}
-            sx={{ 
-              backgroundColor: '#ff9f43',
-              '&:hover': { backgroundColor: '#f7b067' }
-            }}
-          >
-            {updating ? <CircularProgress size={20} color="inherit" /> : 'Uložiť zmeny'}
-          </Button>
-        </DialogActions>
+              <Grid item xs={12}>
+                <FormControl fullWidth required>
+                  <InputLabel>Typ dokumentu</InputLabel>
+                  <Select
+                    value={editType}
+                    label="Typ dokumentu"
+                    onChange={(e) => setEditType(e.target.value as DocumentType)}
+                    disabled={updating}
+                  >
+                    {Object.entries(DOCUMENT_TYPE_CONFIG).map(([key, config]) => (
+                      <MenuItem key={key} value={key}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box
+                            sx={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              backgroundColor: config.color,
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.7rem',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {config.icon}
+                          </Box>
+                          <span>{config.label}</span>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+
+          <Divider sx={{ borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', flexShrink: 0 }} />
+
+          <DialogActions sx={{ p: 3, flexShrink: 0 }}>
+            <Button 
+              onClick={handleCloseEdit}
+              disabled={updating}
+            >
+              Zrušiť
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleUpdateDocument}
+              disabled={!editName.trim() || updating}
+              sx={{ 
+                backgroundColor: '#ff9f43',
+                '&:hover': { backgroundColor: '#f7b067' }
+              }}
+            >
+              {updating ? <CircularProgress size={20} color="inherit" /> : 'Uložiť zmeny'}
+            </Button>
+          </DialogActions>
+        </StyledDialogContent>
       </Dialog>
     </>
   );
