@@ -929,6 +929,9 @@ const NewOrderForm: React.FC<NewOrderFormProps> = ({ isModal = false, onClose, i
                             onChange={handleInputChange}
                         />
                     </Grid>
+                    <Grid item xs={12}>
+
+                    </Grid>
 
                     {/* Body Nakládky */}
                     <Grid item xs={12}>

@@ -49,7 +49,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import Tooltip from '@mui/material/Tooltip';
-import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, getDoc, Timestamp, orderBy, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { format } from 'date-fns';
@@ -510,7 +510,12 @@ const OrderRow = React.memo<OrderRowProps>(({
           </Box>
         ) : '-'}
       </StyledTableCell>
-      <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.dateTime ? format(convertToDate(order.loadingPlaces[0].dateTime)!, 'dd.MM HH:mm') : '-'}</StyledTableCell>
+                      <StyledTableCell isDarkMode={isDarkMode}>
+                  {(() => {
+                    const date = order.loadingPlaces?.[0]?.dateTime ? convertToDate(order.loadingPlaces[0].dateTime) : null;
+                    return date ? format(date, 'dd.MM HH:mm') : '-';
+                  })()}
+                </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>
         {order.unloadingPlaces?.[0] ? (
           <Box>
@@ -525,7 +530,12 @@ const OrderRow = React.memo<OrderRowProps>(({
           </Box>
         ) : '-'}
       </StyledTableCell>
-      <StyledTableCell isDarkMode={isDarkMode}>{order.unloadingPlaces?.[0]?.dateTime ? format(convertToDate(order.unloadingPlaces[0].dateTime)!, 'dd.MM HH:mm') : '-'}</StyledTableCell>
+                      <StyledTableCell isDarkMode={isDarkMode}>
+                  {(() => {
+                    const date = order.unloadingPlaces?.[0]?.dateTime ? convertToDate(order.unloadingPlaces[0].dateTime) : null;
+                    return date ? format(date, 'dd.MM HH:mm') : '-';
+                  })()}
+                </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.goods?.[0]?.name || '-'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#ff9f43', fontWeight: 'bold' }}>{`${(order as any).suma || order.customerPrice || '0'} €`}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#1976d2', fontWeight: 'bold' }}>{`${order.carrierPrice || '0'} €`}</StyledTableCell>
@@ -578,7 +588,12 @@ const OrderRow = React.memo<OrderRowProps>(({
           'Neznámy'
         }
       </StyledTableCell>
-      <StyledTableCell isDarkMode={isDarkMode}>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}</StyledTableCell>
+                      <StyledTableCell isDarkMode={isDarkMode}>
+                  {(() => {
+                    const date = order.createdAt ? convertToDate(order.createdAt) : null;
+                    return date ? format(date, 'dd.MM.yyyy HH:mm') : 'N/A';
+                  })()}
+                </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}> {/* Akcie */} 
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           <BareTooltip title="Detail objednávky" placement="bottom">
@@ -1004,6 +1019,10 @@ const OrdersList: React.FC = () => {
             dimensionsW: data.dimensionsW || '', 
             dimensionsH: data.dimensionsH || '', 
             quantity: data.quantity || '', 
+            // Pridané nové polia
+            poziadavky: data.poziadavky || '',
+            internaPoznamka: data.internaPoznamka || '',
+            cisloNakladuZakaznika: data.cisloNakladuZakaznika || '',
             carrierCompany: data.carrierCompany || '', 
             carrierContact: data.carrierContact || '', 
             carrierVehicleReg: data.carrierVehicleReg || '', 
@@ -1490,6 +1509,7 @@ const OrdersList: React.FC = () => {
       kontaktnaOsoba: `${order.customerContactName || ''} ${order.customerContactSurname || ''}`.trim(),
       suma: order.customerPrice || '',
       mena: 'EUR',
+
     };
     
     setSelectedOrder(modifiedOrder);
@@ -1582,11 +1602,10 @@ const OrdersList: React.FC = () => {
     setIsEditMode(false);
   };
 
-  const handleCloseNewOrderForm = () => {
+    const handleCloseNewOrderForm = () => {
     setShowNewOrderWizard(false);
     setSelectedOrder(null);
     setIsEditMode(false);
-    // fetchOrders(); // Odstránené - real-time listener automaticky aktualizuje
     
     // Obnovíme štatistiky špeditérov po uložení/úprave objednávky
     if (userData?.companyID && Object.keys(teamMembers).length > 0) {
@@ -1978,9 +1997,39 @@ const OrdersList: React.FC = () => {
     }
   };
 
-  const handleShowOrderDetail = (order: OrderFormData) => {
-    setSelectedOrder(order);
-    setDetailDialogOpen(true);
+  const handleShowOrderDetail = async (order: OrderFormData) => {
+    if (!order.id) {
+      console.error('❌ Objednávka nemá ID');
+      return;
+    }
+    
+    try {
+      console.log('🔄 Načítavam najnovšie dáta objednávky z Firebase...');
+      const orderRef = doc(db, 'orders', order.id);
+      const orderSnap = await getDoc(orderRef);
+      
+      if (orderSnap.exists()) {
+        const data = orderSnap.data();
+        const freshOrder: OrderFormData = {
+          ...data,
+          id: orderSnap.id
+        } as OrderFormData;
+        
+        console.log('✅ Najnovšie dáta objednávky načítané');
+        setSelectedOrder(freshOrder);
+        setDetailDialogOpen(true);
+      } else {
+        console.error('❌ Objednávka neexistuje v Firebase');
+        // Fallback na pôvodné dáta
+        setSelectedOrder(order);
+        setDetailDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('❌ Chyba pri načítavaní objednávky:', error);
+      // Fallback na pôvodné dáta
+      setSelectedOrder(order);
+      setDetailDialogOpen(true);
+    }
   };
 
   const handleCloseDetail = () => {

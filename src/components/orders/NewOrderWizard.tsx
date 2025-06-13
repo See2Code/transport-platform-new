@@ -1264,6 +1264,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       console.log('🔍 Debug - formData.unloadingPlaces:', formData.unloadingPlaces);
       console.log('🔍 Debug - processedUnloadingPlaces:', processedUnloadingPlaces);
 
+
       const rawDataToSave = {
         ...formData,
         companyID: userData.companyID,
@@ -1288,6 +1289,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       // Odstránime undefined hodnoty
       const dataToSave = removeUndefinedValues(rawDataToSave);
 
+
       console.log('💾 Kompletné dáta na uloženie:', dataToSave);
       console.log('🔍 Debug - dataToSave.loadingPlaces:', dataToSave.loadingPlaces);
       console.log('🔍 Debug - dataToSave.unloadingPlaces:', dataToSave.unloadingPlaces);
@@ -1306,6 +1308,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         if (savedDoc.exists()) {
           const savedData = savedDoc.data();
           console.log('🔎 Uložené dáta z Firebase:', savedData);
+
           console.log('🔎 Uložené loadingPlaces:', savedData.loadingPlaces);
           console.log('🔎 Uložené unloadingPlaces:', savedData.unloadingPlaces);
         }
@@ -1633,6 +1636,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                     />
                   </Grid>
                 )}
+
 
                 <Grid item xs={12}>
                   <TextField

@@ -123,14 +123,28 @@ interface OrderDetailProps {
 function formatDate(date: Date | Timestamp | null | undefined) {
   if (!date) return '-';
   
-  let dateObj: Date;
-  if (date instanceof Timestamp) {
-    dateObj = date.toDate();
-  } else {
-    dateObj = date;
+  try {
+    let dateObj: Date;
+    if (date instanceof Timestamp) {
+      dateObj = date.toDate();
+    } else if (date instanceof Date) {
+      dateObj = date;
+    } else {
+      // Pokus o konverziu ak je to string alebo iný typ
+      dateObj = new Date(date as any);
+    }
+    
+    // Kontrola či je dátum platný
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Neplatný dátum:', date);
+      return '-';
+    }
+    
+    return format(dateObj, 'dd.MM.yyyy HH:mm', { locale: sk });
+  } catch (error) {
+    console.error('Chyba pri formátovaní dátumu:', error, 'Dátum:', date);
+    return '-';
   }
-  
-  return format(dateObj, 'dd.MM.yyyy HH:mm', { locale: sk });
 }
 
 // Komponent pre zobrazenie hodnotenia
@@ -737,6 +751,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                   <InfoValue isDarkMode={isDarkMode}>{displayOrder.cisloNakladuZakaznika}</InfoValue>
                 </InfoItem>
               )}
+
               {displayOrder.poziadavky && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Požiadavky:</InfoLabel>
@@ -763,11 +778,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Vytvorená:</InfoLabel>
                   <InfoValue isDarkMode={isDarkMode}>
-                    {displayOrder.createdAt ? 
-                      (displayOrder.createdAt instanceof Timestamp ? 
-                        format(displayOrder.createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk }) : 
-                        format(new Date(displayOrder.createdAt), 'dd.MM.yyyy HH:mm', { locale: sk })) 
-                      : '-'}
+                    {formatDate(displayOrder.createdAt)}
                   </InfoValue>
                 </InfoItem>
                 <InfoItem>
@@ -784,7 +795,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                     <InfoItem>
                       <InfoLabel isDarkMode={isDarkMode}>Aktualizovaná:</InfoLabel>
                       <InfoValue isDarkMode={isDarkMode}>
-                        {format(displayOrder.updatedAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: sk })}
+                        {formatDate(displayOrder.updatedAt)}
                       </InfoValue>
                     </InfoItem>
                     {displayOrder.updatedBy && (
