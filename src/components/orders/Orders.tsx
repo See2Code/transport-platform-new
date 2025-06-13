@@ -513,7 +513,7 @@ const OrderRow = React.memo<OrderRowProps>(({
                       <StyledTableCell isDarkMode={isDarkMode}>
                   {(() => {
                     const date = order.loadingPlaces?.[0]?.dateTime ? convertToDate(order.loadingPlaces[0].dateTime) : null;
-                    return date ? format(date, 'dd.MM HH:mm') : '-';
+                    return date ? format(date, 'dd.MM.yyyy HH:mm') : '-';
                   })()}
                 </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>
@@ -533,7 +533,7 @@ const OrderRow = React.memo<OrderRowProps>(({
                       <StyledTableCell isDarkMode={isDarkMode}>
                   {(() => {
                     const date = order.unloadingPlaces?.[0]?.dateTime ? convertToDate(order.unloadingPlaces[0].dateTime) : null;
-                    return date ? format(date, 'dd.MM HH:mm') : '-';
+                    return date ? format(date, 'dd.MM.yyyy HH:mm') : '-';
                   })()}
                 </StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}>{order.loadingPlaces?.[0]?.goods?.[0]?.name || '-'}</StyledTableCell>
