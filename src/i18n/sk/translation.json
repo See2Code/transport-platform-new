@@ -94,6 +94,8 @@
     "searchDispatcher": "Hľadať špeditéra",
     "documentFilter": "Filter podľa dokumentov",
     "documentFilterPlaceholder": "napr. naša faktúra",
+    "sortAscending": "Zoradiť vzostupne",
+    "sortDescending": "Zoradiť zostupne",
     "orderNumber": "Číslo objednávky",
     "contactPerson": "Kontaktná osoba",
     "loading": "Nakládka",

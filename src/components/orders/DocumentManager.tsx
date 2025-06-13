@@ -32,9 +32,10 @@ import DownloadIcon from '@mui/icons-material/Download';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DescriptionIcon from '@mui/icons-material/Description';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import EditIcon from '@mui/icons-material/Edit';
 
 // Firebase
-import { collection, addDoc, query, where, deleteDoc, doc, Timestamp, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, where, deleteDoc, doc, Timestamp, onSnapshot, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 
@@ -130,6 +131,13 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
   // Preview dialog state
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<OrderDocument | null>(null);
+
+  // Edit dialog state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editDocument, setEditDocument] = useState<OrderDocument | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editType, setEditType] = useState<DocumentType>('customer_order');
+  const [updating, setUpdating] = useState(false);
 
   // Fetch documents
   useEffect(() => {
@@ -293,6 +301,48 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
   const handleClosePreview = () => {
     setPreviewOpen(false);
     setPreviewDocument(null);
+  };
+
+  const handleEdit = (document: OrderDocument) => {
+    setEditDocument(document);
+    setEditName(document.name);
+    setEditType(document.type);
+    setEditOpen(true);
+  };
+
+  const handleCloseEdit = () => {
+    setEditOpen(false);
+    setEditDocument(null);
+    setEditName('');
+    setEditType('customer_order');
+    setError(null);
+  };
+
+  const handleUpdateDocument = async () => {
+    if (!editDocument || !editName.trim()) {
+      setError('Prosím vyplňte názov dokumentu');
+      return;
+    }
+
+    setUpdating(true);
+    setError(null);
+
+    try {
+      const updateData = {
+        name: editName.trim(),
+        type: editType,
+        updatedAt: Timestamp.fromDate(new Date())
+      };
+
+      await updateDoc(doc(db, 'orderDocuments', editDocument.id), updateData);
+      
+      handleCloseEdit();
+    } catch (err) {
+      console.error('Chyba pri aktualizácii dokumentu:', err);
+      setError('Nastala chyba pri aktualizácii dokumentu');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const handleDelete = async (document: OrderDocument) => {
@@ -764,6 +814,18 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
                                 <DownloadIcon fontSize="small" />
                               </IconButton>
                             </BareTooltip>
+                            <BareTooltip title="Upraviť">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEdit(document)}
+                                sx={{ 
+                                  color: '#ff9f43',
+                                  '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.1)' }
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </BareTooltip>
                             <BareTooltip title="Vymazať">
                               <IconButton
                                 size="small"
@@ -919,6 +981,99 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ orderId, trigger }) =
             {renderPreviewContent()}
           </DialogContent>
         </StyledDialogContent>
+      </Dialog>
+
+      {/* Edit Document Dialog */}
+      <Dialog
+        open={editOpen}
+        onClose={handleCloseEdit}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(10px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <EditIcon sx={{ color: '#ff9f43' }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Upraviť dokument
+            </Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Názov dokumentu *"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+                disabled={updating}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControl fullWidth required>
+                <InputLabel>Typ dokumentu</InputLabel>
+                <Select
+                  value={editType}
+                  label="Typ dokumentu"
+                  onChange={(e) => setEditType(e.target.value as DocumentType)}
+                  disabled={updating}
+                >
+                  {Object.entries(DOCUMENT_TYPE_CONFIG).map(([key, config]) => (
+                    <MenuItem key={key} value={key}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <span>{config.icon}</span>
+                        <span>{config.label}</span>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button 
+            onClick={handleCloseEdit}
+            disabled={updating}
+          >
+            Zrušiť
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateDocument}
+            disabled={!editName.trim() || updating}
+            sx={{ 
+              backgroundColor: '#ff9f43',
+              '&:hover': { backgroundColor: '#f7b067' }
+            }}
+          >
+            {updating ? <CircularProgress size={20} color="inherit" /> : 'Uložiť zmeny'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </>
   );

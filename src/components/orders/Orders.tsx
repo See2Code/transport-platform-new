@@ -46,6 +46,9 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import DescriptionIcon from '@mui/icons-material/Description';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import Tooltip from '@mui/material/Tooltip';
 import { collection, addDoc, query, where, getDocs, Timestamp, orderBy, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -345,6 +348,68 @@ const StyledTableCell = styled(TableCell, {
   whiteSpace: 'nowrap'
 }));
 
+// Sortovateľná hlavička tabuľky
+interface SortableTableCellProps {
+  isDarkMode: boolean;
+  sortField: 'orderNumber' | 'createdAt' | null;
+  currentField: 'orderNumber' | 'createdAt';
+  sortDirection: 'asc' | 'desc';
+  onSort: (field: 'orderNumber' | 'createdAt') => void;
+  children: React.ReactNode;
+  sx?: any;
+}
+
+const SortableTableCell: React.FC<SortableTableCellProps> = ({
+  isDarkMode,
+  sortField,
+  currentField,
+  sortDirection,
+  onSort,
+  children,
+  sx
+}) => {
+  const isActive = sortField === currentField;
+  
+  const getTooltipText = () => {
+    if (isActive) {
+      return sortDirection === 'desc' ? 'Zoradiť vzostupne' : 'Zoradiť zostupne';
+    }
+    return 'Kliknite pre zoradenie';
+  };
+  
+  return (
+    <Tooltip title={getTooltipText()} arrow>
+      <StyledTableCell 
+        isDarkMode={isDarkMode}
+        sx={{
+          ...sx,
+          cursor: 'pointer',
+          userSelect: 'none',
+          '&:hover': {
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+          }
+        }}
+        onClick={() => onSort(currentField)}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {children}
+          {isActive ? (
+            sortDirection === 'desc' ? (
+              <ArrowDownwardIcon fontSize="small" sx={{ color: '#ff9f43' }} />
+            ) : (
+              <ArrowUpwardIcon fontSize="small" sx={{ color: '#ff9f43' }} />
+            )
+          ) : (
+            <Box sx={{ width: 20, height: 20, opacity: 0.3 }}>
+              <ArrowUpwardIcon fontSize="small" />
+            </Box>
+          )}
+        </Box>
+      </StyledTableCell>
+    </Tooltip>
+  );
+};
+
 // Optimalizovaný OrderRow komponent s React.memo
 interface OrderRowProps {
   order: OrderFormData;
@@ -569,6 +634,8 @@ const OrdersList: React.FC = () => {
   const [dispatcherFilter, setDispatcherFilter] = useState<'all' | 'thisMonth' | 'thisYear' | 'custom'>('all');
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null);
   const [customEndDate, setCustomEndDate] = useState<Date | null>(null);
+  const [sortField, setSortField] = useState<'orderNumber' | 'createdAt' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Synchronizácia filtrov špeditérov s hlavnými filtrami
   useEffect(() => {
@@ -1248,11 +1315,48 @@ const OrdersList: React.FC = () => {
     setTabValue(newValue);
   };
 
+  const handleSort = (field: 'orderNumber' | 'createdAt') => {
+    if (sortField === field) {
+      // Ak klikneme na rovnaký stĺpec, zmeníme smer
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Ak klikneme na nový stĺpec, nastavíme ho a defaultný smer
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
   const getFilteredCustomerOrders = () => {
-    return filteredOrders.filter(order => {
+    let filtered = filteredOrders.filter(order => {
       // Filter pre zákazníkov - zobrazujeme len objednávky, ktoré majú zákazníka (customerCompany) alebo (zakaznik)
       return (order.customerCompany || (order as any).zakaznik);
     });
+
+    // Aplikujeme sorting ak je nastavený
+    if (sortField) {
+      filtered = filtered.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        if (sortField === 'orderNumber') {
+          // Porovnávame číselné hodnoty order number
+          aValue = parseInt((a as any).orderNumberFormatted?.replace(/\D/g, '') || '0');
+          bValue = parseInt((b as any).orderNumberFormatted?.replace(/\D/g, '') || '0');
+        } else if (sortField === 'createdAt') {
+          // Porovnávame dátumy
+          aValue = convertToDate(a.createdAt)?.getTime() || 0;
+          bValue = convertToDate(b.createdAt)?.getTime() || 0;
+        }
+
+        if (sortDirection === 'asc') {
+          return aValue - bValue;
+        } else {
+          return bValue - aValue;
+        }
+      });
+    }
+
+    return filtered;
   };
 
   const filteredOrders = orders.filter(order => {
@@ -2517,7 +2621,15 @@ const OrdersList: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.orderNumber')}</StyledTableCell>
+                    <SortableTableCell 
+                      isDarkMode={isDarkMode}
+                      sortField={sortField}
+                      currentField="orderNumber"
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      {t('orders.orderNumber')}
+                    </SortableTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.documents') || 'Dokumenty'}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.customer')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.contactPerson')}</StyledTableCell>
@@ -2533,7 +2645,15 @@ const OrdersList: React.FC = () => {
                     <StyledTableCell isDarkMode={isDarkMode} sx={{ color: '#2ecc71', fontWeight: 'bold' }}>{t('orders.profit')}</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>Hodnotenie</StyledTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.dispatcher')}</StyledTableCell>
-                    <StyledTableCell isDarkMode={isDarkMode}>{t('orders.creationDate')}</StyledTableCell>
+                    <SortableTableCell 
+                      isDarkMode={isDarkMode}
+                      sortField={sortField}
+                      currentField="createdAt"
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                    >
+                      {t('orders.creationDate')}
+                    </SortableTableCell>
                     <StyledTableCell isDarkMode={isDarkMode}>{t('orders.actions')}</StyledTableCell>
                   </TableRow>
                 </TableHead>
