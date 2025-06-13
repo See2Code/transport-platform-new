@@ -73,6 +73,7 @@ import LanguageSelector from './LanguageSelector';
 import { Customer, CustomerRating } from '../../types/customers';
 import { Carrier, CarrierRating } from '../../types/carriers';
 import StarIcon from '@mui/icons-material/Star';
+import InfoIcon from '@mui/icons-material/Info';
 // import OrderRatingDialog from '../dialogs/OrderRatingDialog';
 import { OrderRating } from '../../types/orders';
 import BareTooltip from '../common/BareTooltip';
@@ -327,12 +328,20 @@ const DialogGlobalStyles = ({ open }: { open: boolean }) => (
 
 
 const StyledTableRow = styled(TableRow, {
-  shouldForwardProp: (prop) => prop !== 'isDarkMode',
-})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  shouldForwardProp: (prop) => prop !== 'isDarkMode' && prop !== 'isSelected',
+})<{ isDarkMode: boolean; isSelected?: boolean }>(({ isDarkMode, isSelected }) => ({
   transition: 'all 0.2s ease-in-out',
   cursor: 'pointer',
+  backgroundColor: isSelected 
+    ? (isDarkMode ? 'rgba(255, 159, 67, 0.15)' : 'rgba(255, 159, 67, 0.1)')
+    : 'transparent',
+  border: isSelected 
+    ? `2px solid #ff9f43`
+    : 'none',
   '&:hover': {
-    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: isSelected
+      ? (isDarkMode ? 'rgba(255, 159, 67, 0.25) !important' : 'rgba(255, 159, 67, 0.18) !important')
+      : (isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'),
     transform: 'translateY(-2px)',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
   }
@@ -415,7 +424,9 @@ interface OrderRowProps {
   order: OrderFormData;
   isDarkMode: boolean;
   teamMembers: any;
+  isSelected: boolean;
   onRowClick: (order: OrderFormData) => void;
+  onShowDetail: (order: OrderFormData) => void;
   onEditOrder: (order: OrderFormData) => void;
   onDuplicateOrder: (order: OrderFormData) => void;
   onPreviewPDF: (event: React.MouseEvent<HTMLElement>, order: OrderFormData) => void;
@@ -429,8 +440,10 @@ interface OrderRowProps {
 const OrderRow = React.memo<OrderRowProps>(({ 
   order, 
   isDarkMode, 
-  teamMembers, 
-  onRowClick, 
+  teamMembers,
+  isSelected,
+  onRowClick,
+  onShowDetail,
   onEditOrder, 
   onDuplicateOrder, 
   onPreviewPDF, 
@@ -443,6 +456,7 @@ const OrderRow = React.memo<OrderRowProps>(({
   return (
     <StyledTableRow 
       isDarkMode={isDarkMode} 
+      isSelected={isSelected}
       onClick={() => onRowClick(order)}
     >
       <StyledTableCell isDarkMode={isDarkMode}>{(order as any).orderNumberFormatted || 'N/A'}</StyledTableCell>
@@ -567,6 +581,11 @@ const OrderRow = React.memo<OrderRowProps>(({
       <StyledTableCell isDarkMode={isDarkMode}>{order.createdAt ? format(convertToDate(order.createdAt)!, 'dd.MM.yyyy HH:mm') : 'N/A'}</StyledTableCell>
       <StyledTableCell isDarkMode={isDarkMode}> {/* Akcie */} 
         <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <BareTooltip title="Detail objednávky" placement="bottom">
+            <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onShowDetail(order); }} sx={{ color: '#2196f3' }}>
+              <InfoIcon fontSize="small"/>
+            </IconButton>
+          </BareTooltip>
           <BareTooltip title={t('orders.edit')} placement="bottom">
             <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEditOrder(order); }} sx={{ color: '#ff9f43' }}>
               <EditIcon fontSize="small"/>
@@ -600,6 +619,7 @@ const OrderRow = React.memo<OrderRowProps>(({
   // Custom comparison funkcia pre hlbšie porovnanie
   if (prevProps.isDarkMode !== nextProps.isDarkMode) return false;
   if (prevProps.order.id !== nextProps.order.id) return false;
+  if (prevProps.isSelected !== nextProps.isSelected) return false;
   
   // Porovnaj kľúčové vlastnosti objednávky
   const prevOrder = prevProps.order;
@@ -679,6 +699,7 @@ const OrdersList: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderFormData | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
   // eslint-disable-next-line
   const [_orderToUpdateId, setOrderToUpdateId] = useState<string | null>(null);
@@ -1948,6 +1969,16 @@ const OrdersList: React.FC = () => {
   };
 
   const handleRowClick = (order: OrderFormData) => {
+    // Ak klikneme na už vybraný riadok, zrušíme výber
+    if (selectedRowId === order.id) {
+      setSelectedRowId(null);
+    } else {
+      // Inak označíme nový riadok
+      setSelectedRowId(order.id || null);
+    }
+  };
+
+  const handleShowOrderDetail = (order: OrderFormData) => {
     setSelectedOrder(order);
     setDetailDialogOpen(true);
   };
@@ -2704,7 +2735,9 @@ const OrdersList: React.FC = () => {
                       order={order}
                       isDarkMode={isDarkMode}
                       teamMembers={teamMembers}
+                      isSelected={selectedRowId === order.id}
                       onRowClick={handleRowClick}
+                      onShowDetail={handleShowOrderDetail}
                       onEditOrder={handleEditOrder}
                       onDuplicateOrder={handleDuplicateOrder}
                       onPreviewPDF={handlePreviewPDFForTable}
