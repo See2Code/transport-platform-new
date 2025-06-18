@@ -111,18 +111,49 @@ const CookieBanner: React.FC = () => {
 
   useEffect(() => {
     // Kontrola či už používateľ dal súhlas
-    const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
-    if (!consent) {
-      // Malé oneskorenie pre lepší UX
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
+    const checkConsent = () => {
+      const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+      if (!consent) {
+        // Malé oneskorenie pre lepší UX
+        const timer = setTimeout(() => {
+          setIsVisible(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        setIsVisible(false);
+      }
+    };
+
+    // Kontrola pri načítaní
+    checkConsent();
+
+    // Sledovanie zmien v localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === COOKIE_CONSENT_KEY) {
+        checkConsent();
+      }
+    };
+
+    // Listener pre zmeny v localStorage z iných tabov
+    window.addEventListener('storage', handleStorageChange);
+
+    // Vlastný listener pre zmeny v tej istej tab
+    const handleLocalChange = () => {
+      checkConsent();
+    };
+    
+    window.addEventListener('cookieConsentChanged', handleLocalChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('cookieConsentChanged', handleLocalChange);
+    };
   }, []);
 
   const handleAccept = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted');
+    // Spustiť event pre aktualizáciu
+    window.dispatchEvent(new Event('cookieConsentChanged'));
     setIsVisible(false);
   };
 
@@ -134,6 +165,8 @@ const CookieBanner: React.FC = () => {
     setIsVisible(false);
     // Nastavíme "dismissed" namiesto "accepted"
     localStorage.setItem(COOKIE_CONSENT_KEY, 'dismissed');
+    // Spustiť event pre aktualizáciu
+    window.dispatchEvent(new Event('cookieConsentChanged'));
   };
 
   if (!isVisible) {

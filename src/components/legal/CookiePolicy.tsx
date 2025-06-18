@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Container,
@@ -6,8 +6,15 @@ import {
   Paper,
   Divider,
   Button,
+  Switch,
+  FormControlLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Alert,
   useTheme
 } from '@mui/material';
+import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +55,14 @@ const ContactBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
 }));
 
+const COOKIE_PREFERENCES_KEY = 'cookiePreferences';
+
+interface CookiePreferences {
+  necessary: boolean;
+  analytics: boolean;
+  marketing: boolean;
+}
+
 const CookiePolicy: React.FC = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
@@ -55,13 +70,58 @@ const CookiePolicy: React.FC = () => {
   const isDarkMode = theme.palette.mode === 'dark';
   const isEN = i18n.language === 'en';
 
+  const [showSettings, setShowSettings] = useState(false);
+  const [savedMessage, setSavedMessage] = useState(false);
+  const [preferences, setPreferences] = useState<CookiePreferences>({
+    necessary: true, // Always true, cannot be disabled
+    analytics: false,
+    marketing: false,
+  });
+
   useEffect(() => {
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
+    
+    // Load saved preferences
+    const savedPrefs = localStorage.getItem(COOKIE_PREFERENCES_KEY);
+    if (savedPrefs) {
+      const parsed = JSON.parse(savedPrefs);
+      setPreferences({ necessary: true, ...parsed });
+    }
   }, []);
 
   const handleBackClick = () => {
     navigate('/');
+  };
+
+  const handleAcceptAll = () => {
+    const newPrefs = { necessary: true, analytics: true, marketing: true };
+    setPreferences(newPrefs);
+    localStorage.setItem(COOKIE_PREFERENCES_KEY, JSON.stringify(newPrefs));
+    localStorage.setItem('cookieConsent', 'accepted');
+    
+    // Spustiť event pre aktualizáciu bannera
+    window.dispatchEvent(new Event('cookieConsentChanged'));
+    
+    setSavedMessage(true);
+    setTimeout(() => setSavedMessage(false), 3000);
+  };
+
+  const handleSaveSettings = () => {
+    localStorage.setItem(COOKIE_PREFERENCES_KEY, JSON.stringify(preferences));
+    localStorage.setItem('cookieConsent', 'customized');
+    
+    // Spustiť event pre aktualizáciu bannera
+    window.dispatchEvent(new Event('cookieConsentChanged'));
+    
+    setSavedMessage(true);
+    setTimeout(() => setSavedMessage(false), 3000);
+    setShowSettings(false);
+  };
+
+  const handlePreferenceChange = (type: keyof CookiePreferences, checked: boolean) => {
+    if (type === 'necessary') return; // Cannot change necessary cookies
+    setPreferences(prev => ({ ...prev, [type]: checked }));
   };
 
   const cookiesSK = {
@@ -316,19 +376,209 @@ const CookiePolicy: React.FC = () => {
         {isEN ? 'Back to Home' : 'Späť na domovskú stránku'}
       </Button>
 
+      {/* Cookie Settings Panel */}
+      <StyledPaper sx={{ mb: 3 }}>
+        <Typography
+          variant="h4"
+          component="h2"
+          gutterBottom
+          sx={{
+            fontWeight: 600,
+            textAlign: 'center',
+            mb: 3,
+            color: '#ff9f43',
+          }}
+        >
+          {isEN ? 'Cookie Settings' : 'Nastavenia súborov cookies'}
+        </Typography>
+
+        {savedMessage && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {isEN ? 'Your preferences have been saved!' : 'Vaše preferencie boli uložené!'}
+          </Alert>
+        )}
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Quick Action Buttons */}
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              onClick={handleAcceptAll}
+              sx={{
+                backgroundColor: '#ff9f43',
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#e68a28',
+                },
+              }}
+            >
+              {isEN ? 'Accept All Cookies' : 'Akceptovať všetky cookies'}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setShowSettings(!showSettings)}
+              sx={{
+                borderColor: '#ff9f43',
+                color: '#ff9f43',
+                '&:hover': {
+                  borderColor: '#e68a28',
+                  backgroundColor: 'rgba(255, 159, 67, 0.1)',
+                },
+              }}
+            >
+              {isEN ? 'Customize Settings' : 'Vlastné nastavenia'}
+            </Button>
+          </Box>
+
+          {/* Detailed Settings */}
+          <Accordion expanded={showSettings} onChange={() => setShowSettings(!showSettings)}>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{
+                backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.1)' : 'rgba(255, 159, 67, 0.05)',
+                '&:hover': {
+                  backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.15)' : 'rgba(255, 159, 67, 0.1)',
+                },
+              }}
+            >
+              <Typography variant="h6" sx={{ color: '#ff9f43' }}>
+                {isEN ? 'Cookie Categories' : 'Kategórie cookies'}
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Necessary Cookies */}
+                <Box sx={{ p: 2, border: '1px solid rgba(255, 159, 67, 0.3)', borderRadius: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={preferences.necessary}
+                        disabled={true}
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#ff9f43',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#ff9f43',
+                          },
+                        }}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {isEN ? 'Necessary Cookies' : 'Nevyhnutné cookies'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: isDarkMode ? '#e0e0e0' : '#666' }}>
+                          {isEN 
+                            ? 'Essential for basic website functionality. Cannot be disabled.'
+                            : 'Nevyhnutné pre základnú funkčnosť webstránky. Nemožno zakázať.'}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+
+                {/* Analytics Cookies */}
+                <Box sx={{ p: 2, border: '1px solid rgba(255, 159, 67, 0.3)', borderRadius: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={preferences.analytics}
+                        onChange={(e) => handlePreferenceChange('analytics', e.target.checked)}
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#ff9f43',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#ff9f43',
+                          },
+                        }}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {isEN ? 'Analytics Cookies' : 'Analytické cookies'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: isDarkMode ? '#e0e0e0' : '#666' }}>
+                          {isEN 
+                            ? 'Help us analyze website usage and improve user experience.'
+                            : 'Pomáhajú nám analyzovať používanie webstránky a zlepšovať používateľskú skúsenosť.'}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+
+                {/* Marketing Cookies */}
+                <Box sx={{ p: 2, border: '1px solid rgba(255, 159, 67, 0.3)', borderRadius: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={preferences.marketing}
+                        onChange={(e) => handlePreferenceChange('marketing', e.target.checked)}
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#ff9f43',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#ff9f43',
+                          },
+                        }}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {isEN ? 'Marketing Cookies (Planned)' : 'Marketingové cookies (plánované)'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: isDarkMode ? '#e0e0e0' : '#666' }}>
+                          {isEN 
+                            ? 'Used for personalized advertising and marketing campaigns. Not yet implemented.'
+                            : 'Používané pre personalizované reklamy a marketingové kampane. Zatiaľ nie sú implementované.'}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+
+                {/* Save Button */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={handleSaveSettings}
+                    sx={{
+                      backgroundColor: '#ff9f43',
+                      color: '#ffffff',
+                      '&:hover': {
+                        backgroundColor: '#e68a28',
+                      },
+                    }}
+                  >
+                    {isEN ? 'Save Settings' : 'Uložiť nastavenia'}
+                  </Button>
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Box>
+      </StyledPaper>
+
+      {/* Cookie Policy Information */}
       <StyledPaper>
         <Typography
-          variant="h3"
+          variant="h4"
           component="h1"
           gutterBottom
           sx={{
-            fontWeight: 700,
+            fontWeight: 600,
             textAlign: 'center',
             mb: 4,
-            color: isDarkMode ? '#ffffff' : '#1a1a1a',
+            color: '#ff9f43',
           }}
         >
-          {currentPolicy.title}
+          {isEN ? 'Cookie Policy Information' : 'Informácie o zásadách cookies'}
         </Typography>
 
         <Divider sx={{ mb: 4, borderColor: '#ff9f43' }} />
