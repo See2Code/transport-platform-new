@@ -20,6 +20,7 @@ import {
 import Contacts from './components/management/Contacts';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import ForgotPassword from './components/auth/ForgotPassword';
 import Home from './components/layout/Home';
 import PrivateRoute from './components/auth/PrivateRoute';
 import RegisterUser from './components/auth/RegisterUser';
@@ -262,6 +263,7 @@ const AppContent: React.FC = () => {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/register-user" element={<RegisterUser />} />
               <Route path="/accept-invitation/:invitationId" element={<RegisterUser />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
