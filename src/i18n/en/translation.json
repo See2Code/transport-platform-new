@@ -320,5 +320,92 @@
     "months": "months",
     "month": "month",
     "approximately": "about"
+  },
+  "home": {
+    "hero": {
+      "title": "CORE",
+      "subtitle": "Comprehensive solution for modern freight forwarding company management",
+      "description": "Optimize logistics, streamline vehicle and driver management, and increase your forwarding company's profitability with the professional CORE system by AESA.",
+      "loginButton": "Sign In",
+      "registerButton": "Register Company"
+    },
+    "menu": {
+      "home": "Home",
+      "features": "Benefits",
+      "functions": "Functions",
+      "testimonials": "Testimonials",
+      "getStarted": "Get Started"
+    },
+    "features": {
+      "title": "Why choose CORE?",
+      "subtitle": "We provide a comprehensive and modern solution that streamlines every aspect of your freight forwarding company",
+      "operationalEfficiency": {
+        "title": "Operational Efficiency",
+        "description": "Optimize every aspect of your logistics operations and save up to 25% in costs."
+      },
+      "comprehensiveRecords": {
+        "title": "Comprehensive Records",
+        "description": "All information about orders, jobs, drivers and vehicles in one place."
+      },
+      "easeOfUse": {
+        "title": "Ease of Use",
+        "description": "Intuitive interface designed for fast and efficient work without lengthy training."
+      },
+      "cuttingEdgeTechnology": {
+        "title": "Cutting-edge Technology",
+        "description": "Modern technologies and practices for maximum reliability and security of your data."
+      }
+    },
+    "benefits": {
+      "title": "Everything you need",
+      "subtitle": "CORE provides functionality that covers every aspect of freight forwarding company operations",
+      "fleetManagement": {
+        "title": "Fleet Management",
+        "description": "Track movement, maintenance and costs of all your vehicles in real time."
+      },
+      "driverRecords": {
+        "title": "Driver Records",
+        "description": "Complete driver management, their driving times and vacation balances."
+      },
+      "routePlanning": {
+        "title": "Route Planning",
+        "description": "Optimize routes for maximum efficiency and minimum costs."
+      },
+      "customerManagement": {
+        "title": "Customer Management",
+        "description": "Organized database of all your clients, contacts and history."
+      },
+      "invoicing": {
+        "title": "Invoicing",
+        "description": "Automated creation and sending of invoices directly from the system."
+      },
+      "analyticalReports": {
+        "title": "Analytical Reports",
+        "description": "Detailed statistics and reports for informed business decisions."
+      },
+      "cloudSolution": {
+        "title": "Cloud Solution",
+        "description": "Access to all data anytime, anywhere."
+      },
+      "mobileApplication": {
+        "title": "Mobile Application",
+        "description": "For drivers and dispatchers - complete functionality on the road."
+      }
+    },
+    "testimonials": {
+      "title": "What our clients say",
+      "subtitle": "Real experiences of our customers",
+      "quote": "The CORE system has allowed us to automate a significant part of administration and streamline transport planning. Real-time vehicle and driver tracking greatly helps us in decision-making and communication with clients. In one year of use, we reduced costs by 18% and increased transport volume by 23%.",
+      "author": "Peter Novák",
+      "company": "Director, SpeedLogistic s.r.o."
+    },
+    "cta": {
+      "title": "Ready to modernize your freight forwarding company?",
+      "subtitle": "Start today and get ahead of the competition. First 30 days free, no commitments.",
+      "button": "Try CORE for 14 days completely free"
+    },
+    "footer": {
+      "copyright": "© {{year}} AESA Group, SE. All rights reserved."
+    }
   }
 } 

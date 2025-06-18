@@ -332,5 +332,92 @@
     "months": "mesiacmi",
     "month": "mesiacom",
     "approximately": "približne"
+  },
+  "home": {
+    "hero": {
+      "title": "CORE",
+      "subtitle": "Komplexné riešenie pre moderné riadenie prepravnej spoločnosti",
+      "description": "Optimalizujte logistiku, zjednodušte správu vozidiel a vodičov a zvýšte ziskovosť svojej prepravnej spoločnosti s profesionálnym systémom CORE od AESA.",
+      "loginButton": "Prihlásiť sa",
+      "registerButton": "Zaregistrovať spoločnosť"
+    },
+    "menu": {
+      "home": "Domov",
+      "features": "Výhody",
+      "functions": "Funkcie",
+      "testimonials": "Referencie",
+      "getStarted": "Začať"
+    },
+    "features": {
+      "title": "Prečo si vybrať CORE?",
+      "subtitle": "Poskytujeme komplexné a moderné riešenie, ktoré zjednodušuje každý aspekt vašej prepravnej spoločnosti",
+      "operationalEfficiency": {
+        "title": "Efektivita prevádzky",
+        "description": "Optimalizujte každý aspekt vašich logistických operácií a šetrite až 25% nákladov."
+      },
+      "comprehensiveRecords": {
+        "title": "Komplexná evidencia",
+        "description": "Všetky informácie o objednávkach, zákazkách, vodičoch a vozidlách na jednom mieste."
+      },
+      "easeOfUse": {
+        "title": "Jednoduchosť použitia",
+        "description": "Intuitívne rozhranie navrhnuté pre rýchlu a efektívnu prácu bez dlhého školenia."
+      },
+      "cuttingEdgeTechnology": {
+        "title": "Špičkové technológie",
+        "description": "Moderné technológie a postupy pre maximálnu spoľahlivosť a bezpečnosť vašich dát."
+      }
+    },
+    "benefits": {
+      "title": "Všetko čo potrebujete",
+      "subtitle": "CORE poskytuje funkcionalitu, ktorá pokrýva každý aspekt prevádzky prepravnej spoločnosti",
+      "fleetManagement": {
+        "title": "Správa vozového parku",
+        "description": "Sledujte pohyb, údržbu a náklady všetkých vašich vozidiel v reálnom čase."
+      },
+      "driverRecords": {
+        "title": "Evidencia vodičov",
+        "description": "Kompletná správa vodičov, ich časov jázd a zostatkov dovoleniek."
+      },
+      "routePlanning": {
+        "title": "Plánovanie trás",
+        "description": "Optimalizujte trasy pre maximálnu efektivitu a minimálne náklady."
+      },
+      "customerManagement": {
+        "title": "Správa zákazníkov",
+        "description": "Organizovaná databáza všetkých vašich klientov, kontaktov a histórie."
+      },
+      "invoicing": {
+        "title": "Fakturácia",
+        "description": "Automatizované vytváranie a odosielanie faktúr priamo zo systému."
+      },
+      "analyticalReports": {
+        "title": "Analytické reporty",
+        "description": "Podrobné štatistiky a reporty pre informované obchodné rozhodnutia."
+      },
+      "cloudSolution": {
+        "title": "Cloud riešenie",
+        "description": "Prístup ku všetkým dátam kedykoľvek a kdekoľvek."
+      },
+      "mobileApplication": {
+        "title": "Mobilná aplikácia",
+        "description": "Pre vodičov a dispečerov - kompletná funkcionalita na cestách."
+      }
+    },
+    "testimonials": {
+      "title": "Čo hovoria naši klienti",
+      "subtitle": "Skutočné skúsenosti našich zákazníkov",
+      "quote": "Systém CORE nám umožnil automatizovať významnú časť administratívy a zefektívniť plánovanie prepráv. Sledovanie vozidiel a vodičov v reálnom čase nám výrazne pomáha pri rozhodovaní a komunikácii s klientmi. Za jeden rok používania sme znížili náklady o 18% a zvýšili objem prepráv o 23%.",
+      "author": "Peter Novák",
+      "company": "Riaditeľ, SpeedLogistic s.r.o."
+    },
+    "cta": {
+      "title": "Pripravený modernizovať svoju prepravnú spoločnosť?",
+      "subtitle": "Začnite už dnes a získajte náskok pred konkurenciou. Prvých 30 dní zadarmo, bez záväzkov.",
+      "button": "Vyskúšajte CORE 14 dní úplne zadarmo"
+    },
+    "footer": {
+      "copyright": "© {{year}} AESA Group, SE. Všetky práva vyhradené."
+    }
   }
 } 

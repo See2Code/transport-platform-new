@@ -21,7 +21,8 @@ import {
   AppBar,
   Drawer,
   Card,
-  ListItemButton} from '@mui/material';
+  ListItemButton,
+  Tooltip} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +49,29 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeMode } from '../../contexts/ThemeContext';
+
+// Flag icons - rovnaké ako v Navbar.tsx
+const SKFlagIcon = () => (
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/sk.svg" 
+    alt="Slovenská vlajka" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
+);
+
+const ENFlagIcon = () => (
+  <img 
+    loading="lazy" 
+    width="20" 
+    height="15"
+    src="https://flagcdn.com/gb.svg" 
+    alt="English flag" 
+    style={{ borderRadius: '2px', objectFit: 'cover' }}
+  />
+);
 
 // Navigation Menu
 const NavbarContainer = styled(AppBar)(({ theme }) => ({
@@ -413,7 +437,7 @@ const itemVariants = {
 };
 
 function Home() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
@@ -424,18 +448,27 @@ function Home() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const { toggleTheme } = useThemeMode();
 
+  // Language change function - rovnaká ako v Navbar.tsx
+  const changeLanguage = (language: string) => {
+    i18n.changeLanguage(language);
+    localStorage.setItem('i18nextLng', language);
+  };
+
+  const currentLanguage = i18n.language;
+  const isEN = currentLanguage === 'en';
+
   // Screenshot carousel
   const [activeIndex, setActiveIndex] = useState(0);
   const screenshots = [
     { src: "/Images/dashboard-preview.jpg", alt: "CORE Dashboard", themeSpecific: 'dark' },
-    { src: "/Images/whiteview.jpg", alt: "Svetlý motív aplikácie", themeSpecific: 'light' },
-    { src: "/Images/tracked-transports.jpg", alt: "Sledovanie prepráv" },
-    { src: "/Images/mapview.jpg", alt: "Pohľad na mapu" },
+    { src: "/Images/whiteview.jpg", alt: isEN ? "Light theme application" : "Svetlý motív aplikácie", themeSpecific: 'light' },
+    { src: "/Images/tracked-transports.jpg", alt: isEN ? "Transport tracking" : "Sledovanie prepráv" },
+    { src: "/Images/mapview.jpg", alt: isEN ? "Map view" : "Pohľad na mapu" },
     { src: "/Images/orders.jpg", alt: t('navigation.orders') },
-    { src: "/Images/businesscases.jpg", alt: "Obchodné prípady" },
-    { src: "/Images/contacs.jpg", alt: "Kontakty" },
-    { src: "/Images/team.jpg", alt: "Tímová spolupráca" },
-    { src: "/Images/setttings.jpg", alt: "Nastavenia" }
+    { src: "/Images/businesscases.jpg", alt: isEN ? "Business cases" : "Obchodné prípady" },
+    { src: "/Images/contacs.jpg", alt: isEN ? "Contacts" : "Kontakty" },
+    { src: "/Images/team.jpg", alt: isEN ? "Team collaboration" : "Tímová spolupráca" },
+    { src: "/Images/setttings.jpg", alt: isEN ? "Settings" : "Nastavenia" }
   ];
 
   // Nastavenie prvého obrázka podľa témy
@@ -516,76 +549,76 @@ function Home() {
   const benefits = [
     { 
       icon: <LocalShipping fontSize="large" />, 
-      title: 'Správa vozového parku',
-      description: 'Sledujte pohyb, údržbu a náklady všetkých vašich vozidiel v reálnom čase.' 
+      title: t('home.benefits.fleetManagement.title'),
+      description: t('home.benefits.fleetManagement.description')
     },
     { 
       icon: <People fontSize="large" />, 
-      title: 'Evidencia vodičov',
-      description: 'Kompletná správa vodičov, ich časov jázd a zostatkov dovoleniek.' 
+      title: t('home.benefits.driverRecords.title'),
+      description: t('home.benefits.driverRecords.description')
     },
     { 
       icon: <Map fontSize="large" />, 
-      title: 'Plánovanie trás',
-      description: 'Optimalizujte trasy pre maximálnu efektivitu a minimálne náklady.' 
+      title: t('home.benefits.routePlanning.title'),
+      description: t('home.benefits.routePlanning.description')
     },
     { 
       icon: <Business fontSize="large" />, 
-      title: 'Správa zákazníkov',
-      description: 'Organizovaná databáza všetkých vašich klientov, kontaktov a histórie.' 
+      title: t('home.benefits.customerManagement.title'),
+      description: t('home.benefits.customerManagement.description')
     },
     { 
       icon: <Payment fontSize="large" />, 
-      title: 'Fakturácia',
-      description: 'Automatizované vytváranie a odosielanie faktúr priamo zo systému.' 
+      title: t('home.benefits.invoicing.title'),
+      description: t('home.benefits.invoicing.description')
     },
     { 
       icon: <QueryStats fontSize="large" />, 
-      title: 'Analytické reporty',
-      description: 'Podrobné štatistiky a reporty pre informované obchodné rozhodnutia.' 
+      title: t('home.benefits.analyticalReports.title'),
+      description: t('home.benefits.analyticalReports.description')
     },
     { 
       icon: <DataSaverOn fontSize="large" />, 
-      title: 'Cloud riešenie',
-      description: 'Prístup ku všetkým dátam kedykoľvek a kdekoľvek.' 
+      title: t('home.benefits.cloudSolution.title'),
+      description: t('home.benefits.cloudSolution.description')
     },
     { 
       icon: <PhoneAndroid fontSize="large" />, 
-      title: 'Mobilná aplikácia',
-      description: 'Pre vodičov a dispečerov - kompletná funkcionalita na cestách.' 
+      title: t('home.benefits.mobileApplication.title'),
+      description: t('home.benefits.mobileApplication.description')
     },
   ];
 
   const features = [
     {
       icon: <Speed fontSize="large" />,
-      title: 'Efektivita prevádzky',
-      description: 'Optimalizujte každý aspekt vašich logistických operácií a šetrite až 25% nákladov.'
+      title: t('home.features.operationalEfficiency.title'),
+      description: t('home.features.operationalEfficiency.description')
     },
     {
       icon: <MenuBook fontSize="large" />,
-      title: 'Komplexná evidencia',
-      description: 'Všetky informácie o objednávkach, zákazkách, vodičoch a vozidlách na jednom mieste.'
+      title: t('home.features.comprehensiveRecords.title'),
+      description: t('home.features.comprehensiveRecords.description')
     },
     {
       icon: <Verified fontSize="large" />,
-      title: 'Jednoduchosť použitia',
-      description: 'Intuitívne rozhranie navrhnuté pre rýchlu a efektívnu prácu bez dlhého školenia.'
+      title: t('home.features.easeOfUse.title'),
+      description: t('home.features.easeOfUse.description')
     },
     {
       icon: <Biotech fontSize="large" />,
-      title: 'Špičkové technológie',
-      description: 'Moderné technológie a postupy pre maximálnu spoľahlivosť a bezpečnosť vašich dát.'
+      title: t('home.features.cuttingEdgeTechnology.title'),
+      description: t('home.features.cuttingEdgeTechnology.description')
     }
   ];
 
   // Menu items for navigation
   const menuItems = [
-    { label: 'Domov', id: 'hero' },
-    { label: 'Výhody', id: 'features' },
-    { label: 'Funkcie', id: 'benefits' },
-    { label: 'Referencie', id: 'testimonials' },
-    { label: 'Začať', id: 'cta' },
+    { label: t('home.menu.home'), id: 'hero' },
+    { label: t('home.menu.features'), id: 'features' },
+    { label: t('home.menu.functions'), id: 'benefits' },
+    { label: t('home.menu.testimonials'), id: 'testimonials' },
+    { label: t('home.menu.getStarted'), id: 'cta' },
   ];
 
   return (
@@ -665,8 +698,41 @@ function Home() {
                   fontWeight: 600
                 }}
               >
-                Prihlásiť sa
+                {t('home.hero.loginButton')}
               </NavButton>
+              
+              {/* Language Switcher */}
+              <Tooltip title="Slovenčina" placement="bottom">
+                <IconButton 
+                  onClick={() => changeLanguage('sk')}
+                  sx={{ 
+                    ml: 1,
+                    color: isDarkMode ? '#fff' : '#333',
+                    opacity: !isEN ? 1 : 0.6,
+                    '&:hover': {
+                      background: 'rgba(255, 159, 67, 0.1)',
+                    }
+                  }}
+                >
+                  <SKFlagIcon />
+                </IconButton>
+              </Tooltip>
+              
+              <Tooltip title="English" placement="bottom">
+                <IconButton 
+                  onClick={() => changeLanguage('en')}
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    opacity: isEN ? 1 : 0.6,
+                    '&:hover': {
+                      background: 'rgba(255, 159, 67, 0.1)',
+                    }
+                  }}
+                >
+                  <ENFlagIcon />
+                </IconButton>
+              </Tooltip>
+              
               <IconButton
                 onClick={toggleTheme}
                 sx={{
@@ -775,11 +841,76 @@ function Home() {
                     fontWeight: 600,
                   }}
                 >
-                  Prihlásiť sa
+                  {t('home.hero.loginButton')}
                 </Typography>
               }
             />
           </ListItemButton>
+          {/* Language Switcher v mobile menu */}
+          <ListItemButton 
+            onClick={() => {
+              changeLanguage('sk');
+              setMobileMenuOpen(false);
+            }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              opacity: !isEN ? 1 : 0.6,
+              '&:hover': {
+                background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <SKFlagIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  Slovenčina
+                </Typography>
+              }
+            />
+          </ListItemButton>
+          
+          <ListItemButton 
+            onClick={() => {
+              changeLanguage('en');
+              setMobileMenuOpen(false);
+            }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              opacity: isEN ? 1 : 0.6,
+              '&:hover': {
+                background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <ENFlagIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  English
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
           <ListItemButton 
             onClick={() => {
               toggleTheme();
@@ -797,6 +928,9 @@ function Home() {
               }
             }}
           >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
+            </ListItemIcon>
             <ListItemText
               primary={
                 <Typography 
@@ -805,11 +939,8 @@ function Home() {
                     fontWeight: 500,
                   }}
                 >
-                  {isDarkMode ? 'Svetlý režim' : 'Tmavý režim'}
+                  {isDarkMode ? t('settings.lightMode') : t('settings.darkMode')}
                 </Typography>
-              }
-              secondary={
-                isDarkMode ? <Brightness7Icon sx={{ color: '#fff' }} /> : <Brightness4Icon sx={{ color: '#333' }} />
               }
             />
           </ListItemButton>
@@ -850,9 +981,15 @@ function Home() {
                   fontWeight: 800,
                   letterSpacing: '-0.02em',
                   mb: 2,
-                  bgGradient: 'linear(to-r, #ff9f43, #ff6b6b)',
-                  bgClip: 'text',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  background: 'linear-gradient(45deg, #ff9f43, #ff6b6b)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  color: 'transparent', // fallback pre nekompatibilné prehliadače
+                  '&::selection': {
+                    background: 'rgba(255, 159, 67, 0.3)',
+                  }
                 }}
               >
                 CORE
@@ -870,7 +1007,7 @@ function Home() {
                   textAlign: 'center'
                 }}
               >
-                Komplexné riešenie pre moderne riadenú špedičnú spoločnosť
+                {t('home.hero.subtitle')}
               </Typography>
 
               <Typography
@@ -884,15 +1021,15 @@ function Home() {
                   textAlign: 'center'
                 }}
               >
-                Optimalizujte logistiku, zefektívnite správu vozidiel a vodičov a zvýšte ziskovosť vašej špedičnej spoločnosti s profesionálnym systémom CORE od AESA.
+                {t('home.hero.description')}
               </Typography>
 
               <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
                 <PrimaryButton onClick={() => navigate('/login')}>
-                  Prihlásiť sa
+                  {t('home.hero.loginButton')}
                 </PrimaryButton>
                 <SecondaryButton onClick={() => navigate('/register')}>
-                  Registrovať firmu
+                  {t('home.hero.registerButton')}
                 </SecondaryButton>
               </Box>
 
@@ -1069,11 +1206,11 @@ function Home() {
         {/* Features Section */}
         <Section id="features">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <SectionTitle variant="h2">
-              Prečo si vybrať CORE?
+            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+              {t('home.features.title')}
             </SectionTitle>
-            <SectionSubtitle variant="h6">
-              Poskytujeme komplexné a moderné riešenie, ktoré zefektívni každý aspekt vašej špedičnej spoločnosti
+            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+              {t('home.features.subtitle')}
             </SectionSubtitle>
           </Box>
 
@@ -1085,21 +1222,37 @@ function Home() {
             <Grid container spacing={4}>
               {features.map((feature, index) => (
                 <Grid item xs={12} sm={6} md={3} key={index}>
-                  <motion.div variants={itemVariants}>
-                    <FeatureCard isDarkMode={isDarkMode}>
-                      <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                        <FeatureIcon>
-                          {feature.icon}
-                        </FeatureIcon>
-                        <Typography variant="h5" gutterBottom sx={{ 
-                          fontWeight: 600, 
-                          color: isDarkMode ? '#ffffff' : '#333333',
-                          mb: 1
-                        }}>
-                          {feature.title}
-                        </Typography>
+                  <motion.div variants={itemVariants} style={{ height: '100%' }}>
+                    <FeatureCard isDarkMode={isDarkMode} sx={{ height: '100%', display: 'flex' }}>
+                      <CardContent sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        textAlign: 'center',
+                        flex: 1,
+                        justifyContent: 'space-between',
+                        minHeight: '280px' // Nastavím minimálnu výšku pre konzistentnosť
+                      }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <FeatureIcon>
+                            {feature.icon}
+                          </FeatureIcon>
+                          <Typography variant="h5" gutterBottom sx={{ 
+                            fontWeight: 600, 
+                            color: isDarkMode ? '#ffffff' : '#333333',
+                            mb: 2,
+                            minHeight: '64px', // Rezervujem priestor pre 2 riadky
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}>
+                            {feature.title}
+                          </Typography>
+                        </Box>
                         <Typography variant="body2" sx={{ 
-                          color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)'
+                          color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center'
                         }}>
                           {feature.description}
                         </Typography>
@@ -1115,11 +1268,11 @@ function Home() {
         {/* Benefits Section */}
         <Section id="benefits">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <SectionTitle variant="h2">
-              Všetko čo potrebujete
+            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+              {t('home.benefits.title')}
             </SectionTitle>
-            <SectionSubtitle variant="h6">
-              CORE poskytuje funkcionalitu, ktorá pokrýva každý aspekt prevádzky špedičnej spoločnosti
+            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+              {t('home.benefits.subtitle')}
             </SectionSubtitle>
           </Box>
 
@@ -1193,11 +1346,11 @@ function Home() {
         {/* Testimonial */}
         <Section id="testimonials">
           <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <SectionTitle variant="h2">
-              Čo o nás hovoria klienti
+            <SectionTitle variant="h2" isDarkMode={isDarkMode}>
+              {t('home.testimonials.title')}
             </SectionTitle>
-            <SectionSubtitle variant="h6">
-              Reálne skúsenosti našich zákazníkov
+            <SectionSubtitle variant="h6" isDarkMode={isDarkMode}>
+              {t('home.testimonials.subtitle')}
             </SectionSubtitle>
           </Box>
 
@@ -1218,9 +1371,7 @@ function Home() {
                       color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)'
                     }}
                   >
-                    "Systém CORE nám umožnil automatizovať značnú časť administratívy a zefektívniť plánovanie prepravy. 
-                    Sledovanie vozidiel a vodičov v reálnom čase nám výrazne pomáha pri rozhodovaní a komunikácii s klientmi. 
-                    Za rok používania sme znížili náklady o 18% a zvýšili objem prepravy o 23%."
+                    "{t('home.testimonials.quote')}"
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar 
@@ -1238,10 +1389,10 @@ function Home() {
                     </Avatar>
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#333333' }}>
-                        Peter Novák
+                        {t('home.testimonials.author')}
                       </Typography>
                       <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}>
-                        Riaditeľ, SpeedLogistic s.r.o.
+                        {t('home.testimonials.company')}
                       </Typography>
                     </Box>
                   </Box>
@@ -1283,7 +1434,7 @@ function Home() {
                   textAlign: 'center'
                 }}
               >
-                Pripravení zmodernizovať vašu špedičnú spoločnosť?
+                {t('home.cta.title')}
               </Typography>
               <Typography 
                 variant="body1" 
@@ -1296,11 +1447,11 @@ function Home() {
                   textAlign: 'center'
                 }}
               >
-                Začnite už dnes a získajte náskok pred konkurenciou. Prvých 30 dní zadarmo, bez záväzkov.
+                {t('home.cta.subtitle')}
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
                 <PrimaryButton onClick={() => navigate('/register')} size="large">
-                  Vyskúšajte CORE na 14 dní úplne zadarmo
+                  {t('home.cta.button')}
                 </PrimaryButton>
               </Box>
             </Box>
@@ -1311,7 +1462,7 @@ function Home() {
         <Box component="footer" sx={{ py: 5, textAlign: 'center' }}>
           <Divider sx={{ mb: 4, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
           <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' }}>
-            © {new Date().getFullYear()} AESA Group, SE. Všetky práva vyhradené.
+            {t('home.footer.copyright', { year: new Date().getFullYear() })}
           </Typography>
         </Box>
       </Container>
