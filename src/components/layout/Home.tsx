@@ -46,9 +46,14 @@ import {
   Brightness7 as Brightness7Icon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  LocationOn as LocationIcon,
+  AccountBalance as BankIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeMode } from '../../contexts/ThemeContext';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 
 // Flag icons - rovnaké ako v Navbar.tsx
 const SKFlagIcon = () => (
@@ -414,6 +419,106 @@ const StyledListItem = styled(ListItem)<{ isDarkMode: boolean }>(({ isDarkMode }
   }
 }));
 
+// Footer styled components
+const FooterSection = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  background: isDarkMode 
+    ? 'linear-gradient(135deg, rgba(16, 14, 60, 0.95) 0%, rgba(26, 26, 46, 0.95) 100%)' 
+    : 'linear-gradient(135deg, rgba(248, 249, 250, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)',
+  borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+  position: 'relative',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '1px',
+    background: 'linear-gradient(90deg, transparent, #ff9f43, transparent)',
+  }
+}));
+
+const FooterContent = styled(Container)(({ _theme }) => ({
+  padding: '80px 24px 40px',
+  '@media (max-width: 900px)': {
+    padding: '60px 16px 30px',
+  }
+}));
+
+const FooterGrid = styled(Grid)(() => ({
+  marginBottom: '60px',
+  '@media (max-width: 900px)': {
+    marginBottom: '40px',
+  }
+}));
+
+const FooterTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  fontSize: '1.3rem',
+  fontWeight: 700,
+  marginBottom: '20px',
+  color: isDarkMode ? '#ffffff' : '#333333',
+  position: 'relative',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    bottom: '-8px',
+    left: 0,
+    width: '40px',
+    height: '3px',
+    background: 'linear-gradient(90deg, #ff9f43, #ff6b6b)',
+    borderRadius: '2px',
+  }
+}));
+
+const FooterText = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+  marginBottom: '8px',
+  fontSize: '0.95rem',
+  lineHeight: 1.6,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+}));
+
+const ContactButton = styled(Button)<{ isDarkMode: boolean }>(({ _isDarkMode }) => ({
+  marginTop: '15px',
+  padding: '10px 25px',
+  borderRadius: '8px',
+  textTransform: 'none',
+  fontWeight: 600,
+  background: 'linear-gradient(45deg, #ff9f43 0%, #ff6b6b 100%)',
+  color: 'white',
+  fontSize: '1rem',
+  boxShadow: '0 4px 15px rgba(255, 159, 67, 0.3)',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    background: 'linear-gradient(45deg, #e8903e 0%, #e85d5d 100%)',
+    transform: 'translateY(-2px)',
+    boxShadow: '0 6px 20px rgba(255, 159, 67, 0.4)',
+  },
+  '& .MuiSvgIcon-root': {
+    marginRight: '8px',
+  }
+}));
+
+const MapContainer = styled(Box)(() => ({
+  height: '300px',
+  borderRadius: '12px',
+  overflow: 'hidden',
+  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+}));
+
+const LegalLink = styled(Button)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+  textTransform: 'none',
+  fontSize: '0.9rem',
+  fontWeight: 500,
+  '&:hover': {
+    color: '#ff9f43',
+    backgroundColor: 'transparent',
+  }
+}));
+
 // Animation variants for framer-motion
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -447,6 +552,12 @@ function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const { toggleTheme } = useThemeMode();
+
+  // Google Maps loader - len ak máme API kľúč
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
+  });
 
   // Language change function - rovnaká ako v Navbar.tsx
   const changeLanguage = (language: string) => {
@@ -543,6 +654,10 @@ function Home() {
     } else {
       scrollToTop();
     }
+  };
+
+  const handlePhoneCall = () => {
+    window.location.href = 'tel:+421910970970';
   };
 
   // Benefity pre používateľov
@@ -1459,12 +1574,178 @@ function Home() {
         </Section>
 
         {/* Footer */}
-        <Box component="footer" sx={{ py: 5, textAlign: 'center' }}>
-          <Divider sx={{ mb: 4, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
-          <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' }}>
-            {t('home.footer.copyright', { year: new Date().getFullYear() })}
-          </Typography>
-        </Box>
+        <FooterSection component="footer" isDarkMode={isDarkMode}>
+          <FooterContent maxWidth="lg">
+            <FooterGrid container spacing={4}>
+              {/* Company Info */}
+              <Grid item xs={12} md={4}>
+                <FooterTitle variant="h6" isDarkMode={isDarkMode}>
+                  {t('home.footer.companyInfo.name')}
+                </FooterTitle>
+                
+                <FooterText variant="body2" isDarkMode={isDarkMode}>
+                  <LocationIcon sx={{ color: '#ff9f43', fontSize: 18 }} />
+                  {t('home.footer.companyInfo.headquarters')}
+                </FooterText>
+                
+                <FooterText variant="body2" isDarkMode={isDarkMode}>
+                  <LocationIcon sx={{ color: '#ff9f43', fontSize: 18 }} />
+                  {t('home.footer.companyInfo.operations')}
+                </FooterText>
+                
+                <Box sx={{ mt: 2 }}>
+                  <FooterText variant="body2" isDarkMode={isDarkMode}>
+                    {t('home.footer.companyInfo.ico')}
+                  </FooterText>
+                  <FooterText variant="body2" isDarkMode={isDarkMode}>
+                    {t('home.footer.companyInfo.dic')}
+                  </FooterText>
+                  <FooterText variant="body2" isDarkMode={isDarkMode}>
+                    {t('home.footer.companyInfo.icdph')}
+                  </FooterText>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <FooterText variant="body2" isDarkMode={isDarkMode} sx={{ fontWeight: 600 }}>
+                    <BankIcon sx={{ color: '#ff9f43', fontSize: 18 }} />
+                    {t('home.footer.companyInfo.banking')}
+                  </FooterText>
+                  <FooterText variant="body2" isDarkMode={isDarkMode} sx={{ ml: 3 }}>
+                    {t('home.footer.companyInfo.bank')}
+                  </FooterText>
+                  <FooterText variant="body2" isDarkMode={isDarkMode} sx={{ ml: 3 }}>
+                    {t('home.footer.companyInfo.swift')}
+                  </FooterText>
+                  <FooterText variant="body2" isDarkMode={isDarkMode} sx={{ ml: 3, fontFamily: 'monospace' }}>
+                    {t('home.footer.companyInfo.iban')}
+                  </FooterText>
+                </Box>
+              </Grid>
+
+              {/* Contact Info */}
+              <Grid item xs={12} md={4}>
+                <FooterTitle variant="h6" isDarkMode={isDarkMode}>
+                  {t('home.footer.contact.title')}
+                </FooterTitle>
+                
+                <FooterText variant="body2" isDarkMode={isDarkMode}>
+                  <PhoneIcon sx={{ color: '#ff9f43', fontSize: 18 }} />
+                  <Box component="a" href="tel:+421910970970" sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { color: '#ff9f43' } }}>
+                    {t('home.footer.contact.phone')}
+                  </Box>
+                </FooterText>
+                
+                <FooterText variant="body2" isDarkMode={isDarkMode}>
+                  <EmailIcon sx={{ color: '#ff9f43', fontSize: 18 }} />
+                  <Box component="a" href="mailto:development@aesa.sk" sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { color: '#ff9f43' } }}>
+                    {t('home.footer.contact.email')}
+                  </Box>
+                </FooterText>
+                
+                <FooterText variant="body2" isDarkMode={isDarkMode} sx={{ mt: 1 }}>
+                  {t('home.footer.contact.contactPerson')}
+                </FooterText>
+
+                <ContactButton
+                  isDarkMode={isDarkMode}
+                  variant="contained"
+                  onClick={handlePhoneCall}
+                  startIcon={<PhoneIcon />}
+                >
+                  {t('home.footer.contact.callUs')}
+                </ContactButton>
+              </Grid>
+
+              {/* Location & Map */}
+              <Grid item xs={12} md={4}>
+                <FooterTitle variant="h6" isDarkMode={isDarkMode}>
+                  {t('home.footer.location.title')}
+                </FooterTitle>
+                
+                <FooterText variant="body2" isDarkMode={isDarkMode} sx={{ mb: 2 }}>
+                  <LocationIcon sx={{ color: '#ff9f43', fontSize: 18 }} />
+                  {t('home.footer.location.address')}
+                </FooterText>
+
+                {isLoaded && process.env.REACT_APP_GOOGLE_MAPS_API_KEY ? (
+                  <MapContainer>
+                    <GoogleMap
+                      mapContainerStyle={{ width: '100%', height: '100%' }}
+                      center={{ lat: 48.3069, lng: 18.0876 }} // Nitra coordinates
+                      zoom={15}
+                      options={{
+                        styles: isDarkMode ? [
+                          { featureType: 'all', elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+                          { featureType: 'all', elementType: 'labels.text.fill', stylers: [{ color: '#ffffff' }] },
+                          { featureType: 'all', elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e', weight: 2 }] },
+                          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#12121f' }] },
+                          { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+                          { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2a2a4e' }] },
+                        ] : [],
+                        disableDefaultUI: true,
+                        zoomControl: true,
+                        scrollwheel: false,
+                        draggable: true,
+                      }}
+                    >
+                      <Marker
+                        position={{ lat: 48.3069, lng: 18.0876 }}
+                        icon={{
+                          url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'%3E%3Cpath fill='%23ff9f43' d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/%3E%3C/svg%3E",
+                          scaledSize: new window.google.maps.Size(32, 32),
+                          anchor: new window.google.maps.Point(16, 32)
+                        }}
+                        title="AESA Group - Palánok 4605/5, 949 01 Nitra"
+                      />
+                    </GoogleMap>
+                  </MapContainer>
+                ) : (
+                  <MapContainer sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.5)' : 'rgba(240, 240, 240, 0.5)',
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)'
+                  }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <LocationIcon sx={{ fontSize: 48, color: '#ff9f43', mb: 1 }} />
+                      <Typography variant="body2">
+                        {t('home.footer.location.address')}
+                      </Typography>
+                    </Box>
+                  </MapContainer>
+                )}
+              </Grid>
+            </FooterGrid>
+
+            {/* Legal Links & Copyright */}
+            <Divider sx={{ mb: 3, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+            
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 2
+            }}>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <LegalLink isDarkMode={isDarkMode}>
+                  {t('home.footer.legal.privacyPolicy')}
+                </LegalLink>
+                <LegalLink isDarkMode={isDarkMode}>
+                  {t('home.footer.legal.termsOfUse')}
+                </LegalLink>
+              </Box>
+              
+              <Typography variant="body2" sx={{ 
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                textAlign: { xs: 'center', md: 'right' }
+              }}>
+                {t('home.footer.copyright', { year: new Date().getFullYear() })}
+              </Typography>
+            </Box>
+          </FooterContent>
+        </FooterSection>
       </Container>
     </Box>
   );

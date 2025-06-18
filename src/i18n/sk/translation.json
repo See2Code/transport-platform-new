@@ -417,7 +417,34 @@
       "button": "Vyskúšajte CORE 14 dní úplne zadarmo"
     },
     "footer": {
-      "copyright": "© {{year}} AESA Group, SE. Všetky práva vyhradené."
+      "copyright": "© {{year}} AESA Group, SE. Všetky práva vyhradené.",
+      "companyInfo": {
+        "name": "AESA Group, SE",
+        "headquarters": "Pekárska 11, 917 01 Trnava, Slovensko",
+        "operations": "Korešpondenčná a prevádzka: Palánok 4605/5, 949 01 Nitra",
+        "ico": "IČO: 55361731",
+        "dic": "DIČ: 2121966220",
+        "icdph": "IČ DPH: SK2121966220",
+        "banking": "Bankové spojenie:",
+        "bank": "TatraBanka, a.s.",
+        "swift": "SWIFT: TATRSKBX",
+        "iban": "SK2411000000002947154079"
+      },
+      "contact": {
+        "title": "Kontakt",
+        "phone": "+421 910 970 970",
+        "email": "development@aesa.sk",
+        "callUs": "Zavolajte nám",
+        "contactPerson": "Kontaktná osoba: Róbert Sitár"
+      },
+      "legal": {
+        "privacyPolicy": "Ochrana súkromia",
+        "termsOfUse": "Podmienky používania"
+      },
+      "location": {
+        "title": "Naša lokalita",
+        "address": "Palánok 4605/5, 949 01 Nitra"
+      }
     }
   }
 } 

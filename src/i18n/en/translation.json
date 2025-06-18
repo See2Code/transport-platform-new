@@ -405,7 +405,34 @@
       "button": "Try CORE for 14 days completely free"
     },
     "footer": {
-      "copyright": "© {{year}} AESA Group, SE. All rights reserved."
+      "copyright": "© {{year}} AESA Group, SE. All rights reserved.",
+      "companyInfo": {
+        "name": "AESA Group, SE",
+        "headquarters": "Pekárska 11, 917 01 Trnava, Slovakia",
+        "operations": "Correspondence and operations: Palánok 4605/5, 949 01 Nitra",
+        "ico": "Company ID: 55361731",
+        "dic": "Tax ID: 2121966220",
+        "icdph": "VAT ID: SK2121966220",
+        "banking": "Banking details:",
+        "bank": "TatraBanka, a.s.",
+        "swift": "SWIFT: TATRSKBX",
+        "iban": "SK2411000000002947154079"
+      },
+      "contact": {
+        "title": "Contact",
+        "phone": "+421 910 970 970",
+        "email": "development@aesa.sk",
+        "callUs": "Call us",
+        "contactPerson": "Contact person: Róbert Sitár"
+      },
+      "legal": {
+        "privacyPolicy": "Privacy Policy",
+        "termsOfUse": "Terms of Use"
+      },
+      "location": {
+        "title": "Our Location",
+        "address": "Palánok 4605/5, 949 01 Nitra"
+      }
     }
   }
 } 
