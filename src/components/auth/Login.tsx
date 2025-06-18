@@ -18,7 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeMode } from '../../contexts/ThemeContext';
 
 function Login() {
-  const { login } = useAuth();
+  const { login, loading: authLoading } = useAuth();
   const { isDarkMode } = useThemeMode();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
