@@ -32,14 +32,30 @@ function Login() {
     setError(null);
 
     try {
-      const navigationPromise = navigate('/dashboard', { replace: true });
-      
       await login(email, password);
+      navigate('/dashboard', { replace: true });
+    } catch (error: any) {
+      // Spracovanie rôznych typov Firebase chýb s používateľsky prívetivými správami
+      let errorMessage = 'Zadali ste nesprávny email alebo heslo';
       
-      await navigationPromise;
-    // eslint-disable-next-line unused-imports/no-unused-vars
-    } catch (_) {
-      setError('Nesprávne prihlasovacie údaje');
+      if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'Zadali ste nesprávny email alebo heslo';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'Používateľ s týmto emailom neexistuje';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Zadali ste nesprávne heslo';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Neplatný formát emailu';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'Tento účet bol zablokovaný';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Príliš veľa neúspešných pokusov. Skúste to znova neskôr';
+      } else if (error.message && error.message.includes('Používateľ neexistuje v systéme')) {
+        errorMessage = 'Používateľ neexistuje v systéme';
+      }
+      
+      setError(errorMessage);
+    } finally {
       setLoading(false);
     }
   };
@@ -133,7 +149,10 @@ function Login() {
                   label="Email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError(null); // Reset error pri zmene emailu
+                  }}
                   required
                   disabled={loading}
                   sx={{
@@ -167,7 +186,10 @@ function Login() {
                   label="Heslo"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError(null); // Reset error pri zmene hesla
+                  }}
                   required
                   disabled={loading}
                   sx={{

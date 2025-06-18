@@ -2735,7 +2735,7 @@ const OrdersList: React.FC = () => {
                     ) : ( // Ak nie je mobilné zariadenie, zobraz fixnú tabuľku
             <Box 
               sx={{ 
-                backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                backgroundColor: isDarkMode ? 'rgba(45, 45, 65, 0.95)' : '#ffffff', // Bledšia v tmavej téme
                 borderRadius: '20px',
                 border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
                 backdropFilter: 'blur(20px)',
@@ -2765,13 +2765,13 @@ const OrdersList: React.FC = () => {
                   '::-webkit-scrollbar-thumb': {
                     backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)',
                     borderRadius: '8px',
-                    border: `2px solid ${isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff'}`,
-                    '&:hover': {
-                      backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-                    },
+                                      border: `2px solid ${isDarkMode ? 'rgba(45, 45, 65, 0.95)' : '#ffffff'}`,
+                  '&:hover': {
+                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
                   },
-                  '::-webkit-scrollbar-corner': {
-                    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+                },
+                '::-webkit-scrollbar-corner': {
+                  backgroundColor: isDarkMode ? 'rgba(45, 45, 65, 0.95)' : '#ffffff',
                   },
                   // Firefox fallback
                   scrollbarWidth: 'auto',
@@ -2795,7 +2795,7 @@ const OrdersList: React.FC = () => {
                       position: 'sticky',
                       top: 0,
                       zIndex: 10,
-                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.98)' : '#ffffff',
+                      backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.98)' : '#ffffff', // Header zostáva tmavší
                       fontWeight: 600,
                       color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
                       borderBottom: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
@@ -2909,7 +2909,7 @@ const OrdersList: React.FC = () => {
                   left: 0,
                   right: 0,
                   zIndex: 10,
-                  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.98)' : '#ffffff',
+                  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.98)' : '#f5f5f5', // Šedá ako header v bielej téme
                   borderTop: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
                   display: 'flex',
                   flexDirection: 'column',

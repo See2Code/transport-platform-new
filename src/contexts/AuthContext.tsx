@@ -248,7 +248,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      setError(null);
       
       // Prihlásenie cez Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -288,7 +287,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
     } catch (error: any) {
       console.error('Chyba pri prihlásení:', error);
-      setError(error.message || 'Nastala chyba pri prihlásení');
+      // Nenastavujeme globálny error state pre login chyby
+      // Error handling nechávame na komponente
       throw error;
     } finally {
       setLoading(false);
