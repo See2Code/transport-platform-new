@@ -1729,11 +1729,14 @@ function Home() {
               gap: 2
             }}>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <LegalLink isDarkMode={isDarkMode}>
+                <LegalLink isDarkMode={isDarkMode} onClick={() => navigate('/privacy-policy')}>
                   {t('home.footer.legal.privacyPolicy')}
                 </LegalLink>
-                <LegalLink isDarkMode={isDarkMode}>
+                <LegalLink isDarkMode={isDarkMode} onClick={() => navigate('/terms-of-use')}>
                   {t('home.footer.legal.termsOfUse')}
+                </LegalLink>
+                <LegalLink isDarkMode={isDarkMode} onClick={() => navigate('/cookie-policy')}>
+                  {t('home.footer.legal.cookiePolicy')}
                 </LegalLink>
               </Box>
               

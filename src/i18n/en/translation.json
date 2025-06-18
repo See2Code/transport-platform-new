@@ -427,7 +427,8 @@
       },
       "legal": {
         "privacyPolicy": "Privacy Policy",
-        "termsOfUse": "Terms of Use"
+        "termsOfUse": "Terms of Use",
+        "cookiePolicy": "Cookie Policy"
       },
       "location": {
         "title": "Our Location",

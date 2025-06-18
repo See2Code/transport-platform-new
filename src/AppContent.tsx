@@ -23,9 +23,13 @@ import Register from './components/auth/Register';
 import Home from './components/layout/Home';
 import PrivateRoute from './components/auth/PrivateRoute';
 import RegisterUser from './components/auth/RegisterUser';
+import PrivacyPolicy from './components/legal/PrivacyPolicy';
+import TermsOfUse from './components/legal/TermsOfUse';
+import CookiePolicy from './components/legal/CookiePolicy';
 import { useThemeMode } from './contexts/ThemeContext';
 import ChatDrawer from './components/chat/ChatDrawer';
 import NotificationPermission from './components/notifications/NotificationPermission';
+import CookieBanner from './components/common/CookieBanner';
 import { useChat } from './contexts/ChatContext';
 import styled from '@emotion/styled';
 
@@ -260,6 +264,9 @@ const AppContent: React.FC = () => {
               <Route path="/register" element={<Register />} />
               <Route path="/register-user" element={<RegisterUser />} />
               <Route path="/accept-invitation/:invitationId" element={<RegisterUser />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-use" element={<TermsOfUse />} />
+              <Route path="/cookie-policy" element={<CookiePolicy />} />
               
               {/* Chránené cesty */}
               <Route path="/dashboard" element={
@@ -367,6 +374,7 @@ const AppContent: React.FC = () => {
         
         {/* Komponenty, ktoré sa zobrazujú globálne */}
         <NotificationPermission />
+        <CookieBanner />
       </ChatUIContext.Provider>
     </MuiThemeProvider>
   );
