@@ -144,12 +144,12 @@ const LogoContainer = styled(Box)(() => ({
 
 const LogoImage = styled('img', {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+})<{ isDarkMode: boolean }>(({ _isDarkMode }) => ({
   width: '120px',
   height: 'auto',
-  filter: isDarkMode ? 'brightness(0) invert(1)' : 'brightness(0)',
   cursor: 'pointer',
   transition: 'transform 0.3s ease-in-out',
+  imageRendering: '-webkit-optimize-contrast',
   '&:hover': {
     transform: 'scale(1.05)',
   },
@@ -404,18 +404,31 @@ const TestimonialCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) =
 
 // Benefit list
 const StyledListItem = styled(ListItem)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
-  padding: '10px 0',
+  padding: '16px 0',
+  minHeight: '120px', // Nastavím rovnakú minimálnu výšku pre všetky komponenty
+  alignItems: 'flex-start',
   '& .MuiListItemIcon-root': {
-    minWidth: '40px',
+    minWidth: '50px',
     color: '#ff9f43',
+    marginTop: '4px',
+  },
+  '& .MuiListItemText-root': {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    margin: 0,
   },
   '& .MuiListItemText-primary': {
     fontSize: '1.1rem',
-    fontWeight: 500,
+    fontWeight: 600,
     color: isDarkMode ? '#ffffff' : '#333333',
+    marginBottom: '8px',
+    lineHeight: 1.3,
   },
   '& .MuiListItemText-secondary': {
     color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+    fontSize: '0.95rem',
+    lineHeight: 1.5,
   }
 }));
 
@@ -519,27 +532,7 @@ const LegalLink = styled(Button)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   }
 }));
 
-// Animation variants for framer-motion
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      duration: 0.5
-    }
-  }
-};
+// Keeping some motion for carousel only
 
 function Home() {
   const { t, i18n } = useTranslation();
@@ -571,7 +564,7 @@ function Home() {
   // Screenshot carousel
   const [activeIndex, setActiveIndex] = useState(0);
   const screenshots = [
-    { src: "/Images/dashboard-preview.jpg", alt: "CORE Dashboard", themeSpecific: 'dark' },
+    { src: "/Images/dashboard-preview.jpg", alt: "AESA Core Dashboard", themeSpecific: 'dark' },
     { src: "/Images/whiteview.jpg", alt: isEN ? "Light theme application" : "Svetlý motív aplikácie", themeSpecific: 'light' },
     { src: "/Images/tracked-transports.jpg", alt: isEN ? "Transport tracking" : "Sledovanie prepráv" },
     { src: "/Images/mapview.jpg", alt: isEN ? "Map view" : "Pohľad na mapu" },
@@ -777,22 +770,13 @@ function Home() {
           <Toolbar sx={{ justifyContent: 'space-between', px: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <LogoImage 
-                src="/AESA black.svg" 
+                src={isDarkMode ? "/AESA white.svg" : "/AESA black.svg"} 
                 alt="AESA Logo" 
                 isDarkMode={isDarkMode} 
                 onClick={handleLogoClick}
-                sx={{ width: '80px', mr: 2 }}
+                sx={{ width: '100px', mr: 2 }}
               />
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  fontWeight: 700, 
-                  color: isDarkMode ? '#fff' : '#333',
-                  display: { xs: 'none', sm: 'block' }
-                }}
-              >
-                CORE
-              </Typography>
+
             </Box>
 
             {/* Desktop Menu */}
@@ -1081,7 +1065,7 @@ function Home() {
             <Box>
               <LogoContainer>
                 <LogoImage 
-                  src="/AESA black.svg" 
+                  src={isDarkMode ? "/AESA white.svg" : "/AESA black.svg"} 
                   alt="AESA Logo" 
                   isDarkMode={isDarkMode} 
                   onClick={handleLogoClick}
@@ -1329,55 +1313,47 @@ function Home() {
             </SectionSubtitle>
           </Box>
 
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <Grid container spacing={4}>
-              {features.map((feature, index) => (
-                <Grid item xs={12} sm={6} md={3} key={index}>
-                  <motion.div variants={itemVariants} style={{ height: '100%' }}>
-                    <FeatureCard isDarkMode={isDarkMode} sx={{ height: '100%', display: 'flex' }}>
-                      <CardContent sx={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        textAlign: 'center',
-                        flex: 1,
-                        justifyContent: 'space-between',
-                        minHeight: '280px' // Nastavím minimálnu výšku pre konzistentnosť
+          <Grid container spacing={4}>
+            {features.map((feature, index) => (
+              <Grid item xs={12} sm={6} md={3} key={index}>
+                <FeatureCard isDarkMode={isDarkMode} sx={{ height: '100%', display: 'flex' }}>
+                  <CardContent sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    textAlign: 'center',
+                    flex: 1,
+                    justifyContent: 'space-between',
+                    minHeight: '280px' // Nastavím minimálnu výšku pre konzistentnosť
+                  }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <FeatureIcon>
+                        {feature.icon}
+                      </FeatureIcon>
+                      <Typography variant="h5" gutterBottom sx={{ 
+                        fontWeight: 600, 
+                        color: isDarkMode ? '#ffffff' : '#333333',
+                        mb: 2,
+                        minHeight: '64px', // Rezervujem priestor pre 2 riadky
+                        display: 'flex',
+                        alignItems: 'center'
                       }}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <FeatureIcon>
-                            {feature.icon}
-                          </FeatureIcon>
-                          <Typography variant="h5" gutterBottom sx={{ 
-                            fontWeight: 600, 
-                            color: isDarkMode ? '#ffffff' : '#333333',
-                            mb: 2,
-                            minHeight: '64px', // Rezervujem priestor pre 2 riadky
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}>
-                            {feature.title}
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" sx={{ 
-                          color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}>
-                          {feature.description}
-                        </Typography>
-                      </CardContent>
-                    </FeatureCard>
-                  </motion.div>
-                </Grid>
-              ))}
-            </Grid>
-          </motion.div>
+                        {feature.title}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ 
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      {feature.description}
+                    </Typography>
+                  </CardContent>
+                </FeatureCard>
+              </Grid>
+            ))}
+          </Grid>
         </Section>
 
         {/* Benefits Section */}
@@ -1391,69 +1367,63 @@ function Home() {
             </SectionSubtitle>
           </Box>
 
-          <Grid container spacing={6} alignItems="center">
+          <Grid container spacing={6} alignItems="stretch">
             <Grid item xs={12} md={6}>
-              <motion.div
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.7 }}
+              <Box
+                sx={{
+                  backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.5)' : 'rgba(255, 255, 255, 0.5)',
+                  borderRadius: '16px',
+                  p: 3,
+                  boxShadow: isDarkMode ? '0 8px 30px rgba(0, 0, 0, 0.3)' : '0 8px 30px rgba(0, 0, 0, 0.07)',
+                  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
               >
-                <Box
-                  sx={{
-                    backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.5)' : 'rgba(255, 255, 255, 0.5)',
-                    borderRadius: '16px',
-                    p: 3,
-                    boxShadow: isDarkMode ? '0 8px 30px rgba(0, 0, 0, 0.3)' : '0 8px 30px rgba(0, 0, 0, 0.07)',
-                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
-                  }}
-                >
-                  <List>
-                    {benefits.slice(0, 4).map((benefit, index) => (
-                      <StyledListItem key={index} isDarkMode={isDarkMode}>
-                        <ListItemIcon>
-                          {benefit.icon}
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={benefit.title} 
-                          secondary={benefit.description}
-                        />
-                      </StyledListItem>
-                    ))}
-                  </List>
-                </Box>
-              </motion.div>
+                <List sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  {benefits.slice(0, 4).map((benefit, index) => (
+                    <StyledListItem key={index} isDarkMode={isDarkMode}>
+                      <ListItemIcon>
+                        {benefit.icon}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={benefit.title} 
+                        secondary={benefit.description}
+                      />
+                    </StyledListItem>
+                  ))}
+                </List>
+              </Box>
             </Grid>
             
             <Grid item xs={12} md={6}>
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.7 }}
+              <Box
+                sx={{
+                  backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.5)' : 'rgba(255, 255, 255, 0.5)',
+                  borderRadius: '16px',
+                  p: 3,
+                  boxShadow: isDarkMode ? '0 8px 30px rgba(0, 0, 0, 0.3)' : '0 8px 30px rgba(0, 0, 0, 0.07)',
+                  border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
               >
-                <Box
-                  sx={{
-                    backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.5)' : 'rgba(255, 255, 255, 0.5)',
-                    borderRadius: '16px',
-                    p: 3,
-                    boxShadow: isDarkMode ? '0 8px 30px rgba(0, 0, 0, 0.3)' : '0 8px 30px rgba(0, 0, 0, 0.07)',
-                    border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
-                  }}
-                >
-                  <List>
-                    {benefits.slice(4, 8).map((benefit, index) => (
-                      <StyledListItem key={index} isDarkMode={isDarkMode}>
-                        <ListItemIcon>
-                          {benefit.icon}
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={benefit.title} 
-                          secondary={benefit.description}
-                        />
-                      </StyledListItem>
-                    ))}
-                  </List>
-                </Box>
-              </motion.div>
+                <List sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  {benefits.slice(4, 8).map((benefit, index) => (
+                    <StyledListItem key={index} isDarkMode={isDarkMode}>
+                      <ListItemIcon>
+                        {benefit.icon}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={benefit.title} 
+                        secondary={benefit.description}
+                      />
+                    </StyledListItem>
+                  ))}
+                </List>
+              </Box>
             </Grid>
           </Grid>
         </Section>
@@ -1471,106 +1441,94 @@ function Home() {
 
           <Grid container spacing={4} justifyContent="center">
             <Grid item xs={12} md={10} lg={8}>
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7 }}
-              >
-                <TestimonialCard isDarkMode={isDarkMode}>
-                  <Typography 
-                    variant="body1" 
+              <TestimonialCard isDarkMode={isDarkMode}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontSize: '1.2rem', 
+                    fontStyle: 'italic', 
+                    mb: 3, 
+                    color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)'
+                  }}
+                >
+                  "{t('home.testimonials.quote')}"
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar 
                     sx={{ 
-                      fontSize: '1.2rem', 
-                      fontStyle: 'italic', 
-                      mb: 3, 
-                      color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)'
+                      width: 60, 
+                      height: 60, 
+                      mr: 2,
+                      bgcolor: '#ff9f43',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      fontSize: '1.5rem'
                     }}
                   >
-                    "{t('home.testimonials.quote')}"
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar 
-                      sx={{ 
-                        width: 60, 
-                        height: 60, 
-                        mr: 2,
-                        bgcolor: '#ff9f43',
-                        color: '#fff',
-                        fontWeight: 'bold',
-                        fontSize: '1.5rem'
-                      }}
-                    >
-                      PN
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#333333' }}>
-                        {t('home.testimonials.author')}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}>
-                        {t('home.testimonials.company')}
-                      </Typography>
-                    </Box>
+                    PN
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: isDarkMode ? '#ffffff' : '#333333' }}>
+                      {t('home.testimonials.author')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }}>
+                      {t('home.testimonials.company')}
+                    </Typography>
                   </Box>
-                </TestimonialCard>
-              </motion.div>
+                </Box>
+              </TestimonialCard>
             </Grid>
           </Grid>
         </Section>
 
         {/* CTA Section */}
         <Section id="cta" sx={{ pb: 10, '&::after': { display: 'none' } }}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
+          <Box 
+            sx={{ 
+              p: { xs: 4, md: 8 }, 
+              borderRadius: '20px',
+              background: isDarkMode 
+                ? 'linear-gradient(135deg, rgba(48, 43, 99, 0.95) 0%, rgba(36, 36, 62, 0.95) 100%)' 
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.95) 100%)',
+              backdropFilter: 'blur(10px)',
+              border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+              boxShadow: isDarkMode 
+                ? '0 25px 50px rgba(0, 0, 0, 0.3)' 
+                : '0 25px 50px rgba(0, 0, 0, 0.07)',
+            }}
           >
-            <Box 
+            <Typography 
+              variant="h3" 
+              component="h2" 
               sx={{ 
-                p: { xs: 4, md: 8 }, 
-                borderRadius: '20px',
-                background: isDarkMode 
-                  ? 'linear-gradient(135deg, rgba(48, 43, 99, 0.95) 0%, rgba(36, 36, 62, 0.95) 100%)' 
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 245, 250, 0.95) 100%)',
-                backdropFilter: 'blur(10px)',
-                border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
-                boxShadow: isDarkMode 
-                  ? '0 25px 50px rgba(0, 0, 0, 0.3)' 
-                  : '0 25px 50px rgba(0, 0, 0, 0.07)',
+                fontWeight: 700, 
+                mb: 2,
+                color: isDarkMode ? '#ffffff' : '#333333',
+                fontSize: { xs: '1.75rem', md: '2.5rem' },
+                textAlign: 'center'
               }}
             >
-              <Typography 
-                variant="h3" 
-                component="h2" 
-                sx={{ 
-                  fontWeight: 700, 
-                  mb: 2,
-                  color: isDarkMode ? '#ffffff' : '#333333',
-                  fontSize: { xs: '1.75rem', md: '2.5rem' },
-                  textAlign: 'center'
-                }}
-              >
-                {t('home.cta.title')}
-              </Typography>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  mb: 4, 
-                  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                  maxWidth: '700px',
-                  mx: 'auto',
-                  fontSize: { xs: '1rem', md: '1.1rem' },
-                  textAlign: 'center'
-                }}
-              >
-                {t('home.cta.subtitle')}
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-                <PrimaryButton onClick={() => navigate('/register')} size="large">
-                  {t('home.cta.button')}
-                </PrimaryButton>
-              </Box>
+              {t('home.cta.title')}
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                mb: 4, 
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                maxWidth: '700px',
+                mx: 'auto',
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                textAlign: 'center'
+              }}
+            >
+              {t('home.cta.subtitle')}
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+              <PrimaryButton onClick={() => navigate('/register')} size="large">
+                {t('home.cta.button')}
+              </PrimaryButton>
             </Box>
-          </motion.div>
+          </Box>
         </Section>
 
         {/* Footer */}

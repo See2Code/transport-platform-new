@@ -115,12 +115,12 @@ const NavIconButton = styled(IconButton)(({ theme }) => ({
 
 const LogoImage = styled('img', {
   shouldForwardProp: (prop) => prop !== 'isDarkMode'
-})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+})<{ isDarkMode: boolean }>(({ _isDarkMode }) => ({
   width: '80px',
   height: 'auto',
-  filter: isDarkMode ? 'brightness(0) invert(1)' : 'brightness(0)',
   cursor: 'pointer',
   transition: 'transform 0.3s ease-in-out',
+  imageRendering: '-webkit-optimize-contrast',
   '&:hover': {
     transform: 'scale(1.05)',
   },
@@ -276,11 +276,11 @@ const Navbar: FC = () => {
           <Toolbar sx={{ justifyContent: 'flex-start', px: 0, minHeight: { xs: 56, sm: 64 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <LogoImage 
-                src="/AESA black.svg" 
+                src={isDarkMode ? "/AESA white.svg" : "/AESA black.svg"} 
                 alt="AESA Logo" 
                 isDarkMode={isDarkMode} 
                 onClick={handleLogoClick}
-                sx={{ width: '80px', mr: 2 }}
+                sx={{ width: '90px', mr: 2 }}
               />
               <Typography 
                 variant="h6" 
