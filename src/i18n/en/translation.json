@@ -319,7 +319,11 @@
     "day": "day",
     "months": "months",
     "month": "month",
-    "approximately": "about"
+    "approximately": "about",
+    "monthlyOrders": "Orders this month",
+    "monthlyProfit": "Monthly profit",
+    "monthlyRevenue": "Monthly revenue",
+    "monthlyCosts": "Monthly costs"
   },
   "home": {
     "hero": {

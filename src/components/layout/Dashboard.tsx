@@ -24,6 +24,10 @@ import {
   Contacts as ContactsIcon,
   DriveEta as DriveEtaIcon,
   AccessTime as AccessTimeIcon,
+  Receipt as ReceiptIcon,
+  TrendingUp as TrendingUpIcon,
+  Euro as EuroIcon,
+  AccountBalance as AccountBalanceIcon,
 } from '@mui/icons-material';
 import { collection, query, getDocs, where, Timestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -277,6 +281,11 @@ export default function Dashboard() {
     totalDrivers: 0,
     statusDistribution: [] as { name: string; value: number; total?: number }[],
     recentBusinessCases: [] as BusinessCase[],
+    // Mesačné štatistiky objednávok
+    monthlyOrdersCount: 0,
+    monthlyProfit: 0,
+    monthlyRevenue: 0,
+    monthlyCosts: 0,
   });
   const [activeVehicles, setActiveVehicles] = useState<VehicleLocation[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
@@ -307,9 +316,119 @@ export default function Dashboard() {
     }
   }, [userData]);
 
+  // Real-time listener pre mesačné štatistiky objednávok  
+  const setupOrdersListener = useCallback(() => {
+    if (!userData?.companyID) {
+      console.log('⚠️ Žiadne companyID - orders listener sa nespustí');
+      return;
+    }
+
+    console.log('🚀 Spúšťam orders listener pre companyID:', userData.companyID);
+
+    try {
+      // Získame aktuálny mesiac a rok
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Začiatok aktuálneho mesiaca
+      const startOfMonth = new Date(currentYear, currentMonth, 1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      // Koniec aktuálneho mesiaca
+      const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      console.log(`📅 Nastavujem filter pre mesiac ${currentMonth + 1}/${currentYear}`);
+      console.log(`📅 Od: ${startOfMonth.toISOString()}`);
+      console.log(`📅 Do: ${endOfMonth.toISOString()}`);
+
+      // Najprv skúsime jednoduchý dotaz na všetky objednávky
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        where('companyID', '==', userData.companyID),
+        orderBy('createdAt', 'desc')
+      );
+
+      console.log('📊 Orders query zostrojený (všetky objednávky), spúšťam listener...');
+
+      return onSnapshot(ordersQuery, (snapshot) => {
+        console.log(`📊 Orders listener triggered - počet všetkých objednávok: ${snapshot.size}`);
+        const allOrders = snapshot.docs.map(doc => ({...doc.data(), id: doc.id}));
+
+        // Filtrujeme objednávky pre aktuálny mesiac
+        const monthlyOrders = allOrders.filter((order: any) => {
+          const orderDate = order.createdAt?.toDate?.() || (order.createdAt?.seconds ? new Date(order.createdAt.seconds * 1000) : null);
+          if (!orderDate) return false;
+          
+          return orderDate >= startOfMonth && orderDate <= endOfMonth;
+        });
+
+        console.log(`📅 Mesačné štatistiky - Aktuálny mesiac: ${currentMonth + 1}/${currentYear}`);
+        console.log(`📅 Začiatok mesiaca: ${startOfMonth.toISOString()}`);
+        console.log(`📅 Koniec mesiaca: ${endOfMonth.toISOString()}`);
+        console.log(`📊 Objednávky v mesiaci: ${monthlyOrders.length} z ${allOrders.length} celkových`);
+
+        // Výpočet štatistík
+        let totalRevenue = 0;
+        let totalCosts = 0;
+        let totalProfit = 0;
+
+        monthlyOrders.forEach((order: any, index) => {
+          // Skúsime najprv suma, potom customerPrice (rovnako ako v Orders.tsx)
+          const customerPrice = parseFloat(order.suma || order.customerPrice || '0');
+          const carrierPrice = parseFloat(order.carrierPrice || '0');
+          
+          console.log(`📋 Objednávka ${index + 1}:`, {
+            id: order.id,
+            createdAt: order.createdAt?.toDate?.() || order.createdAt,
+            suma: order.suma,
+            customerPrice: order.customerPrice,
+            carrierPrice: order.carrierPrice,
+            parsedCustomerPrice: customerPrice,
+            parsedCarrierPrice: carrierPrice
+          });
+          
+          if (!isNaN(customerPrice) && customerPrice > 0) {
+            totalRevenue += customerPrice;
+          }
+          
+          if (!isNaN(carrierPrice) && carrierPrice > 0) {
+            totalCosts += carrierPrice;
+          }
+        });
+
+        totalProfit = totalRevenue - totalCosts;
+
+        console.log(`💰 Výsledné štatistiky:`, {
+          count: monthlyOrders.length,
+          revenue: totalRevenue,
+          costs: totalCosts,
+          profit: totalProfit
+        });
+
+        setStats(prev => ({
+          ...prev,
+          monthlyOrdersCount: monthlyOrders.length,
+          monthlyRevenue: totalRevenue,
+          monthlyCosts: totalCosts,
+          monthlyProfit: totalProfit,
+        }));
+
+      }, (error) => {
+        console.error('Error in orders listener:', error);
+      });
+
+    } catch (error) {
+      console.error('Error setting up orders listener:', error);
+      return undefined;
+    }
+  }, [userData]);
+
   useEffect(() => {
     let unsubscribeVehicles: (() => void) | undefined;
     let unsubscribeBusinessCases: (() => void) | undefined;
+    let unsubscribeOrders: (() => void) | undefined;
     let isMounted = true;
 
     const setupListeners = async () => {
@@ -432,7 +551,10 @@ export default function Dashboard() {
           }
         };
 
-        // Spustenie listenerov - fetchStaticData sme už vyvolali, netreba ho tu volať znova
+        // Nastavenie orders listener
+        unsubscribeOrders = setupOrdersListener();
+
+        // Spustenie ostatných listenerov
         await Promise.all([
           setupVehiclesListener(),
           setupBusinessCasesListener(),
@@ -462,8 +584,15 @@ export default function Dashboard() {
           console.error('Chyba pri odpájaní business cases listenera:', err);
         }
       }
+      if (unsubscribeOrders) {
+        try {
+          unsubscribeOrders();
+        } catch (err) {
+          console.error('Chyba pri odpájaní orders listenera:', err);
+        }
+      }
     };
-  }, [userData, fetchStaticData]); // pridaný fetchStaticData ako závislosť
+  }, [userData, fetchStaticData, setupOrdersListener]); // pridané obe funkcie ako závislosť
 
   // Helper function to format time ago
   const formatTimeAgo = (timestamp: Timestamp | any) => {
@@ -681,6 +810,137 @@ export default function Dashboard() {
                 opacity: 0.7,
                 fontSize: { xs: '0.9rem', sm: '1rem' }
               }}>{t('dashboard.teamMembers')}</Typography>
+            </StatsCardContent>
+          </SimpleStatsCard>
+        </Grid>
+
+        {/* Nové mesačné štatistiky */}
+        <Grid item xs={12} sm={6} md={3}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
+            <StatsCardContent>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: { xs: 1, sm: 2 }, 
+                mb: { xs: 1, sm: 2 } 
+              }}>
+                <ReceiptIcon sx={{ 
+                  color: '#4caf50', 
+                  fontSize: { xs: 32, sm: 40 } 
+                }} />
+                <Typography variant="h4" sx={{
+                  fontSize: { xs: '1.5rem', sm: '2rem' }
+                }}>
+                  <CountUp
+                    end={stats.monthlyOrdersCount}
+                    duration={2.5}
+                    separator=" "
+                  />
+                </Typography>
+              </Box>
+              <Typography variant="body1" sx={{ 
+                opacity: 0.7,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}>{t('dashboard.monthlyOrders')}</Typography>
+            </StatsCardContent>
+          </SimpleStatsCard>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
+            <StatsCardContent>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: { xs: 1, sm: 2 }, 
+                mb: { xs: 1, sm: 2 } 
+              }}>
+                <TrendingUpIcon sx={{ 
+                  color: '#2196f3', 
+                  fontSize: { xs: 32, sm: 40 } 
+                }} />
+                <Typography variant="h4" sx={{
+                  fontSize: { xs: '1.5rem', sm: '2rem' }
+                }}>
+                  <CountUp
+                    end={stats.monthlyProfit}
+                    duration={2.5}
+                    separator=" "
+                    decimals={0}
+                    suffix=" €"
+                  />
+                </Typography>
+              </Box>
+              <Typography variant="body1" sx={{ 
+                opacity: 0.7,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}>{t('dashboard.monthlyProfit')}</Typography>
+            </StatsCardContent>
+          </SimpleStatsCard>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
+            <StatsCardContent>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: { xs: 1, sm: 2 }, 
+                mb: { xs: 1, sm: 2 } 
+              }}>
+                <EuroIcon sx={{ 
+                  color: '#ff6b6b', 
+                  fontSize: { xs: 32, sm: 40 } 
+                }} />
+                <Typography variant="h4" sx={{
+                  fontSize: { xs: '1.5rem', sm: '2rem' }
+                }}>
+                  <CountUp
+                    end={stats.monthlyRevenue}
+                    duration={2.5}
+                    separator=" "
+                    decimals={0}
+                    suffix=" €"
+                  />
+                </Typography>
+              </Box>
+              <Typography variant="body1" sx={{ 
+                opacity: 0.7,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}>{t('dashboard.monthlyRevenue')}</Typography>
+            </StatsCardContent>
+          </SimpleStatsCard>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <SimpleStatsCard isDarkMode={isDarkMode}>
+            <StatsCardContent>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: { xs: 1, sm: 2 }, 
+                mb: { xs: 1, sm: 2 } 
+              }}>
+                <AccountBalanceIcon sx={{ 
+                  color: '#9c27b0', 
+                  fontSize: { xs: 32, sm: 40 } 
+                }} />
+                <Typography variant="h4" sx={{
+                  fontSize: { xs: '1.5rem', sm: '2rem' }
+                }}>
+                  <CountUp
+                    end={stats.monthlyCosts}
+                    duration={2.5}
+                    separator=" "
+                    decimals={0}
+                    suffix=" €"
+                  />
+                </Typography>
+              </Box>
+              <Typography variant="body1" sx={{ 
+                opacity: 0.7,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}>{t('dashboard.monthlyCosts')}</Typography>
             </StatsCardContent>
           </SimpleStatsCard>
         </Grid>

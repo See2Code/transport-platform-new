@@ -331,7 +331,11 @@
     "day": "dňom",
     "months": "mesiacmi",
     "month": "mesiacom",
-    "approximately": "približne"
+    "approximately": "približne",
+    "monthlyOrders": "Objednávky v mesiaci",
+    "monthlyProfit": "Zisk v mesiaci",
+    "monthlyRevenue": "Obrat v mesiaci",
+    "monthlyCosts": "Náklady v mesiaci"
   },
   "home": {
     "hero": {
