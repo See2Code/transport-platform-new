@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -18,13 +18,20 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeMode } from '../../contexts/ThemeContext';
 
 function Login() {
-  const { login, loading: authLoading } = useAuth();
+  const { login, loading: authLoading, currentUser } = useAuth();
   const { isDarkMode } = useThemeMode();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Automatické presmerovanie prihlásených používateľov
+  useEffect(() => {
+    if (currentUser && !authLoading) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [currentUser, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +40,11 @@ function Login() {
 
     try {
       await login(email, password);
-      navigate('/dashboard', { replace: true });
+      
+      // NENAVIGUJEME - necháme AuthContext, aby sa postaral o presmerovanie
+      // Keď sa currentUser nastaví, PrivateRoute automaticky presmeruje
+      // Loading screen zostane aktívny až kým AuthContext nezíska user data
+      
     } catch (error: any) {
       // Spracovanie rôznych typov Firebase chýb s používateľsky prívetivými správami
       let errorMessage = 'Zadali ste nesprávny email alebo heslo';
@@ -55,9 +66,9 @@ function Login() {
       }
       
       setError(errorMessage);
-    } finally {
-      setLoading(false);
+      setLoading(false); // Reset loading iba pri chybe
     }
+    // Loading zostane true - AuthContext sa postará o presmerovanie po načítaní user data
   };
 
   const handleClose = () => {
@@ -74,10 +85,29 @@ function Login() {
             : 'linear-gradient(135deg, #f5f7fa 0%, #e4e5e6 100%)',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexDirection: 'column'
         }}
       >
-        <CircularProgress size={60} sx={{ color: '#ff9f43' }} />
+        <CircularProgress size={60} sx={{ color: '#ff9f43', mb: 3 }} />
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: isDarkMode ? '#ffffff' : '#333333',
+            fontWeight: 500 
+          }}
+        >
+          Prihlasovanie...
+        </Typography>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+            mt: 1
+          }}
+        >
+          Overujeme vaše údaje
+        </Typography>
       </Box>
     );
   }
