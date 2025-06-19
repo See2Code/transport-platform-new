@@ -1649,6 +1649,19 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                       ),
                     }}
                     helperText="Automaticky načítané zo zákazníka"
+                    sx={{
+                      '& input[type=number]': {
+                        '-moz-appearance': 'textfield',
+                      },
+                      '& input[type=number]::-webkit-outer-spin-button': {
+                        '-webkit-appearance': 'none',
+                        margin: 0,
+                      },
+                      '& input[type=number]::-webkit-inner-spin-button': {
+                        '-webkit-appearance': 'none',
+                        margin: 0,
+                      },
+                    }}
                   />
                 </Grid>
                 
@@ -1707,11 +1720,33 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                     type="number"
                     value={formData.suma || ''}
                     onChange={handleInputChange('suma')}
+                    onKeyPress={(e) => {
+                      // Povolíme len číslice, bodku a čiarku pre ceny
+                      const allowedKeys = /[0-9.,]/;
+                      const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                      
+                      if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
                     required
                     InputProps={{
                       endAdornment: <InputAdornment position="end">€</InputAdornment>,
                     }}
                     inputProps={{ min: 0, step: "0.01" }}
+                    sx={{
+                      '& input[type=number]': {
+                        '-moz-appearance': 'textfield',
+                      },
+                      '& input[type=number]::-webkit-outer-spin-button': {
+                        '-webkit-appearance': 'none',
+                        margin: 0,
+                      },
+                      '& input[type=number]::-webkit-inner-spin-button': {
+                        '-webkit-appearance': 'none',
+                        margin: 0,
+                      },
+                    }}
                   />
                 </Grid>
                 
@@ -2099,8 +2134,30 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             type="number"
                             value={item.quantity}
                             onChange={(e) => updateGoods(type, index, goodsIndex, 'quantity', parseFloat(e.target.value) || 1)}
+                            onKeyPress={(e) => {
+                              // Povolíme len číslice, bodku a čiarku pre množstvo
+                              const allowedKeys = /[0-9.,]/;
+                              const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                              
+                              if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
                             required
                             inputProps={{ step: 0.01 }}
+                            sx={{
+                              '& input[type=number]': {
+                                '-moz-appearance': 'textfield',
+                              },
+                              '& input[type=number]::-webkit-outer-spin-button': {
+                                '-webkit-appearance': 'none',
+                                margin: 0,
+                              },
+                              '& input[type=number]::-webkit-inner-spin-button': {
+                                '-webkit-appearance': 'none',
+                                margin: 0,
+                              },
+                            }}
                           />
                         </Grid>
                         
@@ -2131,10 +2188,34 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             id={`goods-weight-${type}-${index}-${goodsIndex}`}
                             name={`goodsWeight${type}${index}${goodsIndex}`}
                             label={t('orders.weightTons')}
-                            type="number"
-                            value={item.weight || ''}
-                            onChange={(e) => updateGoods(type, index, goodsIndex, 'weight', parseFloat(e.target.value) || undefined)}
-                            inputProps={{ min: 0, step: 0.001 }}
+                            type="text"
+                            value={item.weight !== undefined ? item.weight.toString() : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Povolíme len čísla, bodku a čiarku
+                              const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.');
+                              
+                              if (cleanValue === '') {
+                                updateGoods(type, index, goodsIndex, 'weight', undefined);
+                                return;
+                              }
+                              
+                              // Konvertujeme na číslo
+                              const weight = parseFloat(cleanValue);
+                              if (!isNaN(weight)) {
+                                updateGoods(type, index, goodsIndex, 'weight', weight);
+                              }
+                            }}
+                            onKeyPress={(e) => {
+                              // Povolíme len číslice, čiarku, bodku, backspace, delete, tab, enter, šípky
+                              const allowedKeys = /[0-9.,]/;
+                              const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                              
+                              if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            placeholder="napr. 0,5 alebo 1.2"
                             InputProps={{
                               endAdornment: <InputAdornment position="end">t</InputAdornment>,
                             }}
@@ -2315,10 +2396,32 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                       type="number"
                       value={formData.carrierPrice || ''}
                       onChange={handleInputChange('carrierPrice')}
+                      onKeyPress={(e) => {
+                        // Povolíme len číslice, bodku a čiarku pre ceny dopravcu
+                        const allowedKeys = /[0-9.,]/;
+                        const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                        
+                        if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                       InputProps={{
                         endAdornment: <InputAdornment position="end">€</InputAdornment>,
                       }}
                       inputProps={{ min: 0, step: "0.01" }}
+                      sx={{
+                        '& input[type=number]': {
+                          '-moz-appearance': 'textfield',
+                        },
+                        '& input[type=number]::-webkit-outer-spin-button': {
+                          '-webkit-appearance': 'none',
+                          margin: 0,
+                        },
+                        '& input[type=number]::-webkit-inner-spin-button': {
+                          '-webkit-appearance': 'none',
+                          margin: 0,
+                        },
+                      }}
                     />
                   </Grid>
                   
@@ -2333,6 +2436,15 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                           type="number"
                           value={formData.carrierPaymentTermDays || 60}
                           onChange={handleCarrierPaymentTermsChange}
+                          onKeyPress={(e) => {
+                            // Povolíme len číslice pre dni splatnosti (bez desatinných miest)
+                            const allowedKeys = /[0-9]/;
+                            const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                            
+                            if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
                           InputProps={{
                             endAdornment: (
                               <InputAdornment position="end">
@@ -2361,6 +2473,19 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                           }}
                           inputProps={{ min: 1, max: 365 }}
                           autoFocus
+                          sx={{
+                            '& input[type=number]': {
+                              '-moz-appearance': 'textfield',
+                            },
+                            '& input[type=number]::-webkit-outer-spin-button': {
+                              '-webkit-appearance': 'none',
+                              margin: 0,
+                            },
+                            '& input[type=number]::-webkit-inner-spin-button': {
+                              '-webkit-appearance': 'none',
+                              margin: 0,
+                            },
+                          }}
                         />
                       ) : (
                         <TextField
