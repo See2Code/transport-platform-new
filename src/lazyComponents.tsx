@@ -33,7 +33,7 @@ export const LazyTrackedTransports = withLazyPreload(() => import('./components/
 
 // Business komponenty
 export const LazyBusinessCases = withLazyPreload(() => import('./components/management/BusinessCases'));
-export const LazyOrdersForm = withLazyPreload(() => import('./components/orders/Orders'));
+export const LazyOrdersForm = withLazyPreload(() => import('./components/orders/OrderCore/Orders'));
 export const LazyNewOrderForm = withLazyPreload(() => import('./components/orders/NewOrderForm'));
 
 // Ostatné komponenty
