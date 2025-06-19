@@ -787,6 +787,18 @@ const OrdersList: React.FC = () => {
   }, [userData?.companyID, dispatcherFilter, customStartDate, customEndDate, teamMembers, orders]); // Pridané orders dependency
 
 
+  // useEffect na sledovanie zmien v zozname objednávok a resetovanie selectedRowId
+  useEffect(() => {
+    // Skontrolujeme či vybraná objednávka ešte existuje v aktuálnom zozname
+    if (selectedRowId && orders.length > 0) {
+      const orderExists = orders.some(order => order.id === selectedRowId);
+      if (!orderExists) {
+        console.log('🧹 Resetujem selectedRowId - objednávka už neexistuje:', selectedRowId);
+        setSelectedRowId(null);
+      }
+    }
+  }, [orders, selectedRowId]);
+
   // Definícia handleDeleteOrder pred použitím v hook
   const handleDeleteOrder = async (id: string) => {
     if (!userData?.companyID) {
@@ -852,6 +864,11 @@ const OrdersList: React.FC = () => {
       await handleDeleteOrder(selectedOrderId);
       setShowDeleteConfirm(false);
       setSelectedOrderId(null);
+      
+      // Resetujeme aj selectedRowId ak sa zhoduje s vymazanou objednávkou
+      if (selectedRowId === selectedOrderId) {
+        setSelectedRowId(null);
+      }
     }
   };
 
@@ -1232,6 +1249,14 @@ const OrdersList: React.FC = () => {
   };
 
   const handleRowClick = (order: OrderFormData) => {
+    // Skontrolujeme či objednávka ešte existuje v aktuálnom zozname
+    const orderExists = orders.some(o => o.id === order.id);
+    if (!orderExists) {
+      console.warn('⚠️ Pokus o kliknutie na neexistujúcu objednávku');
+      setSelectedRowId(null);
+      return;
+    }
+    
     // Ak klikneme na už vybraný riadok, zrušíme výber
     if (selectedRowId === order.id) {
       setSelectedRowId(null);
@@ -1263,21 +1288,27 @@ const OrdersList: React.FC = () => {
         setSelectedOrder(freshOrder);
         setDetailDialogOpen(true);
       } else {
-        console.error('❌ Objednávka neexistuje v Firebase');
-        // Fallback na pôvodné dáta
-        setSelectedOrder(order);
-        setDetailDialogOpen(true);
+        console.error('❌ Objednávka neexistuje v Firebase - bola pravdepodobne vymazaná');
+        alert('Objednávka už neexistuje. Bola pravdepodobne vymazaná.');
+        
+        // Resetujeme výber riadku ak sa zhoduje s neexistujúcou objednávkou
+        if (selectedRowId === order.id) {
+          setSelectedRowId(null);
+        }
+        return;
       }
     } catch (error) {
       console.error('❌ Chyba pri načítavaní objednávky:', error);
-      // Fallback na pôvodné dáta
-      setSelectedOrder(order);
-      setDetailDialogOpen(true);
+      alert('Nastala chyba pri načítavaní objednávky: ' + (error as Error).message);
+      return;
     }
   };
 
   const handleCloseDetail = () => {
     setDetailDialogOpen(false);
+    setSelectedOrder(null);
+    // Resetujeme aj selectedRowId pri zatvorení detailu
+    setSelectedRowId(null);
   };
 
   // Funkcie pre správu miest
