@@ -56,54 +56,129 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [tableMenuAnchor, setTableMenuAnchor] = useState<null | HTMLElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Funkcie na ukladanie a obnovenie pozície kurzora
-  const saveCursorPosition = useCallback(() => {
+  // Funkcia na konverziu plain textu na HTML pri inicializácii
+  const getInitialContent = useCallback((value: string): string => {
+    if (!value) return '';
+    // Ak už obsahuje HTML tagy, vráť ako je
+    if (value.includes('<') && value.includes('>')) {
+      return value;
+    }
+    // Ak je to plain text, konvertuj na HTML s preservovanými riadkami
+    return value.replace(/\n/g, '<br>');
+  }, []);
+
+  // Funkcia na získanie aktuálnej veľkosti písma na pozícii kurzora
+  const getCurrentFontSize = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return '14';
+    
+    const range = selection.getRangeAt(0);
+    let element = range.startContainer;
+    
+    // Ak je to text node, získaj parent element
+    if (element.nodeType === Node.TEXT_NODE && element.parentNode) {
+      element = element.parentNode;
+    }
+    
+    // Prejdi hierarchiu nahor a hľadaj font-size
+    while (element && element !== editorRef.current) {
+      if (element.nodeType === Node.ELEMENT_NODE) {
+        const computedStyle = window.getComputedStyle(element as Element);
+        const fontSize = computedStyle.fontSize;
+        
+        // Ak má element explicitne nastavenú font-size
+        if ((element as HTMLElement).style.fontSize) {
+          const size = (element as HTMLElement).style.fontSize;
+          return size.replace('px', '');
+        }
+        
+        // Ak má computed font-size inú ako predvolenú
+        if (fontSize && fontSize !== '14px') {
+          return fontSize.replace('px', '');
+        }
+      }
+      if (element.parentNode) {
+        element = element.parentNode;
+      } else {
+        break;
+      }
+    }
+    
+    return '14'; // Predvolená veľkosť
+  }, []);
+
+  // Funkcia na získanie aktuálneho zarovnania
+  const getCurrentAlignment = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return 'left';
+    
+    const range = selection.getRangeAt(0);
+    let element = range.startContainer;
+    
+    // Ak je to text node, získaj parent element
+    if (element.nodeType === Node.TEXT_NODE && element.parentNode) {
+      element = element.parentNode;
+    }
+    
+    // Prejdi hierarchiu nahor a hľadaj text-align
+    while (element && element !== editorRef.current) {
+      if (element.nodeType === Node.ELEMENT_NODE) {
+        const computedStyle = window.getComputedStyle(element as Element);
+        const textAlign = computedStyle.textAlign;
+        
+        if (textAlign && ['left', 'center', 'right'].includes(textAlign)) {
+          return textAlign;
+        }
+      }
+      if (element.parentNode) {
+        element = element.parentNode;
+      } else {
+        break;
+      }
+    }
+    
+    return 'left'; // Predvolené zarovnanie
+  }, []);
+
+  // Funkcia na aktualizáciu toolbar stavov
+  const updateToolbarStates = useCallback(() => {
+    const currentFontSize = getCurrentFontSize();
+    const currentAlignment = getCurrentAlignment();
+    
+    setFontSize(currentFontSize);
+    setAlignment(currentAlignment);
+  }, [getCurrentFontSize, getCurrentAlignment]);
+
+  // Event listener pre zmeny kurzora
+  const handleSelectionChange = useCallback(() => {
+    // Skontroluj či je selection v našom editore
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0 && editorRef.current) {
       const range = selection.getRangeAt(0);
-      const preCaretRange = range.cloneRange();
-      preCaretRange.selectNodeContents(editorRef.current);
-      preCaretRange.setEnd(range.endContainer, range.endOffset);
-      return preCaretRange.toString().length;
-    }
-    return 0;
-  }, []);
-
-  const restoreCursorPosition = useCallback((position: number) => {
-    if (!editorRef.current) return;
-    
-    const selection = window.getSelection();
-    if (!selection) return;
-
-    const walker = document.createTreeWalker(
-      editorRef.current,
-      NodeFilter.SHOW_TEXT,
-      null
-    );
-
-    let currentPosition = 0;
-    let node;
-
-    while (node = walker.nextNode()) {
-      const nodeLength = node.textContent?.length || 0;
-      if (currentPosition + nodeLength >= position) {
-        const range = document.createRange();
-        range.setStart(node, position - currentPosition);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        return;
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        updateToolbarStates();
       }
-      currentPosition += nodeLength;
     }
+  }, [updateToolbarStates]);
 
-    // Ak sa nepodarilo nájsť pozíciu, nastav kurzor na koniec
-    const range = document.createRange();
-    range.selectNodeContents(editorRef.current);
-    range.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }, []);
+  // Pridanie event listenerov
+  useEffect(() => {
+    document.addEventListener('selectionchange', handleSelectionChange);
+    
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, [handleSelectionChange]);
+
+  // Aktualizácia toolbar stavov pri zmene obsahu
+  const handleContentChange = () => {
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      onChange(content);
+      // Aktualizuj toolbar stavy po malej pauze
+      setTimeout(updateToolbarStates, 10);
+    }
+  };
 
   const executeCommand = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
@@ -176,24 +251,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   const handleTableMenuClose = () => {
     setTableMenuAnchor(null);
-  };
-
-  const handleContentChange = () => {
-    if (editorRef.current) {
-      const content = editorRef.current.innerHTML;
-      onChange(content);
-    }
-  };
-
-  // Funkcia na konverziu plain textu na HTML pri inicializácii
-  const getInitialContent = (value: string): string => {
-    if (!value) return '';
-    // Ak už obsahuje HTML tagy, vráť ako je
-    if (value.includes('<') && value.includes('>')) {
-      return value;
-    }
-    // Ak je to plain text, konvertuj na HTML s preservovanými riadkami
-    return value.replace(/\n/g, '<br>');
   };
 
   const getPlainTextLength = (html: string): number => {
