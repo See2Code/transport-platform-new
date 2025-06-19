@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Container,
   Typography,
   Box,
   styled,
@@ -16,7 +15,6 @@ import {
   IconButton,
   Tooltip,
   Divider,
-  useTheme,
   Snackbar,
 } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -121,6 +119,9 @@ const colors = {
 
 const PageWrapper = styled('div')({
   padding: '24px',
+  minHeight: '100vh',
+  position: 'relative',
+  zIndex: 1,
   '@media (max-width: 600px)': {
     padding: '16px',
     paddingBottom: '80px',
@@ -247,9 +248,9 @@ const SearchWrapper = styled(Box)({
   }
 });
 
-const MapDialog = styled(Dialog)(({ theme }) => ({
+const MapDialog = styled(Dialog)<{ isDarkMode?: boolean }>(({ isDarkMode = false }) => ({
   '& .MuiDialog-paper': {
-    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+    backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
     margin: 0,
     maxWidth: '100%',
     width: '100%',
@@ -260,14 +261,14 @@ const MapDialog = styled(Dialog)(({ theme }) => ({
     position: 'relative',
     overflow: 'hidden',
     '& .MuiDialogTitle-root': {
-      color: theme.palette.mode === 'dark' ? '#ffffff' : '#000000',
+      color: isDarkMode ? '#ffffff' : '#000000',
       padding: '16px 24px',
       fontSize: '1.5rem',
       fontWeight: 600,
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+      borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
       zIndex: 10
     },
     '& .MuiDialogContent-root': {
@@ -277,7 +278,7 @@ const MapDialog = styled(Dialog)(({ theme }) => ({
     }
   },
   '& .MuiBackdrop-root': {
-    backgroundColor: theme.palette.mode === 'dark' 
+    backgroundColor: isDarkMode 
       ? 'rgba(0, 0, 0, 0.7)' 
       : 'rgba(0, 0, 0, 0.5)',
     backdropFilter: 'blur(4px)',
@@ -521,7 +522,6 @@ function useNotifications() {
 }
 
 const TrackedTransports: React.FC = () => {
-  const theme = useTheme();
   const { userData } = useAuth();
   const { isDarkMode } = useThemeMode();
   const [transports, setTransports] = useState<Transport[]>([]);
@@ -1035,15 +1035,13 @@ const TrackedTransports: React.FC = () => {
 
   // Hlavný useEffect pre načítanie dát pri montáži a zmene usera
   useEffect(() => {
+    console.log("TrackedTransports useEffect triggered", { userCompanyID: userData?.companyID });
     if (userData?.companyID) {
-      console.log("Running initial/user change data fetch.");
+      console.log("Running initial/user change data fetch for TrackedTransports");
       fetchTransports(); 
-      // fetchCustomers(); // Ak sú potrebné pre formulár prepravy, inak odstrániť
-      // fetchCarriers();  // Ak sú potrebné pre formulár prepravy, inak odstrániť
     } else {
+      console.log("No companyID, clearing transports");
       setTransports([]);
-      // setCustomers([]);
-      // setCarriers([]);
       setLoading(false); 
     }
   }, [userData?.companyID, fetchTransports]); // Pridaná fetchTransports závislosť
@@ -1069,15 +1067,13 @@ const TrackedTransports: React.FC = () => {
       );
   });
 
-  if (loading && transports.length === 0) { // Zobrazíme loading len ak ešte nemáme žiadne dáta
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-          <CircularProgress sx={{ color: '#ff9f43' }} />
-        </Box>
-      </Container>
-    );
-  }
+  console.log("TrackedTransports render", { 
+    loading, 
+    transportsLength: transports.length, 
+    filteredLength: filteredTransports.length,
+    userData: userData?.companyID,
+    error 
+  });
 
   return (
     <>
@@ -1103,17 +1099,90 @@ const TrackedTransports: React.FC = () => {
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
+        {/* Loading indikátor */}
         {loading && transports.length === 0 ? (
            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                <CircularProgress sx={{ color: '#ff9f43' }} />
+               <Typography sx={{ ml: 2, color: isDarkMode ? '#ffffff' : '#000000' }}>
+                 Načítavam prepravy...
+               </Typography>
            </Box>
-        ) : ( 
+        ) : (
+          /* Obsah prepráv */
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+             {/* Ak nie sú žiadne prepravy */}
              {filteredTransports.length === 0 && !loading && (
-                  <Typography sx={{ textAlign: 'center', mt: 4, color: theme.palette.text.secondary }}>
-                      Žiadne sledované prepravy nenájdené.
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  mt: 6,
+                  mb: 4,
+                  p: 4,
+                  border: `2px dashed ${isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                  borderRadius: '16px',
+                  backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.3)' : 'rgba(255, 255, 255, 0.5)'
+                }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      textAlign: 'center', 
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                      mb: 2,
+                      fontWeight: 500
+                    }}
+                  >
+                    Žiadne sledované prepravy nenájdené
                   </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      textAlign: 'center', 
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                      mb: 3,
+                      maxWidth: '400px'
+                    }}
+                  >
+                    {searchTerm 
+                      ? `Pre vyhľadávaný výraz "${searchTerm}" sa nenašli žiadne prepravy.`
+                      : 'Zatiaľ nemáte vytvorenú žiadnu sledovanú prepravu. Začnite vytvorením novej prepravy.'
+                    }
+                  </Typography>
+                  
+                  {/* Tlačidlo pridať len ak nie je aktívne vyhľadávanie */}
+                  {!searchTerm && (
+                    <AddButton
+                      startIcon={<AddIcon />}
+                      onClick={handleOpenAddTransportDialog}
+                      sx={{ mt: 1 }}
+                    >
+                      Pridať prvú prepravu
+                    </AddButton>
+                  )}
+                  
+                  {/* Ak je aktívne vyhľadávanie, ponúkneme vymazanie filtra */}
+                  {searchTerm && (
+                    <Button
+                      variant="outlined"
+                      onClick={() => setSearchTerm('')}
+                      sx={{ 
+                        mt: 1,
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        '&:hover': {
+                          borderColor: '#ff9f43',
+                          backgroundColor: 'rgba(255, 159, 67, 0.1)'
+                        }
+                      }}
+                    >
+                      Vymazať filter
+                    </Button>
+                  )}
+                </Box>
              )}
+             
+             {/* Zoznam prepráv */}
              {filteredTransports.map((transport) => renderTransportItem(transport))} 
           </Box>
         )}
@@ -1181,6 +1250,7 @@ const TrackedTransports: React.FC = () => {
         open={mapDialogOpen}
         onClose={() => setMapDialogOpen(false)}
         fullScreen
+        isDarkMode={isDarkMode}
         TransitionProps={{
           onEntered: () => {
             // Trigger resize event pre správne načítanie mapy po zobrazení dialógu

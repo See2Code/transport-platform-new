@@ -428,6 +428,11 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     carrierNotes: '',
     carrierRating: 0,
     carrierPaymentTermDays: 60,
+    // Pridané polia pre číslo objednávky
+    orderNumber: '',
+    orderNumberFormatted: '',
+    orderYear: '',
+    orderMonth: '',
   });
 
   // Loading states
@@ -456,6 +461,11 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
   // Carrier payment terms editing
   const [isEditingCarrierPaymentTerms, setIsEditingCarrierPaymentTerms] = useState(false);
+
+  // Order number editing
+  const [isEditingOrderNumber, setIsEditingOrderNumber] = useState(false);
+  const [originalOrderNumber, setOriginalOrderNumber] = useState<string>('');
+  const orderNumberInputRef = useRef<HTMLInputElement>(null);
 
   // Reserved order number for new orders
   const [reservedOrderNumber, setReservedOrderNumber] = useState<string | null>(null);
@@ -662,9 +672,13 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     
     setIsGeneratingOrderNumber(true);
     try {
+      console.log('🔢 Začínam generovanie čísla objednávky...');
+      
       // Generate order number
       const orderYear = new Date().getFullYear().toString();
       const orderMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+      
+      console.log('📅 Generujem pre rok/mesiac:', orderYear, orderMonth);
       
       const orderNumberQuery = query(
         collection(db, 'orders'),
@@ -674,10 +688,71 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       );
       
       const orderSnapshot = await getDocs(orderNumberQuery);
+      console.log('📊 Počet existujúcich objednávok:', orderSnapshot.size);
+      
+      // Debug: Zobrazíme všetky existujúce čísla objednávok
+      const existingOrderNumbers = orderSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          orderNumberFormatted: data.orderNumberFormatted,
+          orderNumber: data.orderNumber,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        };
+      });
+      
+      console.log('📋 Existujúce čísla objednávok:', existingOrderNumbers);
+      
       const orderNumber = (orderSnapshot.size + 1).toString().padStart(3, '0');
       const orderNumberFormatted = `${orderYear}${orderMonth}${orderNumber}`;
       
-      console.log('🎯 Rezervované číslo objednávky:', orderNumberFormatted);
+      console.log('🎯 Nové rezervované číslo objednávky:', orderNumberFormatted);
+      console.log('🔍 Kontrola duplicity - hľadám číslo:', orderNumberFormatted);
+      
+      // Dodatočná kontrola duplicity
+      const duplicateCheckQuery = query(
+        collection(db, 'orders'),
+        where('companyID', '==', userData.companyID),
+        where('orderNumberFormatted', '==', orderNumberFormatted)
+      );
+      
+      const duplicateSnapshot = await getDocs(duplicateCheckQuery);
+      if (!duplicateSnapshot.empty) {
+        console.error('❌ CHYBA: Číslo objednávky už existuje!', orderNumberFormatted);
+        console.error('🔍 Existujúce dokumenty s týmto číslom:', duplicateSnapshot.docs.map(doc => ({
+          id: doc.id,
+          data: doc.data()
+        })));
+        
+        // Pokúsime sa nájsť ďalšie voľné číslo
+        let nextNumber = orderSnapshot.size + 2;
+        let nextOrderNumberFormatted = '';
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (attempts < maxAttempts) {
+          nextOrderNumberFormatted = `${orderYear}${orderMonth}${nextNumber.toString().padStart(3, '0')}`;
+          const nextDuplicateQuery = query(
+            collection(db, 'orders'),
+            where('companyID', '==', userData.companyID),
+            where('orderNumberFormatted', '==', nextOrderNumberFormatted)
+          );
+          
+          const nextDuplicateSnapshot = await getDocs(nextDuplicateQuery);
+          if (nextDuplicateSnapshot.empty) {
+            console.log('✅ Nájdené voľné číslo:', nextOrderNumberFormatted);
+            setReservedOrderNumber(nextOrderNumberFormatted);
+            return;
+          }
+          
+          nextNumber++;
+          attempts++;
+        }
+        
+        console.error('❌ Nepodarilo sa nájsť voľné číslo objednávky po 10 pokusoch');
+        return;
+      }
+      
       setReservedOrderNumber(orderNumberFormatted);
     } catch (error) {
       console.error('❌ Chyba pri generovaní čísla objednávky:', error);
@@ -736,12 +811,21 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         kontaktnaOsoba: (orderData as any).kontaktnaOsoba || 
           `${orderData.customerContactName || ''} ${orderData.customerContactSurname || ''}`.trim(),
         loadingPlaces: migratedLoadingPlaces,
-        unloadingPlaces: migratedUnloadingPlaces
+        unloadingPlaces: migratedUnloadingPlaces,
+        // Nastavíme číslo objednávky pre editáciu
+        orderNumber: (orderData as any).orderNumber || '',
+        orderNumberFormatted: (orderData as any).orderNumberFormatted || '',
+        orderYear: (orderData as any).orderYear || '',
+        orderMonth: (orderData as any).orderMonth || '',
       }));
+      
+      // Uložíme pôvodné číslo objednávky
+      setOriginalOrderNumber((orderData as any).orderNumberFormatted || '');
       
       console.log('✅ Migration applied:', {
         loadingPlaces: migratedLoadingPlaces,
-        unloadingPlaces: migratedUnloadingPlaces
+        unloadingPlaces: migratedUnloadingPlaces,
+        orderNumber: (orderData as any).orderNumberFormatted
       });
     }
   }, [isEdit, orderData, open, customerOptions]); // Pridávame customerOptions do závislostí
@@ -863,6 +947,11 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       carrierNotes: '',
       carrierRating: 0,
       carrierPaymentTermDays: 60,
+      // Pridané polia pre číslo objednávky
+      orderNumber: '',
+      orderNumberFormatted: '',
+      orderYear: '',
+      orderMonth: '',
     });
     // Reset dispatcher editing states
     setIsEditingDispatcher(false);
@@ -1178,13 +1267,26 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
       let orderYear = '';
       let orderMonth = '';
 
-      // Použijeme rezervované číslo objednávky pre nové objednávky
+      // Použijeme rezervované číslo objednávky pre nové objednávky alebo upravené číslo pre edit
       if (!isEdit && reservedOrderNumber) {
         orderNumberFormatted = reservedOrderNumber;
         // Extrahovanie častí z rezervovaného čísla
         orderYear = reservedOrderNumber.substring(0, 4);
         orderMonth = reservedOrderNumber.substring(4, 6);
         orderNumber = reservedOrderNumber.substring(6, 9);
+      } else if (isEdit && formData.orderNumberFormatted) {
+        // Pre editáciu používame upravené číslo objednávky
+        orderNumberFormatted = formData.orderNumberFormatted;
+        orderYear = formData.orderNumberFormatted.substring(0, 4);
+        orderMonth = formData.orderNumberFormatted.substring(4, 6);
+        orderNumber = formData.orderNumberFormatted.substring(6, 9);
+        
+        console.log('✏️ Používam upravené číslo objednávky:', {
+          orderNumberFormatted,
+          orderYear,
+          orderMonth,
+          orderNumber
+        });
       }
 
       // Debug logy pre špeditera
@@ -1273,8 +1375,17 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         createdAt: isEdit ? orderData.createdAt : Timestamp.now(),
         updatedAt: Timestamp.now(),
         updatedBy: isEdit ? userData.uid : undefined,
-        // Generujeme číslo objednávky len pre nové objednávky
-        ...(isEdit ? {} : {
+        // Ukladáme číslo objednávky
+        ...(isEdit ? {
+          // Pre editáciu aktualizujeme len ak sa číslo zmenilo
+          ...(formData.orderNumberFormatted && {
+            orderNumber,
+            orderNumberFormatted,
+            orderYear,
+            orderMonth,
+          })
+        } : {
+          // Pre nové objednávky vždy nastavíme číslo
           orderNumber,
           orderNumberFormatted,
           orderYear,
@@ -1386,7 +1497,10 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         console.log('📍 Dokončené ukladanie miest do kolekcie locations');
       }
 
-      handleReset();
+      // Pre editáciu neresestujeme formulár, len zatvoríme dialog
+      if (!isEdit) {
+        handleReset();
+      }
       onClose();
       onOrderSaved?.();
     } catch (error) {
@@ -2453,6 +2567,75 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     }));
   };
 
+  // Order number editing functions
+  const handleStartEditOrderNumber = () => {
+    if (userData?.role !== 'admin') return;
+    setIsEditingOrderNumber(true);
+  };
+
+  const handleCancelEditOrderNumber = () => {
+    setIsEditingOrderNumber(false);
+    // Obnovíme hodnotu v input fieldi
+    if (orderNumberInputRef.current) {
+      orderNumberInputRef.current.value = originalOrderNumber;
+    }
+    setFormData(prev => ({
+      ...prev,
+      orderNumberFormatted: originalOrderNumber
+    }));
+  };
+
+  const handleOrderNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = event.target.value;
+    console.log('🔢 Typing:', { rawValue, length: rawValue.length });
+    
+    // Len odstránime nečíselné znaky, bez obmedzenia dĺžky
+    const numericValue = rawValue.replace(/[^0-9]/g, '');
+    event.target.value = numericValue;
+    
+    console.log('🧮 Final value:', event.target.value, 'Length:', numericValue.length);
+  };
+
+  const handleSaveOrderNumber = async () => {
+    if (!userData?.companyID) return;
+    
+    // Získame hodnotu z input ref-u
+    const orderNumberValue = orderNumberInputRef.current?.value || '';
+    if (!orderNumberValue) return;
+    
+    try {
+              // Skontrolujeme duplicitu
+        const duplicateCheckQuery = query(
+          collection(db, 'orders'),
+          where('companyID', '==', userData.companyID),
+          where('orderNumberFormatted', '==', orderNumberValue)
+        );
+        
+        const duplicateSnapshot = await getDocs(duplicateCheckQuery);
+        
+        // Vylúčime aktuálnu objednávku z kontroly
+        const existingDuplicates = duplicateSnapshot.docs.filter(doc => doc.id !== orderData.id);
+        
+        if (existingDuplicates.length > 0) {
+          alert(`Číslo objednávky ${orderNumberValue} už existuje! Zvoľte iné číslo.`);
+          return;
+        }
+        
+        // Uložíme do formData
+        setFormData(prev => ({
+          ...prev,
+          orderNumberFormatted: orderNumberValue
+        }));
+        
+        setIsEditingOrderNumber(false);
+        console.log('✅ Číslo objednávky zmenené na:', orderNumberValue);
+      
+    } catch (error) {
+      console.error('❌ Chyba pri kontrole čísla objednávky:', error);
+      alert('Nastala chyba pri kontrole čísla objednávky');
+    }
+  };
+
   return (
     <Dialog
       open={open}
@@ -2527,8 +2710,9 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Typography variant="body2" color="text.secondary">
                 {steps[activeStep].description}
               </Typography>
-              {/* Zobrazenie rezervovaného čísla objednávky pre nové objednávky */}
-              {!isEdit && (
+              {/* Spojený riadok s číslom objednávky a špedítérom */}
+              {!isEdit ? (
+                // Pre nové objednávky - zobrazenie rezervovaného čísla
                 <Box sx={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -2559,102 +2743,196 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                     }}>
                       {reservedOrderNumber}
                     </Typography>
-                  ) : (
+                  ) : open ? (
                     <Typography variant="caption" sx={{ color: '#f44336', fontStyle: 'italic' }}>
                       Chyba pri generovaní
                     </Typography>
-                  )}
+                  ) : null}
                 </Box>
-              )}
-              {/* Zobrazenie pôvodného špeditéra pre edit mode */}
-              {isEdit && originalDispatcher && (
+              ) : (
+                // Pre editáciu objednávky - spojený riadok s číslom a špedítérom
                 <Box sx={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  gap: 1, 
+                  gap: 2, 
                   mt: 1,
                   p: 1,
-                  backgroundColor: isDarkMode ? 'rgba(255, 159, 67, 0.1)' : 'rgba(255, 159, 67, 0.1)',
+                  backgroundColor: isDarkMode ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.1)',
                   borderRadius: 1,
-                  border: `1px solid ${isDarkMode ? 'rgba(255, 159, 67, 0.3)' : 'rgba(255, 159, 67, 0.3)'}`
+                  border: `1px solid ${isDarkMode ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.3)'}`
                 }}>
-                  <AccountCircleIcon sx={{ fontSize: '1rem', color: '#ff9f43' }} />
-                  <Typography variant="caption" sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
-                    Vytvoril: 
-                  </Typography>
-                  {isEditingDispatcher ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Autocomplete
-                        size="small"
-                        value={editedDispatcher}
-                        onChange={(event, newValue) => handleDispatcherChange(newValue)}
-                        options={Object.entries(teamMembers).map(([id, member]) => ({
-                          id,
-                          name: member.name
-                        }))}
-                        getOptionLabel={(option) => option.name}
-                        isOptionEqualToValue={(option, value) => option.id === value.id}
-                        renderInput={(params) => (
-                          <TextField 
-                            {...params} 
-                            variant="outlined" 
+                  {/* Číslo objednávky sekcia */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BusinessIcon sx={{ fontSize: '1rem', color: '#2196f3' }} />
+                    <Typography variant="caption" sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
+                      Číslo objednávky: 
+                    </Typography>
+                    {isEditingOrderNumber ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextField
+                          size="small"
+                          defaultValue={formData.orderNumberFormatted || ''}
+                          inputRef={orderNumberInputRef}
+                          onChange={handleOrderNumberChange}
+                          sx={{
+                            minWidth: 140,
+                            width: 140,
+                            '& .MuiInputBase-root': {
+                              fontSize: '0.8rem',
+                              fontFamily: 'monospace'
+                            },
+                            '& .MuiInputBase-input': {
+                              textAlign: 'center',
+                              letterSpacing: '1px',
+                              padding: '6px 8px'
+                            }
+                          }}
+                          inputProps={{
+                            style: { 
+                              fontFamily: 'monospace', 
+                              fontSize: '0.8rem'
+                            }
+                          }}
+                          placeholder="Číslo objednávky"
+                          autoFocus
+                        />
+                        <BareTooltip title="Uložiť">
+                          <IconButton
                             size="small"
-                            sx={{ minWidth: 250 }}
-                          />
-                        )}
-                        sx={{
-                          '& .MuiAutocomplete-input': {
-                            fontSize: '0.75rem',
-                            padding: '2px 4px !important'
-                          }
-                        }}
-                      />
-                      <BareTooltip title="Uložiť">
-                        <IconButton 
-                          size="small" 
-                          onClick={handleSaveDispatcher}
-                          sx={{ 
-                            color: '#4caf50',
-                            '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' }
-                          }}
-                        >
-                          <CheckIcon sx={{ fontSize: '0.875rem' }} />
-                        </IconButton>
-                      </BareTooltip>
-                      <BareTooltip title="Zrušiť">
-                        <IconButton 
-                          size="small" 
-                          onClick={handleCancelEditDispatcher}
-                          sx={{ 
-                            color: '#f44336',
-                            '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' }
-                          }}
-                        >
-                          <CloseIcon sx={{ fontSize: '0.875rem' }} />
-                        </IconButton>
-                      </BareTooltip>
-                    </Box>
-                  ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Typography variant="caption" sx={{ 
-                        fontWeight: 600, 
-                        color: '#ff9f43'
-                      }}>
-                        {editedDispatcher?.name || originalDispatcher.name}
-                      </Typography>
-                      {userData?.role === 'admin' && (
-                        <BareTooltip title="Upraviť špeditéra">
-                          <IconButton 
-                            size="small" 
-                            onClick={handleStartEditDispatcher}
-                            sx={{ 
-                              color: '#ff9f43',
-                              '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.1)' }
-                            }}
+                            onClick={handleSaveOrderNumber}
+                            sx={{ color: '#4caf50' }}
                           >
-                            <EditIcon sx={{ fontSize: '0.75rem' }} />
+                            <CheckIcon sx={{ fontSize: '0.8rem' }} />
                           </IconButton>
                         </BareTooltip>
+                        <BareTooltip title="Zrušiť">
+                          <IconButton
+                            size="small"
+                            onClick={handleCancelEditOrderNumber}
+                            sx={{ color: '#f44336' }}
+                          >
+                            <CloseIcon sx={{ fontSize: '0.8rem' }} />
+                          </IconButton>
+                        </BareTooltip>
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography variant="caption" sx={{ 
+                          fontWeight: 600, 
+                          color: '#2196f3',
+                          fontFamily: 'monospace',
+                          fontSize: '0.85rem'
+                        }}>
+                          {formData.orderNumberFormatted || 'Nezadané'}
+                        </Typography>
+                        {userData?.role === 'admin' && (
+                          <BareTooltip title="Upraviť číslo objednávky">
+                            <IconButton
+                              size="small"
+                              onClick={handleStartEditOrderNumber}
+                              sx={{ 
+                                color: '#2196f3',
+                                '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.1)' }
+                              }}
+                            >
+                              <EditIcon sx={{ fontSize: '0.7rem' }} />
+                            </IconButton>
+                          </BareTooltip>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Oddelovač */}
+                  <Box sx={{ 
+                    width: '1px', 
+                    height: '24px', 
+                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)' 
+                  }} />
+
+                  {/* Špedíter sekcia */}
+                  {originalDispatcher && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AccountCircleIcon sx={{ fontSize: '1rem', color: '#ff9f43' }} />
+                      <Typography variant="caption" sx={{ color: isDarkMode ? '#ffffff' : '#000000' }}>
+                        Vytvoril: 
+                      </Typography>
+                      {isEditingDispatcher ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Autocomplete
+                            size="small"
+                            value={editedDispatcher}
+                            onChange={(event, newValue) => handleDispatcherChange(newValue)}
+                            options={Object.entries(teamMembers).map(([id, member]) => ({
+                              id,
+                              name: member.name
+                            }))}
+                            getOptionLabel={(option) => option.name}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            renderInput={(params) => (
+                              <TextField 
+                                {...params} 
+                                variant="outlined" 
+                                size="small"
+                                sx={{ minWidth: 180, width: 180 }}
+                              />
+                            )}
+                            sx={{
+                              '& .MuiAutocomplete-input': {
+                                fontSize: '0.75rem',
+                                padding: '2px 4px !important'
+                              }
+                            }}
+                          />
+                          <BareTooltip title="Uložiť">
+                            <IconButton 
+                              size="small" 
+                              onClick={handleSaveDispatcher}
+                              sx={{ 
+                                color: '#4caf50',
+                                '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' }
+                              }}
+                            >
+                              <CheckIcon sx={{ fontSize: '0.8rem' }} />
+                            </IconButton>
+                          </BareTooltip>
+                          <BareTooltip title="Zrušiť">
+                            <IconButton 
+                              size="small" 
+                              onClick={handleCancelEditDispatcher}
+                              sx={{ 
+                                color: '#f44336',
+                                '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' }
+                              }}
+                            >
+                              <CloseIcon sx={{ fontSize: '0.8rem' }} />
+                            </IconButton>
+                          </BareTooltip>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Typography variant="caption" sx={{ 
+                            fontWeight: 600, 
+                            color: '#ff9f43',
+                            fontSize: '0.85rem'
+                          }}>
+                            {editedDispatcher?.name || originalDispatcher.name}
+                          </Typography>
+                          {userData?.role === 'admin' && (
+                            <BareTooltip title="Upraviť špeditéra">
+                              <IconButton 
+                                size="small" 
+                                onClick={handleStartEditDispatcher}
+                                sx={{ 
+                                  color: '#ff9f43',
+                                  '&:hover': { backgroundColor: 'rgba(255, 159, 67, 0.1)' }
+                                }}
+                              >
+                                <EditIcon sx={{ fontSize: '0.7rem' }} />
+                              </IconButton>
+                            </BareTooltip>
+                          )}
+                        </Box>
                       )}
                     </Box>
                   )}

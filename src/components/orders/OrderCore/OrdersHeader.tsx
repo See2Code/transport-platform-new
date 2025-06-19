@@ -44,6 +44,8 @@ const OrdersHeader: React.FC<OrdersHeaderProps> = ({
         >
           {t('orders.newOrder')}
         </Button>
+        
+
       </Box>
       <OrdersSearch
         isDarkMode={isDarkMode}

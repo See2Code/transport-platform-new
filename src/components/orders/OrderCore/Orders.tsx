@@ -66,6 +66,7 @@ import DispatchersFilters from './DispatchersFilters';
 
 
 
+
 const OrdersList: React.FC = () => {
   const { t } = useTranslation();
   const { isDarkMode } = useThemeMode();
@@ -196,6 +197,8 @@ const OrdersList: React.FC = () => {
   // PDF loading dialog state
   const [showPdfLoadingDialog, setShowPdfLoadingDialog] = useState(false);
   const [pdfLoadingMessage, setPdfLoadingMessage] = useState('');
+
+  
 
   // State pre stránkovanie všetkých kariet
   const [ordersPage, setOrdersPage] = useState(0);
@@ -869,6 +872,8 @@ const OrdersList: React.FC = () => {
       calculateDispatcherStats();
     }
   };
+
+
 
   // Upravená funkcia pre náhľad PDF
   const _handlePreviewPDF = async (order: OrderFormData) => {
@@ -1830,6 +1835,8 @@ const OrdersList: React.FC = () => {
       open={showPdfLoadingDialog}
       message={pdfLoadingMessage}
     />
+
+
     </PageWrapper>
   );
 };
