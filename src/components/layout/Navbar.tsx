@@ -37,6 +37,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import ChatIcon from '@mui/icons-material/Chat';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
+import ContactsIcon from '@mui/icons-material/Contacts';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import CloseIcon from '@mui/icons-material/Close';
@@ -444,6 +445,12 @@ const Navbar: FC = () => {
                 </NavIconButton>
               </BareTooltip>
               
+              <BareTooltip title="Kontakty" placement="bottom">
+                <NavIconButton onClick={() => navigate('/contacts')}>
+                  <ContactsIcon />
+                </NavIconButton>
+              </BareTooltip>
+              
               <BareTooltip title={t('navigation.settings')} placement="bottom">
                 <NavIconButton onClick={() => navigate('/settings')}>
                   <SettingsIcon />
@@ -802,6 +809,36 @@ const Navbar: FC = () => {
                   }}
                 >
                   {t('navigation.team')}
+                </Typography>
+              }
+            />
+          </ListItemButton>
+
+          <ListItemButton 
+            onClick={() => { navigate('/contacts'); setMobileMenuOpen(false); }}
+            sx={{ 
+              py: 1.5,
+              borderRadius: '8px',
+              mb: 1,
+              '&:hover': {
+                background: isDarkMode 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: isDarkMode ? '#fff' : '#333', minWidth: '40px' }}>
+              <ContactsIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                <Typography 
+                  sx={{ 
+                    color: isDarkMode ? '#fff' : '#333',
+                    fontWeight: 500,
+                  }}
+                >
+                  Kontakty
                 </Typography>
               }
             />

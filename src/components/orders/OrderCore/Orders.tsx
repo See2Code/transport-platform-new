@@ -202,17 +202,17 @@ const OrdersList: React.FC = () => {
 
   // State pre stránkovanie všetkých kariet
   const [ordersPage, setOrdersPage] = useState(0);
-  const [ordersRowsPerPage, setOrdersRowsPerPage] = useState(25);
+  const [ordersRowsPerPage, setOrdersRowsPerPage] = useState(10);
   const [customersPage, setCustomersPage] = useState(0);
-  const [customersRowsPerPage, setCustomersRowsPerPage] = useState(25);
+  const [customersRowsPerPage, setCustomersRowsPerPage] = useState(10);
   const [carriersPage, setCarriersPage] = useState(0);
-  const [carriersRowsPerPage, setCarriersRowsPerPage] = useState(25);
+  const [carriersRowsPerPage, setCarriersRowsPerPage] = useState(10);
   const [locationsPage, setLocationsPage] = useState(0);
-  const [locationsRowsPerPage, setLocationsRowsPerPage] = useState(25);
+  const [locationsRowsPerPage, setLocationsRowsPerPage] = useState(10);
 
 
   const [dispatchersPage, setDispatchersPage] = useState(0);
-  const [dispatchersRowsPerPage, setDispatchersRowsPerPage] = useState(25);
+  const [dispatchersRowsPerPage, setDispatchersRowsPerPage] = useState(10);
 
   // --- FETCH FUNKCIE (presunuté SEM HORE) ---
   

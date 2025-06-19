@@ -37,6 +37,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { db } from '../../firebase';
+import RichTextEditor from '../common/RichTextEditor';
 
 // Použijem SVG vlajky z flagcdn.com ako v ostatných komponentoch
 const SUPPORTED_LANGUAGES = [
@@ -366,20 +367,60 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
                         backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
                       },
                     },
+                    // Štýly pre renderovaný HTML obsah
+                    '& table': {
+                      borderCollapse: 'collapse',
+                      width: '100%',
+                      margin: '10px 0',
+                      '& td, & th': {
+                        border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.3)' : '#ccc'}`,
+                        padding: '8px',
+                        textAlign: 'left'
+                      }
+                    },
+                    '& ul, & ol': {
+                      paddingLeft: '20px',
+                      margin: '10px 0'
+                    },
+                    '& li': {
+                      marginBottom: '5px'
+                    },
+                    '& strong': {
+                      fontWeight: 'bold'
+                    },
+                    '& em': {
+                      fontStyle: 'italic'
+                    },
+                    '& u': {
+                      textDecoration: 'underline'
+                    }
                   }}
                 >
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                      whiteSpace: 'pre-wrap',
-                      lineHeight: 1.6,
-                      fontFamily: 'monospace',
-                      fontSize: '13px'
-                    }}
-                  >
-                    {currentNotes.content}
-                  </Typography>
+                  {/* Kontrola či je obsah HTML alebo plain text */}
+                  {currentNotes.content.includes('<') && currentNotes.content.includes('>') ? (
+                    // HTML obsah - renderuj ako HTML
+                    <Box
+                      dangerouslySetInnerHTML={{ __html: currentNotes.content }}
+                      sx={{ 
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        lineHeight: 1.6,
+                        fontSize: '14px'
+                      }}
+                    />
+                  ) : (
+                    // Plain text obsah - renderuj ako text s preservovanými riadkami
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: 1.6,
+                        fontSize: '14px'
+                      }}
+                    >
+                      {currentNotes.content}
+                    </Typography>
+                  )}
                 </Box>
               ) : (
                 <Typography 
@@ -442,24 +483,19 @@ const TransportNotesCard: React.FC<TransportNotesCardProps> = ({ companyID }) =>
                       helperText="Nadpis, ktorý sa zobrazí v PDF dokumente"
                     />
 
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={8}
-                      label="Obsah poznámok"
-                      value={notes.get(editingLanguage)?.content || ''}
-                      onChange={(e) => handleFieldChange(editingLanguage, 'content', e.target.value)}
-                      placeholder="Zadajte text poznámok, ktoré sa majú pridať do PDF dokumentov..."
-                      helperText={`${(notes.get(editingLanguage)?.content || '').length}/30000 znakov`}
-                      inputProps={{ maxLength: 30000 }}
-                      sx={{
-                        '& .MuiInputBase-inputMultiline': {
-                          fontSize: '14px',
-                          lineHeight: 1.5,
-                          fontFamily: 'monospace'
-                        }
-                      }}
-                    />
+                    <Box>
+                      <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                        Obsah poznámok
+                      </Typography>
+                      <RichTextEditor
+                        value={notes.get(editingLanguage)?.content || ''}
+                        onChange={(value) => handleFieldChange(editingLanguage, 'content', value)}
+                        placeholder="Zadajte text poznámok, ktoré sa majú pridať do PDF dokumentov..."
+                        helperText="Text s formátovaním, ktorý sa pridá do PDF dokumentov"
+                        maxLength={30000}
+                        rows={8}
+                      />
+                    </Box>
 
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button

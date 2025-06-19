@@ -2174,19 +2174,26 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             name={`goodsWeight${type}${index}${goodsIndex}`}
                             label={t('orders.weightTons')}
                             type="text"
-                            value={item.weight !== undefined ? item.weight.toString() : ''}
+                            value={item.weightText !== undefined ? item.weightText : (item.weight !== undefined ? item.weight.toString() : '')}
                             onChange={(e) => {
-                              const value = e.target.value;
-                              // Povolíme len čísla, bodku a čiarku
-                              const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.');
+                              let value = e.target.value;
                               
+                              // Povolíme len čísla, bodku a čiarku
+                              const cleanValue = value.replace(/[^0-9.,]/g, '');
+                              
+                              // Uložíme text hodnotu
+                              updateGoods(type, index, goodsIndex, 'weightText', cleanValue);
+                              
+                              // Ak je hodnota prázdna
                               if (cleanValue === '') {
                                 updateGoods(type, index, goodsIndex, 'weight', undefined);
                                 return;
                               }
                               
-                              // Konvertujeme na číslo
-                              const weight = parseFloat(cleanValue);
+                              // Skúsime konvertovať na číslo (pre výpočty)
+                              const numericValue = cleanValue.replace(',', '.');
+                              const weight = parseFloat(numericValue);
+                              
                               if (!isNaN(weight)) {
                                 updateGoods(type, index, goodsIndex, 'weight', weight);
                               }
@@ -3044,13 +3051,24 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           </Box>
           <IconButton 
             onClick={onClose} 
-            edge="end" 
             aria-label="close"
             sx={{
-              color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+              color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+              border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+              borderRadius: '8px',
+              padding: '8px',
+              margin: '8px',
+              marginRight: '12px',
+              '&:hover': {
+                backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                color: isDarkMode ? '#ffffff' : '#000000',
+                transform: 'scale(1.05)',
+              },
+              transition: 'all 0.2s ease-in-out',
             }}
           >
-            <CloseIcon />
+            <CloseIcon sx={{ fontSize: '1.2rem' }} />
           </IconButton>
         </Box>
         

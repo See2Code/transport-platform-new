@@ -583,7 +583,7 @@ export default function BusinessCases() {
   const [phaseDialogOpen, setPhaseDialogOpen] = useState(false);
   const [, setPhases] = useState<Phase[]>([]);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const { t } = useTranslation(); // Hook pre preklady
 
   // Definícia stavov obchodného prípadu - zabalená do useMemo

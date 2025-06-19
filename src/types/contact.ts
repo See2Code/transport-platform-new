@@ -17,6 +17,7 @@ export interface Contact {
   email: string;
   notes?: string;
   position?: string;
+  companyID?: string; // ID firmy
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: {

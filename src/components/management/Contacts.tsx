@@ -25,6 +25,7 @@ import {
   Grid,
   DialogContentText,
   InputAdornment,
+  TablePagination,
   SelectChangeEvent} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -272,6 +273,10 @@ const Contacts = () => {
   const { isDarkMode } = useThemeMode();
   const { currentUser } = useAuth();
 
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const [formData, setFormData] = useState<ContactFormData>({
     firstName: '',
     lastName: '',
@@ -396,9 +401,11 @@ const Contacts = () => {
         company: formData.companyName,
         phoneNumber: formData.phone,
         countryCode: formData.countryCode,
+        phonePrefix: formData.phonePrefix,
         email: formData.email,
         notes: formData.note,
         position: formData.position,
+        companyID: userData?.companyID, // Pridávame companyID
         createdAt: formData.createdAt,
         updatedAt: formData.updatedAt,
         createdBy: {
@@ -527,6 +534,22 @@ const Contacts = () => {
       .includes(searchTerm.toLowerCase())
   );
 
+  // Pagination handlers
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Get paginated contacts
+  const paginatedContacts = filteredContacts.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   const renderMobileContact = (contact: Contact) => (
     <MobileContactCard key={contact.id} isDarkMode={isDarkMode}>
       <MobileContactHeader isDarkMode={isDarkMode}>
@@ -649,7 +672,45 @@ const Contacts = () => {
 
       {useMediaQuery('(max-width: 600px)') ? (
         <Box>
-          {filteredContacts.map(contact => renderMobileContact(contact))}
+          {paginatedContacts.map(contact => renderMobileContact(contact))}
+          <TablePagination
+            rowsPerPageOptions={[10, 25, 50]}
+            component="div"
+            count={filteredContacts.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Riadkov na stránku:"
+            labelDisplayedRows={({ from, to, count }: { from: number; to: number; count: number }) => 
+              `${from}-${to} z ${count !== -1 ? count : `viac ako ${to}`}`
+            }
+            sx={{
+              backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+              color: isDarkMode ? '#ffffff' : '#000000',
+              borderRadius: '16px',
+              border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+              mt: 2,
+              '& .MuiTablePagination-toolbar': {
+                color: isDarkMode ? '#ffffff' : '#000000',
+              },
+              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                color: isDarkMode ? '#ffffff' : '#000000',
+              },
+              '& .MuiSelect-icon': {
+                color: isDarkMode ? '#ffffff' : '#000000',
+              },
+              '& .MuiIconButton-root': {
+                color: isDarkMode ? '#ffffff' : '#000000',
+                '&:hover': {
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                },
+                '&.Mui-disabled': {
+                  color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                }
+              }
+            }}
+          />
         </Box>
       ) : (
         <TableContainer component={Paper} sx={{
@@ -672,7 +733,7 @@ const Contacts = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredContacts.map((contact) => (
+              {paginatedContacts.map((contact) => (
                 <StyledTableRow isDarkMode={isDarkMode} key={contact.id}>
                   <TableCell>{contact.company}</TableCell>
                   <TableCell>{contact.firstName} {contact.lastName}</TableCell>
@@ -731,6 +792,42 @@ const Contacts = () => {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            rowsPerPageOptions={[10, 25, 50]}
+            component="div"
+            count={filteredContacts.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Riadkov na stránku:"
+            labelDisplayedRows={({ from, to, count }: { from: number; to: number; count: number }) => 
+              `${from}-${to} z ${count !== -1 ? count : `viac ako ${to}`}`
+            }
+            sx={{
+              backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+              color: isDarkMode ? '#ffffff' : '#000000',
+              borderTop: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+              '& .MuiTablePagination-toolbar': {
+                color: isDarkMode ? '#ffffff' : '#000000',
+              },
+              '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                color: isDarkMode ? '#ffffff' : '#000000',
+              },
+              '& .MuiSelect-icon': {
+                color: isDarkMode ? '#ffffff' : '#000000',
+              },
+              '& .MuiIconButton-root': {
+                color: isDarkMode ? '#ffffff' : '#000000',
+                '&:hover': {
+                  backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                },
+                '&.Mui-disabled': {
+                  color: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                }
+              }
+            }}
+          />
         </TableContainer>
       )}
 

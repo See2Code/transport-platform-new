@@ -7,6 +7,7 @@ export interface GoodsItem {
   quantity: number;
   unit: string;
   weight?: number; // Váha v tonách
+  weightText?: string; // Text reprezentácia váhy pre editáciu
   palletExchange: string;
   dimensions?: string;
   description?: string;
