@@ -1717,9 +1717,14 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                     id="customer-price"
                     name="customerPrice"
                     label={t('orders.customerPrice') + ' *'}
-                    type="number"
+                    type="text"
                     value={formData.suma || ''}
-                    onChange={handleInputChange('suma')}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Povolíme len čísla, bodku a čiarku pre ceny
+                      const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.');
+                      setFormData(prev => ({ ...prev, suma: cleanValue }));
+                    }}
                     onKeyPress={(e) => {
                       // Povolíme len číslice, bodku a čiarku pre ceny
                       const allowedKeys = /[0-9.,]/;
@@ -1733,20 +1738,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                     InputProps={{
                       endAdornment: <InputAdornment position="end">€</InputAdornment>,
                     }}
-                    inputProps={{ min: 0, step: "0.01" }}
-                    sx={{
-                      '& input[type=number]': {
-                        '-moz-appearance': 'textfield',
-                      },
-                      '& input[type=number]::-webkit-outer-spin-button': {
-                        '-webkit-appearance': 'none',
-                        margin: 0,
-                      },
-                      '& input[type=number]::-webkit-inner-spin-button': {
-                        '-webkit-appearance': 'none',
-                        margin: 0,
-                      },
-                    }}
+                    placeholder="napr. 150,50 alebo 1200.00"
                   />
                 </Grid>
                 
@@ -2131,9 +2123,15 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                             id={`goods-quantity-${type}-${index}-${goodsIndex}`}
                             name={`goodsQuantity${type}${index}${goodsIndex}`}
                             label="Množstvo *"
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateGoods(type, index, goodsIndex, 'quantity', parseFloat(e.target.value) || 1)}
+                            type="text"
+                            value={item.quantity.toString()}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Povolíme len čísla, bodku a čiarku pre množstvo
+                              const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.');
+                              const quantity = cleanValue === '' ? 1 : parseFloat(cleanValue) || 1;
+                              updateGoods(type, index, goodsIndex, 'quantity', quantity);
+                            }}
                             onKeyPress={(e) => {
                               // Povolíme len číslice, bodku a čiarku pre množstvo
                               const allowedKeys = /[0-9.,]/;
@@ -2144,20 +2142,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                               }
                             }}
                             required
-                            inputProps={{ step: 0.01 }}
-                            sx={{
-                              '& input[type=number]': {
-                                '-moz-appearance': 'textfield',
-                              },
-                              '& input[type=number]::-webkit-outer-spin-button': {
-                                '-webkit-appearance': 'none',
-                                margin: 0,
-                              },
-                              '& input[type=number]::-webkit-inner-spin-button': {
-                                '-webkit-appearance': 'none',
-                                margin: 0,
-                              },
-                            }}
+                            placeholder="napr. 0,5 alebo 10"
                           />
                         </Grid>
                         
@@ -2393,9 +2378,14 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                       id="carrier-price"
                       name="carrierPrice"
                       label={t('orders.carrierPrice') || 'Cena za dopravu'}
-                      type="number"
+                      type="text"
                       value={formData.carrierPrice || ''}
-                      onChange={handleInputChange('carrierPrice')}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Povolíme len čísla, bodku a čiarku pre ceny dopravcu
+                        const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.');
+                        setFormData(prev => ({ ...prev, carrierPrice: cleanValue }));
+                      }}
                       onKeyPress={(e) => {
                         // Povolíme len číslice, bodku a čiarku pre ceny dopravcu
                         const allowedKeys = /[0-9.,]/;
@@ -2408,20 +2398,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
                       InputProps={{
                         endAdornment: <InputAdornment position="end">€</InputAdornment>,
                       }}
-                      inputProps={{ min: 0, step: "0.01" }}
-                      sx={{
-                        '& input[type=number]': {
-                          '-moz-appearance': 'textfield',
-                        },
-                        '& input[type=number]::-webkit-outer-spin-button': {
-                          '-webkit-appearance': 'none',
-                          margin: 0,
-                        },
-                        '& input[type=number]::-webkit-inner-spin-button': {
-                          '-webkit-appearance': 'none',
-                          margin: 0,
-                        },
-                      }}
+                      placeholder="napr. 80,50 alebo 120.00"
                     />
                   </Grid>
                   
