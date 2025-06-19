@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -11,7 +11,10 @@ import {
   FormControl,
   SelectChangeEvent,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Menu,
+  Grid,
+  Button
 } from '@mui/material';
 import {
   FormatBold,
@@ -50,6 +53,57 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const [fontSize, setFontSize] = useState<string>('14');
   const [alignment, setAlignment] = useState<string>('left');
+  const [tableMenuAnchor, setTableMenuAnchor] = useState<null | HTMLElement>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Funkcie na ukladanie a obnovenie pozície kurzora
+  const saveCursorPosition = useCallback(() => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editorRef.current) {
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editorRef.current);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      return preCaretRange.toString().length;
+    }
+    return 0;
+  }, []);
+
+  const restoreCursorPosition = useCallback((position: number) => {
+    if (!editorRef.current) return;
+    
+    const selection = window.getSelection();
+    if (!selection) return;
+
+    const walker = document.createTreeWalker(
+      editorRef.current,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    let currentPosition = 0;
+    let node;
+
+    while (node = walker.nextNode()) {
+      const nodeLength = node.textContent?.length || 0;
+      if (currentPosition + nodeLength >= position) {
+        const range = document.createRange();
+        range.setStart(node, position - currentPosition);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return;
+      }
+      currentPosition += nodeLength;
+    }
+
+    // Ak sa nepodarilo nájsť pozíciu, nastav kurzor na koniec
+    const range = document.createRange();
+    range.selectNodeContents(editorRef.current);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, []);
 
   const executeCommand = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
@@ -90,19 +144,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   };
 
-  const insertTable = () => {
-    const tableHTML = `
-      <table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0;">
-        <tr>
-          <td style="padding: 8px; border: 1px solid #ccc;">Bunka 1</td>
-          <td style="padding: 8px; border: 1px solid #ccc;">Bunka 2</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px; border: 1px solid #ccc;">Bunka 3</td>
-          <td style="padding: 8px; border: 1px solid #ccc;">Bunka 4</td>
-        </tr>
-      </table>
-    `;
+  const insertTable = (rows: number, cols: number) => {
+    let tableHTML = `<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0;">`;
+    
+    for (let i = 0; i < rows; i++) {
+      tableHTML += '<tr>';
+      for (let j = 0; j < cols; j++) {
+        tableHTML += `<td style="padding: 8px; border: 1px solid #ccc;">Bunka ${i * cols + j + 1}</td>`;
+      }
+      tableHTML += '</tr>';
+    }
+    
+    tableHTML += '</table>';
     
     if (editorRef.current) {
       const selection = window.getSelection();
@@ -113,6 +166,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         onChange(editorRef.current.innerHTML);
       }
     }
+    
+    setTableMenuAnchor(null);
+  };
+
+  const handleTableMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setTableMenuAnchor(event.currentTarget);
+  };
+
+  const handleTableMenuClose = () => {
+    setTableMenuAnchor(null);
   };
 
   const handleContentChange = () => {
@@ -138,6 +201,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     div.innerHTML = html;
     return div.textContent?.length || 0;
   };
+
+  // Inicializácia obsahu len raz
+  useEffect(() => {
+    if (editorRef.current && !isInitialized) {
+      editorRef.current.innerHTML = getInitialContent(value);
+      setIsInitialized(true);
+    }
+  }, [value, isInitialized, getInitialContent]);
 
   return (
     <Box sx={{ border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, borderRadius: '12px', overflow: 'hidden' }}>
@@ -262,7 +333,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         <Tooltip title="Vložiť tabuľku">
           <IconButton
             size="small"
-            onClick={insertTable}
+            onClick={handleTableMenuOpen}
             sx={{ color: isDarkMode ? '#fff' : '#000' }}
           >
             <TableIcon />
@@ -299,7 +370,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         contentEditable
         suppressContentEditableWarning
         onInput={handleContentChange}
-        dangerouslySetInnerHTML={{ __html: getInitialContent(value) }}
         sx={{
           minHeight: `${rows * 1.5}rem`,
           maxHeight: '400px',
@@ -346,6 +416,164 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </Typography>
         </Box>
       )}
+
+      {/* Table size selector menu */}
+      <Menu
+        anchorEl={tableMenuAnchor}
+        open={Boolean(tableMenuAnchor)}
+        onClose={handleTableMenuClose}
+        PaperProps={{
+          sx: {
+            backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
+            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            backdropFilter: 'blur(10px)',
+            p: 2,
+            minWidth: '250px'
+          }
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: isDarkMode ? '#fff' : '#000' }}>
+          Vyber veľkosť tabuľky:
+        </Typography>
+        <Grid container spacing={1}>
+          {/* Rýchle možnosti */}
+          <Grid item xs={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(2, 2)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              2×2
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(2, 3)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              2×3
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(2, 4)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              2×4
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(3, 2)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              3×2
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(3, 3)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              3×3
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(3, 4)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              3×4
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(4, 2)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              4×2
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(4, 3)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              4×3
+            </Button>
+          </Grid>
+          <Grid item xs={12}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => insertTable(4, 4)}
+              sx={{ 
+                color: isDarkMode ? '#fff' : '#000',
+                borderColor: isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                fontSize: '12px'
+              }}
+            >
+              4×4
+            </Button>
+          </Grid>
+        </Grid>
+      </Menu>
     </Box>
   );
 };

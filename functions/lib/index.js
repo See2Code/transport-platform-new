@@ -758,6 +758,40 @@ const safeText = (text) => {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 };
+// Funkcia pre bezpečné renderovanie HTML obsahu (pre transport notes)
+const renderHtmlContent = (content) => {
+    if (!content)
+        return '';
+    const htmlContent = String(content);
+    // Ak obsah obsahuje HTML tagy, považujeme ho za HTML
+    if (htmlContent.includes('<') && htmlContent.includes('>')) {
+        // Sanitizujeme HTML - povolíme len bezpečné tagy
+        return htmlContent
+            .replace(/<script[^>]*>.*?<\/script>/gi, '') // Odstránime script tagy
+            .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '') // Odstránime iframe tagy
+            .replace(/on\w+\s*=\s*"[^"]*"/gi, '') // Odstránime event handlery
+            .replace(/javascript:/gi, '') // Odstránime javascript: odkazy
+            .replace(/style\s*=\s*"[^"]*"/gi, (match) => {
+            var _a;
+            // Zachováme len bezpečné CSS vlastnosti
+            const styleContent = ((_a = match.match(/style\s*=\s*"([^"]*)"/i)) === null || _a === void 0 ? void 0 : _a[1]) || '';
+            const allowedStyles = styleContent
+                .split(';')
+                .filter(style => {
+                var _a;
+                const prop = (_a = style.trim().split(':')[0]) === null || _a === void 0 ? void 0 : _a.trim().toLowerCase();
+                return ['color', 'background-color', 'font-size', 'font-weight', 'text-align',
+                    'margin', 'padding', 'border', 'width', 'height'].includes(prop);
+            })
+                .join(';');
+            return allowedStyles ? `style="${allowedStyles}"` : '';
+        });
+    }
+    else {
+        // Ak obsah neobsahuje HTML tagy, považujeme ho za plain text
+        return safeText(htmlContent).replace(/\n/g, '<br>');
+    }
+};
 // Pomocná funkcia na formátovanie adresy
 const formatAddress = (street, city, zip, country) => {
     return [
@@ -1572,6 +1606,62 @@ function generateOrderHtml(orderData, settings, carrierData, dispatcherData, tra
           orphans: 3;
           widows: 3;
         }
+        
+        /* Štýly pre formátovanie transport notes */
+        .transport-notes-box table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 8px 0;
+          font-size: 9px;
+          line-height: 1.2;
+        }
+        
+        .transport-notes-box table td,
+        .transport-notes-box table th {
+          border: 1px solid #ddd;
+          padding: 4px 6px;
+          text-align: left;
+          vertical-align: top;
+        }
+        
+        .transport-notes-box table th {
+          background-color: #f5f5f5;
+          font-weight: bold;
+        }
+        
+        .transport-notes-box table tr:nth-child(even) {
+          background-color: #fafafa;
+        }
+        
+        .transport-notes-box ul,
+        .transport-notes-box ol {
+          margin: 6px 0;
+          padding-left: 16px;
+        }
+        
+        .transport-notes-box li {
+          margin: 2px 0;
+          line-height: 1.3;
+        }
+        
+        .transport-notes-box p {
+          margin: 4px 0;
+          line-height: 1.4;
+        }
+        
+        .transport-notes-box strong,
+        .transport-notes-box b {
+          font-weight: bold;
+        }
+        
+        .transport-notes-box em,
+        .transport-notes-box i {
+          font-style: italic;
+        }
+        
+        .transport-notes-box u {
+          text-decoration: underline;
+        }
       </style>
     </head>
     <body>
@@ -1651,7 +1741,7 @@ function generateOrderHtml(orderData, settings, carrierData, dispatcherData, tra
         <div class="transport-section">
           <div class="transport-notes-box">
             <h3>${safeText(transportNotes[language].title)}</h3>
-            <p style="white-space: pre-wrap; line-height: 1.4;">${safeText(transportNotes[language].content)}</p>
+            <p style="white-space: pre-wrap; line-height: 1.4;">${renderHtmlContent(transportNotes[language].content)}</p>
           </div>
         </div>
         ` : ''}
