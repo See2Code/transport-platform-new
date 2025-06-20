@@ -6,53 +6,27 @@ import {
   Step,
   StepLabel,
   Button,
-  Card,
-  CardContent,
-  Grid,
   TextField,
   Autocomplete,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   IconButton,
-  Chip,
   Divider,
   Dialog,
   DialogContent,
   DialogActions,
   CircularProgress,
-  Alert,
-  alpha,
-  SelectChangeEvent,
-  InputAdornment,
-  Collapse,
-  Snackbar
+  SelectChangeEvent
 } from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { sk } from 'date-fns/locale';
+
 
 // Icons
 import PersonIcon from '@mui/icons-material/Person';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import SummaryIcon from '@mui/icons-material/Assessment';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import InventoryIcon from '@mui/icons-material/Inventory';
-
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import BusinessIcon from '@mui/icons-material/Business';
-import PhoneIcon from '@mui/icons-material/Phone';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import CheckIcon from '@mui/icons-material/Check';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 // Firebase imports
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, Timestamp, orderBy, getDoc } from 'firebase/firestore';
@@ -61,18 +35,18 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useThemeMode } from '../../../contexts/ThemeContext';
 
 // Types
-import { OrderFormData, LoadingPlace, UnloadingPlace, GoodsItem } from '../../../types/orders';
+import { OrderFormData, GoodsItem } from '../../../types/orders';
 import { Customer } from '../../../types/customers';
 import { Carrier } from '../../../types/carriers';
-import { countries } from '../../../constants/countries';
-import CustomerForm, { CustomerData } from '../../management/CustomerForm';
-import CarrierDialog from '../../dialogs/CarrierDialog';
+import DialogHandlers from './DialogHandlers';
 
 
 import BareTooltip from './BareTooltip';
-import { StyledStepper, StyledCard, StyledAutocomplete, LocationCard } from './StyledComponents';
+import { StyledStepper } from './StyledComponents';
 import { emptyGoodsItem, emptyLoadingPlace, emptyUnloadingPlace, NewOrderWizardProps } from './types';
 import CustomerStep from './CustomerStep';
+import CargoStep from './CargoStep';
+import CarrierStep from './CarrierStep';
 
 
 
@@ -1223,846 +1197,50 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           />
         );
       case 1:
-        return renderCargoStep();
+        return (
+          <CargoStep
+            formData={formData}
+            savedLocations={savedLocations}
+            savedGoods={savedGoods}
+            expandedLocationCards={expandedLocationCards}
+            addLocation={addLocation}
+            removeLocation={removeLocation}
+            duplicateLocation={duplicateLocation}
+            updateLocation={updateLocation}
+            toggleLocationCard={toggleLocationCard}
+            addGoods={addGoods}
+            removeGoods={removeGoods}
+            updateGoods={updateGoods}
+          />
+        );
       case 2:
-        return renderCarrierStep();
+        return (
+          <CarrierStep
+            formData={formData}
+            carriers={carriers}
+            isCarrierLoading={isCarrierLoading}
+            teamMembers={teamMembers}
+            isEditingDispatcher={isEditingDispatcher}
+            isEditingCarrierPaymentTerms={isEditingCarrierPaymentTerms}
+            _originalDispatcher={originalDispatcher}
+            editedDispatcher={editedDispatcher}
+            calculateProfit={calculateProfit}
+            handleCarrierChange={handleCarrierChange}
+            handleInputChange={handleInputChange}
+            setNewCarrierDialog={setNewCarrierDialog}
+            handleStartEditDispatcher={handleStartEditDispatcher}
+            handleSaveDispatcher={handleSaveDispatcher}
+            handleCancelEditDispatcher={handleCancelEditDispatcher}
+            handleDispatcherChange={handleDispatcherChange}
+            handleStartEditCarrierPaymentTerms={handleStartEditCarrierPaymentTerms}
+            handleCarrierPaymentTermsChange={handleCarrierPaymentTermsChange}
+            handleCancelEditCarrierPaymentTerms={handleCancelEditCarrierPaymentTerms}
+            setIsEditingCarrierPaymentTerms={setIsEditingCarrierPaymentTerms}
+          />
+        );
       default:
         return null;
     }
-  };
-
-
-
-  const renderCargoStep = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ color: '#ff9f43', fontWeight: 600, mb: 3 }}>
-        <LocalShippingIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-        {t('orders.cargoAndRoute') || 'Tovar a trasa'}
-      </Typography>
-
-      {/* Loading Places */}
-      <Box mb={4}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" sx={{ color: '#2ecc71', fontWeight: 600 }}>
-            <LocationOnIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            {t('orders.loadingPlaces') || 'Miesta nakládky'}
-          </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={() => addLocation('loading')}
-            sx={{ 
-              borderColor: '#2ecc71', 
-              color: '#2ecc71',
-              '&:hover': { borderColor: '#27ae60', backgroundColor: alpha('#2ecc71', 0.1) }
-            }}
-          >
-            {t('orders.addLoading') || 'Pridať nakládku'}
-          </Button>
-        </Box>
-
-        {formData.loadingPlaces?.map((place, index) => 
-          renderLocationCard('loading', place, index)
-        )}
-      </Box>
-
-      {/* Unloading Places */}
-      <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" sx={{ color: '#e74c3c', fontWeight: 600 }}>
-            <LocationOnIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            {t('orders.unloadingPlaces') || 'Miesta vykládky'}
-          </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={() => addLocation('unloading')}
-            sx={{ 
-              borderColor: '#e74c3c', 
-              color: '#e74c3c',
-              '&:hover': { borderColor: '#c0392b', backgroundColor: alpha('#e74c3c', 0.1) }
-            }}
-          >
-            {t('orders.addUnloading') || 'Pridať vykládku'}
-          </Button>
-        </Box>
-
-        {formData.unloadingPlaces?.map((place, index) => 
-          renderLocationCard('unloading', place, index)
-        )}
-      </Box>
-    </Box>
-  );
-
-  const renderLocationCard = (type: 'loading' | 'unloading', place: LoadingPlace | UnloadingPlace, index: number) => {
-    const cardKey = `${type}-${index}`;
-    const isExpanded = expandedLocationCards[cardKey];
-    const color = type === 'loading' ? '#2ecc71' : '#e74c3c';
-    const places = formData[`${type}Places` as keyof typeof formData] as any[];
-
-    return (
-      <LocationCard key={place.id}>
-        <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Box display="flex" alignItems="center">
-              <Chip
-                label={`${type === 'loading' ? 'Nakládka' : 'Vykládka'} #${index + 1}`}
-                size="small"
-                sx={{ 
-                  backgroundColor: alpha(color, 0.1), 
-                  color: color,
-                  fontWeight: 600
-                }}
-              />
-              <Typography variant="body2" sx={{ ml: 2, color: 'text.secondary' }}>
-                {place.city || 'Nezadané mesto'}
-              </Typography>
-            </Box>
-            
-            <Box>
-              <BareTooltip title="Duplikovať">
-                <IconButton
-                  size="small"
-                  onClick={() => duplicateLocation(type, index)}
-                  sx={{ color: 'text.secondary' }}
-                >
-                  <ContentCopyIcon />
-                </IconButton>
-              </BareTooltip>
-              
-              <BareTooltip title="Rozbaliť/Zbaliť">
-                <IconButton
-                  size="small"
-                  onClick={() => toggleLocationCard(type, index)}
-                  sx={{ color: 'text.secondary' }}
-                >
-                  {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </IconButton>
-              </BareTooltip>
-              
-              {places.length > 1 && (
-                <BareTooltip title="Odstrániť">
-                  <IconButton
-                    size="small"
-                    onClick={() => removeLocation(type, index)}
-                    sx={{ color: '#e74c3c' }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </BareTooltip>
-              )}
-            </Box>
-          </Box>
-
-          <Collapse in={isExpanded} timeout="auto">
-            <Grid container spacing={2}>
-              {/* Company Name */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  id={`${type}-company-name-${index}`}
-                  name={`${type}CompanyName${index}`}
-                  label="Názov firmy *"
-                  value={place.companyName || ''}
-                  onChange={(e) => updateLocation(type, index, 'companyName', e.target.value)}
-                  required
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <BusinessIcon sx={{ color: 'text.secondary' }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              
-              {/* Location Details */}
-              <Grid item xs={12} sm={6}>
-                <StyledAutocomplete
-                  freeSolo
-                  options={savedLocations}
-                  value={place.city}
-                  onInputChange={(_, newValue) => updateLocation(type, index, 'city', newValue)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      id={`${type}-city-${index}`}
-                      name={`${type}City${index}`}
-                      label={t('orders.city') + ' *'}
-                      required
-                      fullWidth
-                    />
-                  )}
-                />
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  id={`${type}-street-${index}`}
-                  name={`${type}Street${index}`}
-                  label={t('orders.street') + ' *'}
-                  value={place.street}
-                  onChange={(e) => updateLocation(type, index, 'street', e.target.value)}
-                  required
-                />
-              </Grid>
-              
-              <Grid item xs={6} sm={3}>
-                <TextField
-                  fullWidth
-                  id={`${type}-zip-${index}`}
-                  name={`${type}Zip${index}`}
-                  label={t('orders.zipCode') + ' *'}
-                  value={place.zip}
-                  onChange={(e) => updateLocation(type, index, 'zip', e.target.value)}
-                  required
-                />
-              </Grid>
-              
-              <Grid item xs={6} sm={3}>
-                <Autocomplete
-                  options={countries}
-                  getOptionLabel={(option) => option.name}
-                  value={countries.find(c => c.name === place.country) || null}
-                  onChange={(_, newValue) => updateLocation(type, index, 'country', newValue?.name || 'Slovensko')}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      id={`${type}-country-${index}`}
-                      name={`${type}Country${index}`}
-                      label={t('orders.country') + ' *'}
-                      required
-                    />
-                  )}
-                />
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
-                  <DateTimePicker
-                    label={type === 'loading' ? 'Dátum a čas nakládky *' : 'Dátum a čas vykládky *'}
-                    value={place.dateTime}
-                    onChange={(newValue) => updateLocation(type, index, 'dateTime', newValue)}
-                    slotProps={{ textField: { fullWidth: true, required: true } }}
-                  />
-                </LocalizationProvider>
-              </Grid>
-              
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  id={`${type}-contact-name-${index}`}
-                  name={`${type}ContactName${index}`}
-                  label="Meno kontaktnej osoby"
-                  value={place.contactPersonName}
-                  onChange={(e) => updateLocation(type, index, 'contactPersonName', e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PersonIcon sx={{ color: 'text.secondary' }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  id={`${type}-contact-phone-${index}`}
-                  name={`${type}ContactPhone${index}`}
-                  label="Telefón kontaktnej osoby"
-                  value={place.contactPersonPhone}
-                  onChange={(e) => updateLocation(type, index, 'contactPersonPhone', e.target.value)}
-                  placeholder="+421 XXX XXX XXX"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PhoneIcon sx={{ color: 'text.secondary' }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-
-              {/* Goods Section */}
-              <Grid item xs={12}>
-                <Divider sx={{ my: 2 }} />
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    <InventoryIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: 20 }} />
-                    {type === 'loading' ? 'Tovar na naloženie' : 'Tovar na vyloženie'}
-                  </Typography>
-                  <Button
-                    size="small"
-                    startIcon={<AddIcon />}
-                    onClick={() => addGoods(type, index)}
-                    sx={{ color: '#ff9f43' }}
-                  >
-                    Pridať tovar
-                  </Button>
-                </Box>
-
-                {place.goods?.map((item, goodsIndex) => (
-                  <Card key={item.id} sx={{ 
-                    mb: 2, 
-                    backgroundColor: 'transparent',
-                    border: (theme: any) => `1px solid ${theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.1)' 
-                      : 'rgba(0, 0, 0, 0.1)'}`,
-                    borderRadius: 2
-                  }}>
-                    <CardContent sx={{ pb: 2, '&:last-child': { pb: 2 } }}>
-                      <Box display="flex" justifyContent="between" alignItems="center" mb={2}>
-                        <Chip
-                          label={`Tovar #${goodsIndex + 1}`}
-                          size="small"
-                          sx={{ backgroundColor: alpha('#ff9f43', 0.1), color: '#ff9f43' }}
-                        />
-                        {place.goods && place.goods.length > 1 && (
-                          <IconButton
-                            size="small"
-                            onClick={() => removeGoods(type, index, goodsIndex)}
-                            sx={{ color: '#e74c3c' }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        )}
-                      </Box>
-                      
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <StyledAutocomplete
-                            freeSolo
-                            options={savedGoods}
-                            value={item.name}
-                            onInputChange={(_, newValue) => updateGoods(type, index, goodsIndex, 'name', newValue || '')}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                id={`goods-name-${type}-${index}-${goodsIndex}`}
-                                name={`goodsName${type}${index}${goodsIndex}`}
-                                label="Názov tovaru *"
-                                required
-                                fullWidth
-                              />
-                            )}
-                          />
-                        </Grid>
-                        
-                        <Grid item xs={6} sm={3}>
-                          <TextField
-                            fullWidth
-                            id={`goods-quantity-${type}-${index}-${goodsIndex}`}
-                            name={`goodsQuantity${type}${index}${goodsIndex}`}
-                            label="Množstvo *"
-                            type="text"
-                            value={item.quantity.toString()}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              // Povolíme len čísla, bodku a čiarku pre množstvo
-                              const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.');
-                              const quantity = cleanValue === '' ? 1 : parseFloat(cleanValue) || 1;
-                              updateGoods(type, index, goodsIndex, 'quantity', quantity);
-                            }}
-                            onKeyPress={(e) => {
-                              // Povolíme len číslice, bodku a čiarku pre množstvo
-                              const allowedKeys = /[0-9.,]/;
-                              const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-                              
-                              if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
-                                e.preventDefault();
-                              }
-                            }}
-                            required
-                            placeholder="napr. 0,5 alebo 10"
-                          />
-                        </Grid>
-                        
-                        <Grid item xs={6} sm={3}>
-                          <FormControl fullWidth>
-                            <InputLabel id={`unit-label-${type}-${index}-${goodsIndex}`}>Jednotka *</InputLabel>
-                            <Select
-                              id={`unit-select-${type}-${index}-${goodsIndex}`}
-                              name={`unit${type}${index}${goodsIndex}`}
-                              labelId={`unit-label-${type}-${index}-${goodsIndex}`}
-                              value={item.unit}
-                              label="Jednotka *"
-                              onChange={(e) => updateGoods(type, index, goodsIndex, 'unit', e.target.value)}
-                              required
-                            >
-                              <MenuItem value="ks">ks</MenuItem>
-                              <MenuItem value="pal">pal</MenuItem>
-                              <MenuItem value="kg">kg</MenuItem>
-                              <MenuItem value="m³">m³</MenuItem>
-                              <MenuItem value="ldm">ldm</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={4}>
-                          <TextField
-                            fullWidth
-                            id={`goods-weight-${type}-${index}-${goodsIndex}`}
-                            name={`goodsWeight${type}${index}${goodsIndex}`}
-                            label={t('orders.weightTons')}
-                            type="text"
-                            value={item.weightText !== undefined ? item.weightText : (item.weight !== undefined ? item.weight.toString() : '')}
-                            onChange={(e) => {
-                              let value = e.target.value;
-                              
-                              // Povolíme len čísla, bodku a čiarku
-                              const cleanValue = value.replace(/[^0-9.,]/g, '');
-                              
-                              // Uložíme text hodnotu
-                              updateGoods(type, index, goodsIndex, 'weightText', cleanValue);
-                              
-                              // Ak je hodnota prázdna
-                              if (cleanValue === '') {
-                                updateGoods(type, index, goodsIndex, 'weight', undefined);
-                                return;
-                              }
-                              
-                              // Skúsime konvertovať na číslo (pre výpočty)
-                              const numericValue = cleanValue.replace(',', '.');
-                              const weight = parseFloat(numericValue);
-                              
-                              if (!isNaN(weight)) {
-                                updateGoods(type, index, goodsIndex, 'weight', weight);
-                              }
-                            }}
-                            onKeyPress={(e) => {
-                              // Povolíme len číslice, čiarku, bodku, backspace, delete, tab, enter, šípky
-                              const allowedKeys = /[0-9.,]/;
-                              const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-                              
-                              if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
-                                e.preventDefault();
-                              }
-                            }}
-                            placeholder="napr. 0,5 alebo 1.2"
-                            InputProps={{
-                              endAdornment: <InputAdornment position="end">t</InputAdornment>,
-                            }}
-                          />
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={4}>
-                          <TextField
-                            fullWidth
-                            id={`goods-dimensions-${type}-${index}-${goodsIndex}`}
-                            name={`goodsDimensions${type}${index}${goodsIndex}`}
-                            label={t('orders.dimensions')}
-                            value={item.dimensions || ''}
-                            onChange={(e) => updateGoods(type, index, goodsIndex, 'dimensions', e.target.value)}
-                          />
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={4}>
-                          <FormControl fullWidth>
-                            <InputLabel id={`pallet-exchange-label-${type}-${index}-${goodsIndex}`}>{t('orders.palletExchange')}</InputLabel>
-                            <Select
-                              id={`pallet-exchange-select-${type}-${index}-${goodsIndex}`}
-                              name={`palletExchange${type}${index}${goodsIndex}`}
-                              labelId={`pallet-exchange-label-${type}-${index}-${goodsIndex}`}
-                              value={item.palletExchange}
-                              label={t('orders.palletExchange')}
-                              onChange={(e) => updateGoods(type, index, goodsIndex, 'palletExchange', e.target.value)}
-                            >
-                              <MenuItem value="Bez výmeny">Bez výmeny</MenuItem>
-                              <MenuItem value="Výmena">Výmena 1:1</MenuItem>
-                              <MenuItem value="Jednostranná">Jednostranná</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        
-                        <Grid item xs={12}>
-                          <TextField
-                            fullWidth
-                            id={`goods-description-${type}-${index}-${goodsIndex}`}
-                            name={`goodsDescription${type}${index}${goodsIndex}`}
-                            label={t('orders.goodsDescription')}
-                            value={item.description || ''}
-                            onChange={(e) => updateGoods(type, index, goodsIndex, 'description', e.target.value)}
-                            multiline
-                            rows={2}
-                          />
-                        </Grid>
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Grid>
-            </Grid>
-          </Collapse>
-        </CardContent>
-      </LocationCard>
-    );
-  };
-
-  const renderCarrierStep = () => {
-    const profit = calculateProfit();
-    const profitColor = profit >= 0 ? '#2ecc71' : '#e74c3c';
-
-    return (
-      <Box>
-        <Typography variant="h6" gutterBottom sx={{ color: '#ff9f43', fontWeight: 600, mb: 3 }}>
-          <LocalShippingIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-          {t('orders.carrierAndSummary') || 'Dopravca a súhrn'}
-        </Typography>
-
-        <Grid container spacing={3}>
-          {/* Carrier Selection */}
-          <Grid item xs={12}>
-            <StyledCard>
-              <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
-                  <LocalShippingIcon sx={{ color: '#ff9f43', mr: 1 }} />
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {t('orders.selectCarrier') || 'Výber dopravcu'}
-                  </Typography>
-                </Box>
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Autocomplete
-                      options={carriers}
-                      getOptionLabel={(option: Carrier) => option.companyName || ''}
-                      value={carriers.find(c => c.companyName === formData.carrierCompany) || null}
-                      onChange={(_, newValue: Carrier | null) => handleCarrierChange(newValue)}
-                      loading={isCarrierLoading}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          id="carrier-autocomplete"
-                          name="carrier"
-                          label={t('orders.carrier')}
-                          fullWidth
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {isCarrierLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                <BareTooltip title={t('orders.addNewCarrier') || 'Pridať nového dopravcu'}>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => setNewCarrierDialog(true)}
-                                    sx={{ mr: 1, color: '#ff9f43' }}
-                                  >
-                                    <AddIcon />
-                                  </IconButton>
-                                </BareTooltip>
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: '#ff9f43',
-                              },
-                            },
-                            '& .MuiInputLabel-root.Mui-focused': {
-                              color: '#ff9f43',
-                            },
-                          }}
-                        />
-                      )}
-                      renderOption={(props, option: Carrier) => (
-                        <Box component="li" {...props}>
-                          <Box>
-                            <Typography variant="body1" fontWeight={500}>
-                              {option.companyName}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {option.contactName} {option.contactSurname} • {option.city}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      )}
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      id="carrier-contact"
-                      name="carrierContact"
-                      label={t('orders.carrierContact') || 'Kontakt na dopravcu'}
-                      value={formData.carrierContact || ''}
-                      onChange={handleInputChange('carrierContact')}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <PhoneIcon sx={{ color: 'text.secondary' }} />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      id="vehicle-registration"
-                      name="vehicleRegistration"
-                      label={t('orders.vehicleRegistration') || 'EČV vozidla'}
-                      value={formData.carrierVehicleReg || ''}
-                      onChange={handleInputChange('carrierVehicleReg')}
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      id="carrier-price"
-                      name="carrierPrice"
-                      label={t('orders.carrierPrice') || 'Cena za dopravu'}
-                      type="text"
-                      value={formData.carrierPrice || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        // Povolíme len čísla, bodku a čiarku pre ceny dopravcu
-                        const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.');
-                        setFormData(prev => ({ ...prev, carrierPrice: cleanValue }));
-                      }}
-                      onKeyPress={(e) => {
-                        // Povolíme len číslice, bodku a čiarku pre ceny dopravcu
-                        const allowedKeys = /[0-9.,]/;
-                        const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-                        
-                        if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
-                      InputProps={{
-                        endAdornment: <InputAdornment position="end">€</InputAdornment>,
-                      }}
-                      placeholder="napr. 80,50 alebo 120.00"
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ position: 'relative' }}>
-                      {isEditingCarrierPaymentTerms ? (
-                        <TextField
-                          fullWidth
-                          id="carrier-payment-terms-edit"
-                          name="carrierPaymentTermDays"
-                          label="Splatnosť dopravcu (dni)"
-                          type="number"
-                          value={formData.carrierPaymentTermDays || 60}
-                          onChange={handleCarrierPaymentTermsChange}
-                          onKeyPress={(e) => {
-                            // Povolíme len číslice pre dni splatnosti (bez desatinných miest)
-                            const allowedKeys = /[0-9]/;
-                            const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-                            
-                            if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
-                              e.preventDefault();
-                            }
-                          }}
-                          InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                  <BareTooltip title="Uložiť">
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => setIsEditingCarrierPaymentTerms(false)}
-                                      sx={{ color: '#4caf50' }}
-                                    >
-                                      <CheckIcon fontSize="small" />
-                                    </IconButton>
-                                  </BareTooltip>
-                                  <BareTooltip title="Zrušiť">
-                                    <IconButton
-                                      size="small"
-                                      onClick={handleCancelEditCarrierPaymentTerms}
-                                      sx={{ color: '#f44336' }}
-                                    >
-                                      <CloseIcon fontSize="small" />
-                                    </IconButton>
-                                  </BareTooltip>
-                                </Box>
-                              </InputAdornment>
-                            ),
-                          }}
-                          inputProps={{ min: 1, max: 365 }}
-                          autoFocus
-                          sx={{
-                            '& input[type=number]': {
-                              '-moz-appearance': 'textfield',
-                            },
-                            '& input[type=number]::-webkit-outer-spin-button': {
-                              '-webkit-appearance': 'none',
-                              margin: 0,
-                            },
-                            '& input[type=number]::-webkit-inner-spin-button': {
-                              '-webkit-appearance': 'none',
-                              margin: 0,
-                            },
-                          }}
-                        />
-                      ) : (
-                        <TextField
-                          fullWidth
-                          id="carrier-payment-terms"
-                          name="carrierPaymentTerms"
-                          label="Splatnosť dopravcu (dni)"
-                          value={formData.carrierPaymentTermDays || 60}
-                          InputProps={{
-                            readOnly: true,
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <AccessTimeIcon sx={{ color: 'text.secondary' }} />
-                              </InputAdornment>
-                            ),
-                            endAdornment: userData?.role === 'admin' ? (
-                              <InputAdornment position="end">
-                                <BareTooltip title="Upraviť splatnosť pre túto objednávku">
-                                  <IconButton
-                                    size="small"
-                                    onClick={handleStartEditCarrierPaymentTerms}
-                                    sx={{ color: '#ff9f43' }}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </BareTooltip>
-                              </InputAdornment>
-                            ) : null,
-                          }}
-                          helperText={userData?.role === 'admin' 
-                            ? "Kliknite na ikonu pera pre úpravu len tejto objednávky" 
-                            : "Automaticky načítané z dopravcu"
-                          }
-                        />
-                      )}
-                    </Box>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </StyledCard>
-          </Grid>
-
-          {/* Order Summary */}
-          <Grid item xs={12}>
-            <StyledCard>
-              <CardContent>
-                <Box display="flex" alignItems="center" mb={3}>
-                  <SummaryIcon sx={{ color: '#ff9f43', mr: 1 }} />
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {t('orders.orderSummary') || 'Súhrn objednávky'}
-                  </Typography>
-                </Box>
-                
-                <Grid container spacing={3}>
-                  {/* Customer Info */}
-                  <Grid item xs={12} md={4}>
-                    <Box>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        ZÁKAZNÍK
-                      </Typography>
-                      <Typography variant="body1" fontWeight={500}>
-                        {formData.zakaznik || 'Nezvolený'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {formData.kontaktnaOsoba || 'Bez kontaktu'}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  {/* Route Summary */}
-                  <Grid item xs={12} md={4}>
-                    <Box>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        TRASA
-                      </Typography>
-                      <Typography variant="body2">
-                        {formData.loadingPlaces?.[0]?.city || 'Nezadané'} 
-                        {formData.loadingPlaces && formData.loadingPlaces.length > 1 && ` (+${formData.loadingPlaces.length - 1})`}
-                      </Typography>
-                      <Typography variant="body2" sx={{ my: 0.5 }}>↓</Typography>
-                      <Typography variant="body2">
-                        {formData.unloadingPlaces?.[0]?.city || 'Nezadané'}
-                        {formData.unloadingPlaces && formData.unloadingPlaces.length > 1 && ` (+${formData.unloadingPlaces.length - 1})`}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  {/* Financial Summary */}
-                  <Grid item xs={12} md={4}>
-                    <Box>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        FINANČNÝ SÚHRN
-                      </Typography>
-                      <Box display="flex" justifyContent="space-between" mb={1}>
-                        <Typography variant="body2">Príjem:</Typography>
-                        <Typography variant="body2" fontWeight={500}>
-                          {formData.suma || '0'} €
-                        </Typography>
-                      </Box>
-                      <Box display="flex" justifyContent="space-between" mb={1}>
-                        <Typography variant="body2">Náklady:</Typography>
-                        <Typography variant="body2" fontWeight={500}>
-                          {formData.carrierPrice || '0'} €
-                        </Typography>
-                      </Box>
-                      <Divider sx={{ my: 1 }} />
-                      <Box display="flex" justifyContent="space-between">
-                        <Typography variant="body2" fontWeight={600}>Zisk:</Typography>
-                        <Typography 
-                          variant="body2" 
-                          fontWeight={600}
-                          sx={{ color: profitColor }}
-                        >
-                          {profit.toFixed(2)} €
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Grid>
-                </Grid>
-
-                {/* Validation Summary */}
-                <Box mt={3}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    STAV OBJEDNÁVKY
-                  </Typography>
-                  <Box display="flex" flexWrap="wrap" gap={1}>
-                    <Chip
-                      label="Zákazník"
-                      color={formData.zakaznikData ? "success" : "error"}
-                      size="small"
-                    />
-                    <Chip
-                      label="Cena"
-                      color={formData.suma ? "success" : "error"}
-                      size="small"
-                    />
-                    <Chip
-                      label="Nakládka"
-                      color={formData.loadingPlaces?.every(p => p.city && p.street) ? "success" : "error"}
-                      size="small"
-                    />
-                    <Chip
-                      label="Vykládka"
-                      color={formData.unloadingPlaces?.every(p => p.city && p.street) ? "success" : "error"}
-                      size="small"
-                    />
-                    <Chip
-                      label="Dopravca"
-                      color={formData.carrierCompany ? "success" : "warning"}
-                      size="small"
-                    />
-                  </Box>
-                </Box>
-              </CardContent>
-            </StyledCard>
-          </Grid>
-        </Grid>
-      </Box>
-    );
   };
 
   // Dispatcher editing functions
@@ -2607,175 +1785,20 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
         </DialogActions>
       </Box>
 
-      {/* Customer Form Dialog */}
-      <CustomerForm
-        open={newCustomerDialog}
-        onClose={() => setNewCustomerDialog(false)}
-        onSubmit={async (customerData: CustomerData) => {
-          try {
-            if (!userData?.companyID) {
-              alert("Chyba: Nemáte priradenú firmu.");
-              return;
-            }
-            
-            // Uložíme nového zákazníka do databázy
-            const customerRef = collection(db, 'customers');
-            const newCustomer = {
-              company: customerData.companyName, // Mapujeme companyName na company
-              street: customerData.street,
-              city: customerData.city,
-              zip: customerData.zip,
-              country: customerData.country,
-              contactName: customerData.contactName,
-              contactSurname: customerData.contactSurname,
-              email: customerData.contactEmail, // Mapujeme contactEmail na email
-              phone: customerData.contactPhonePrefix && customerData.contactPhone 
-                ? `${customerData.contactPhonePrefix}${customerData.contactPhone}` 
-                : '', // Kombinujeme predvoľbu a číslo
-              contactPhonePrefix: customerData.contactPhonePrefix || '+421',
-              contactPhone: customerData.contactPhone || '',
-              ico: customerData.ico || '',
-              dic: customerData.dic || '',
-              vatId: customerData.icDph || '', // Mapujeme icDph na vatId
-              paymentTermDays: customerData.paymentTermDays || 30,
-              customerId: customerData.customerId || '', // Pridáme customerId
-              companyID: userData.companyID,
-              createdAt: Timestamp.fromDate(new Date())
-            };
-            
-            const docRef = await addDoc(customerRef, newCustomer);
-            
-            // Vytvoríme Customer objekt pre select
-            const newCustomerOption: Customer = {
-              id: docRef.id,
-              company: customerData.companyName,
-              street: customerData.street,
-              city: customerData.city,
-              zip: customerData.zip,
-              country: customerData.country,
-              contactName: customerData.contactName,
-              contactSurname: customerData.contactSurname,
-              email: customerData.contactEmail,
-              phone: customerData.contactPhonePrefix && customerData.contactPhone 
-                ? `${customerData.contactPhonePrefix}${customerData.contactPhone}` 
-                : '',
-              contactPhonePrefix: customerData.contactPhonePrefix || '+421',
-              contactPhone: customerData.contactPhone || '',
-              vatId: customerData.icDph || '',
-              paymentTermDays: customerData.paymentTermDays || 30,
-              customerId: customerData.customerId || '', // Pridáme customerId
-              companyID: userData.companyID
-            };
-            
-            // Pridáme ho do zoznamu a vyberieme
-            setCustomerOptions(prev => [...prev, newCustomerOption]);
-            handleCustomerChange(newCustomerOption);
-            setNewCustomerDialog(false);
-            
-          } catch (error) {
-            console.error('Chyba pri ukladaní zákazníka:', error);
-            alert('Nastala chyba pri ukladaní zákazníka: ' + (error as Error).message);
-          }
-        }}
+      <DialogHandlers
+        newCustomerDialog={newCustomerDialog}
+        setNewCustomerDialog={setNewCustomerDialog}
+        userData={userData || undefined}
+        setCustomerOptions={setCustomerOptions}
+        handleCustomerChange={handleCustomerChange}
+        newCarrierDialog={newCarrierDialog}
+        setNewCarrierDialog={setNewCarrierDialog}
+        setCarriers={setCarriers}
+        handleCarrierChange={handleCarrierChange}
+        showValidationAlert={showValidationAlert}
+        setShowValidationAlert={setShowValidationAlert}
+        validationErrors={validationErrors}
       />
-
-      {/* Carrier Dialog */}
-      <CarrierDialog
-        open={newCarrierDialog}
-        onClose={() => setNewCarrierDialog(false)}
-        onSubmit={async (carrierData: Carrier) => {
-          try {
-            if (!userData?.companyID) {
-              alert("Chyba: Nemáte priradenú firmu.");
-              return;
-            }
-            
-            // Uložíme nového dopravcu do databázy
-            const carrierRef = collection(db, 'carriers');
-            const newCarrier = {
-              companyName: carrierData.companyName,
-              street: carrierData.street,
-              city: carrierData.city,
-              zip: carrierData.zip,
-              country: carrierData.country,
-              contactName: carrierData.contactName,
-              contactSurname: carrierData.contactSurname,
-              contactEmail: carrierData.contactEmail,
-              contactPhone: carrierData.contactPhone,
-              ico: carrierData.ico || '',
-              dic: carrierData.dic || '',
-              icDph: carrierData.icDph || '',
-              vehicleTypes: carrierData.vehicleTypes || [],
-              notes: carrierData.notes || '',
-              paymentTermDays: carrierData.paymentTermDays || 60,
-              companyID: userData.companyID,
-              createdAt: Timestamp.fromDate(new Date())
-            };
-            
-            const docRef = await addDoc(carrierRef, newCarrier);
-            
-            // Vytvoríme Carrier objekt pre select
-            const newCarrierOption: Carrier = {
-              id: docRef.id,
-              companyName: carrierData.companyName,
-              street: carrierData.street,
-              city: carrierData.city,
-              zip: carrierData.zip,
-              country: carrierData.country,
-              contactName: carrierData.contactName,
-              contactSurname: carrierData.contactSurname,
-              contactEmail: carrierData.contactEmail,
-              contactPhone: carrierData.contactPhone,
-              ico: carrierData.ico || '',
-              dic: carrierData.dic || '',
-              icDph: carrierData.icDph || '',
-              vehicleTypes: carrierData.vehicleTypes || [],
-              notes: carrierData.notes || '',
-              paymentTermDays: carrierData.paymentTermDays || 60,
-              companyID: userData.companyID
-            };
-            
-            // Pridáme ho do zoznamu a vyberieme
-            setCarriers(prev => [...prev, newCarrierOption]);
-            handleCarrierChange(newCarrierOption);
-            setNewCarrierDialog(false);
-            
-          } catch (error) {
-            console.error('Chyba pri ukladaní dopravcu:', error);
-            alert('Nastala chyba pri ukladaní dopravcu: ' + (error as Error).message);
-          }
-        }}
-      />
-
-      {/* Validation Errors Snackbar */}
-      <Snackbar
-        open={showValidationAlert}
-        autoHideDuration={5000}
-        onClose={() => setShowValidationAlert(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={() => setShowValidationAlert(false)} 
-          severity="error" 
-          sx={{ 
-            width: '100%',
-            '& .MuiAlert-message': {
-              width: '100%'
-            }
-          }}
-        >
-          <Typography variant="body2" fontWeight={600} gutterBottom>
-            Prosím, opravte nasledovné chyby:
-          </Typography>
-          <Box component="ul" sx={{ pl: 2, m: 0 }}>
-            {validationErrors.map((error, index) => (
-              <Typography key={index} component="li" variant="body2">
-                {error}
-              </Typography>
-            ))}
-          </Box>
-        </Alert>
-      </Snackbar>
     </Dialog>
   );
 };
