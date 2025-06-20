@@ -15,7 +15,7 @@ import { collection, addDoc, query, where, getDocs, getDoc, Timestamp, orderBy, 
 import { db } from '../../../firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 
-import NewOrderWizard from '../NewOrderWizard';
+import NewOrderWizard from '../NewOrderWizard/NewOrderWizard';
 import CustomerForm, { CustomerData } from '../../management/CustomerForm';
 import LocationForm, { LocationData } from '../../management/LocationForm';
 import { httpsCallable } from 'firebase/functions';

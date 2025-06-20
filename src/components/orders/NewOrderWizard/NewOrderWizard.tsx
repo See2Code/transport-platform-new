@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
-  Stepper,
   Step,
   StepLabel,
   Button,
@@ -30,7 +29,6 @@ import {
   Collapse,
   Snackbar
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -45,7 +43,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import InventoryIcon from '@mui/icons-material/Inventory';
-import EuroIcon from '@mui/icons-material/Euro';
+
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import BusinessIcon from '@mui/icons-material/Business';
@@ -58,329 +56,29 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 // Firebase imports
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, Timestamp, orderBy, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
-import { useAuth } from '../../contexts/AuthContext';
-import { useThemeMode } from '../../contexts/ThemeContext';
+import { db } from '../../../firebase';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useThemeMode } from '../../../contexts/ThemeContext';
 
 // Types
-import { OrderFormData, LoadingPlace, UnloadingPlace, GoodsItem } from '../../types/orders';
-import { Customer } from '../../types/customers';
-import { Carrier } from '../../types/carriers';
-import { countries } from '../../constants/countries';
-import CustomerForm, { CustomerData } from '../management/CustomerForm';
-import CarrierDialog from '../dialogs/CarrierDialog';
+import { OrderFormData, LoadingPlace, UnloadingPlace, GoodsItem } from '../../../types/orders';
+import { Customer } from '../../../types/customers';
+import { Carrier } from '../../../types/carriers';
+import { countries } from '../../../constants/countries';
+import CustomerForm, { CustomerData } from '../../management/CustomerForm';
+import CarrierDialog from '../../dialogs/CarrierDialog';
 
-import { createPortal } from 'react-dom';
 
-// BareTooltip komponent - presun z Navbar
-interface BareTooltipProps {
-  title: React.ReactNode;
-  children: React.ReactElement;
-  placement?: 'top' | 'bottom' | 'left' | 'right';
-  enterDelay?: number;
-  leaveDelay?: number;
-}
+import BareTooltip from './BareTooltip';
+import { StyledStepper, StyledCard, StyledAutocomplete, LocationCard } from './StyledComponents';
+import { emptyGoodsItem, emptyLoadingPlace, emptyUnloadingPlace, NewOrderWizardProps } from './types';
+import CustomerStep from './CustomerStep';
 
-const BareTooltip: React.FC<BareTooltipProps> = ({ 
-  title, 
-  children, 
-  placement = 'bottom',
-  enterDelay = 300,
-  leaveDelay = 200
-}) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const childRef = useRef<HTMLElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-  const enterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isHoveringRef = useRef(false);
-  
-  const { isDarkMode } = useThemeMode();
 
-  // Prida globálne štýly
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes fadeInTooltip {
-        from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-        to { opacity: 1; transform: translateX(-50%) translateY(0); }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
 
-  // Sledovanie dokumentu na strate fokusu/prekliknutí na inú aplikáciu
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Skryť tooltip, keď je okno neaktívne
-        setIsVisible(false);
-        if (enterTimeoutRef.current) {
-          clearTimeout(enterTimeoutRef.current);
-          enterTimeoutRef.current = null;
-        }
-        if (leaveTimeoutRef.current) {
-          clearTimeout(leaveTimeoutRef.current);
-          leaveTimeoutRef.current = null;
-        }
-      }
-    };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
 
-  const updateTooltipPosition = useCallback(() => {
-    if (!childRef.current || !isHoveringRef.current) return;
-    
-    const rect = childRef.current.getBoundingClientRect();
-    let top = 0;
-    let left = 0;
-    
-    switch (placement) {
-      case 'top':
-        top = rect.top - (tooltipRef.current?.offsetHeight || 0) - 10;
-        left = rect.left + rect.width / 2;
-        break;
-      case 'bottom':
-        top = rect.bottom + 10;
-        left = rect.left + rect.width / 2;
-        break;
-      case 'left':
-        top = rect.top + rect.height / 2;
-        left = rect.left - (tooltipRef.current?.offsetWidth || 0) - 10;
-        break;
-      case 'right':
-        top = rect.top + rect.height / 2;
-        left = rect.right + 10;
-        break;
-    }
-    
-    setPosition({ top, left });
-  }, [placement]);
 
-  const handleMouseEnter = useCallback(() => {
-    isHoveringRef.current = true;
-    
-    if (leaveTimeoutRef.current) {
-      clearTimeout(leaveTimeoutRef.current);
-      leaveTimeoutRef.current = null;
-    }
-    
-    // Ak je tooltip už zobrazený, netreba čakať
-    if (isVisible) {
-      updateTooltipPosition();
-      return;
-    }
-    
-    if (enterTimeoutRef.current) return;
-    
-    enterTimeoutRef.current = setTimeout(() => {
-      updateTooltipPosition();
-      setIsVisible(true);
-      enterTimeoutRef.current = null;
-    }, enterDelay);
-  }, [enterDelay, isVisible, updateTooltipPosition]);
-
-  const handleMouseLeave = useCallback(() => {
-    isHoveringRef.current = false;
-    
-    if (enterTimeoutRef.current) {
-      clearTimeout(enterTimeoutRef.current);
-      enterTimeoutRef.current = null;
-    }
-    
-    if (leaveTimeoutRef.current) return;
-    
-    leaveTimeoutRef.current = setTimeout(() => {
-      setIsVisible(false);
-      leaveTimeoutRef.current = null;
-    }, leaveDelay);
-  }, [leaveDelay]);
-
-  // Čistenie timeoutov pri unmount
-  useEffect(() => {
-    return () => {
-      if (enterTimeoutRef.current) clearTimeout(enterTimeoutRef.current);
-      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
-    };
-  }, []);
-
-  // Pridávame event handlery pre hover a focus
-  const child = React.cloneElement(children, {
-    ref: childRef,
-    onMouseEnter: handleMouseEnter,
-    onMouseLeave: handleMouseLeave,
-    onFocus: handleMouseEnter,
-    onBlur: handleMouseLeave,
-  });
-
-  return (
-    <>
-      {child}
-      {isVisible && createPortal(
-        <div
-          ref={tooltipRef}
-          style={{
-            position: 'fixed',
-            top: position.top,
-            left: position.left,
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            padding: '10px 16px',
-            backgroundColor: isDarkMode 
-              ? 'rgba(15, 23, 42, 0.85)'
-              : 'rgba(255, 255, 255, 0.92)',
-            color: isDarkMode ? '#ffffff' : '#0f172a',
-            borderRadius: '12px',
-            fontSize: '0.85rem',
-            fontWeight: 500,
-            letterSpacing: '0.2px',
-            boxShadow: isDarkMode
-              ? '0 16px 24px -6px rgba(0, 0, 0, 0.3), 0 4px 10px -3px rgba(0, 0, 0, 0.25)'
-              : '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            backdropFilter: 'blur(12px)',
-            pointerEvents: 'none', // Aby tooltip nereagoval na mouse eventy
-            animationName: 'fadeInTooltip',
-            animationDuration: '0.2s',
-            animationFillMode: 'forwards',
-            willChange: 'transform, opacity', // Optimalizácia pre GPU
-          }}
-        >
-          {title}
-        </div>,
-        document.body
-      )}
-    </>
-  );
-};
-
-// Custom styled components
-const StyledStepper = styled(Stepper)(({ theme }) => ({
-  '& .MuiStepLabel-root .Mui-completed': {
-    color: '#ff9f43',
-  },
-  '& .MuiStepLabel-root .Mui-active': {
-    color: '#ff9f43',
-  },
-  '& .MuiStepLabel-label.Mui-active': {
-    color: '#ff9f43',
-    fontWeight: 600,
-  },
-  '& .MuiStepLabel-label.Mui-completed': {
-    color: '#ff9f43',
-    fontWeight: 500,
-  },
-  '& .MuiStepConnector-line': {
-    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-  },
-  '& .MuiStepConnector-root.Mui-completed .MuiStepConnector-line': {
-    borderColor: '#ff9f43',
-  },
-  '& .MuiStepConnector-root.Mui-active .MuiStepConnector-line': {
-    borderColor: '#ff9f43',
-  },
-}));
-
-const StyledCard = styled(Card)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' 
-    ? 'rgba(28, 28, 45, 0.95)' 
-    : 'rgba(255, 255, 255, 0.95)',
-  backdropFilter: 'blur(10px)',
-  border: `1px solid ${theme.palette.mode === 'dark' 
-    ? 'rgba(255, 255, 255, 0.1)' 
-    : 'rgba(0, 0, 0, 0.1)'}`,
-  borderRadius: 16,
-  transition: 'all 0.3s ease-in-out',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.palette.mode === 'dark'
-      ? '0 8px 25px rgba(0, 0, 0, 0.3)'
-      : '0 8px 25px rgba(0, 0, 0, 0.15)',
-  }
-}));
-
-const StyledAutocomplete = styled(Autocomplete)(() => ({
-  '& .MuiOutlinedInput-root': {
-    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: '#ff9f43',
-    },
-  },
-  '& .MuiInputLabel-root.Mui-focused': {
-    color: '#ff9f43',
-  },
-}));
-
-const LocationCard = styled(Card)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' 
-    ? alpha(theme.palette.background.paper, 0.6)
-    : alpha('#f8f9fa', 0.8),
-  border: `1px solid ${theme.palette.mode === 'dark' 
-    ? 'rgba(255, 255, 255, 0.1)' 
-    : 'rgba(0, 0, 0, 0.1)'}`,
-  borderRadius: 12,
-  marginBottom: theme.spacing(2),
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    borderColor: alpha('#ff9f43', 0.5),
-  }
-}));
-
-// Initial states
-const emptyGoodsItem: GoodsItem = {
-  id: crypto.randomUUID(),
-  name: '',
-  quantity: 1,
-  unit: 'ks',
-  weight: undefined,
-  palletExchange: 'Bez výmeny',
-  dimensions: '',
-  description: '',
-};
-
-const emptyLoadingPlace: LoadingPlace = {
-  id: crypto.randomUUID(),
-  companyName: '',
-  street: '',
-  city: '',
-  zip: '',
-  country: 'Slovensko',
-  dateTime: null,
-  contactPerson: '', // zachováme pre spätnosť
-  contactPersonName: '',
-  contactPersonPhone: '',
-  goods: [{ ...emptyGoodsItem }]
-};
-
-const emptyUnloadingPlace: UnloadingPlace = {
-  id: crypto.randomUUID(),
-  companyName: '',
-  street: '',
-  city: '',
-  zip: '',
-  country: 'Slovensko',
-  dateTime: null,
-  contactPerson: '', // zachováme pre spätnosť
-  contactPersonName: '',
-  contactPersonPhone: '',
-  goods: [{ ...emptyGoodsItem }]
-};
-
-interface NewOrderWizardProps {
-  open: boolean;
-  onClose: () => void;
-  isEdit?: boolean;
-  orderData?: Partial<OrderFormData>;
-  onOrderSaved?: () => void; // Callback pre obnovenie dát po uložení
-}
 
 const NewOrderWizard: React.FC<NewOrderWizardProps> = ({ 
   open, 
@@ -1514,7 +1212,16 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const renderStepContent = (step: number) => {
     switch (step) {
       case 0:
-        return renderCustomerStep();
+        return (
+          <CustomerStep
+            formData={formData}
+            customerOptions={customerOptions}
+            isCustomerLoading={isCustomerLoading}
+            handleCustomerChange={handleCustomerChange}
+            handleInputChange={handleInputChange}
+            setNewCustomerDialog={setNewCustomerDialog}
+          />
+        );
       case 1:
         return renderCargoStep();
       case 2:
@@ -1524,280 +1231,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     }
   };
 
-  const renderCustomerStep = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ color: '#ff9f43', fontWeight: 600, mb: 3 }}>
-        <PersonIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-        {t('orders.customerInformation') || 'Informácie o zákazníkovi'}
-      </Typography>
 
-      <Grid container spacing={3}>
-        {/* Customer Selection */}
-        <Grid item xs={12}>
-          <StyledCard>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <BusinessIcon sx={{ color: '#ff9f43', mr: 1 }} />
-                <Typography variant="subtitle1" fontWeight={600}>
-                  {t('orders.selectCustomer') || 'Výber zákazníka'}
-                </Typography>
-              </Box>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={8}>
-                  <Autocomplete
-                    options={customerOptions}
-                    getOptionLabel={(option: Customer) => {
-                      console.log('🏷️ getOptionLabel called for option:', option);
-                      return option.company || '';
-                    }}
-                    value={formData.zakaznikData}
-                    onChange={(_, newValue: Customer | null) => {
-                      console.log('🔄 Customer selection changed:', newValue);
-                      handleCustomerChange(newValue);
-                    }}
-                    loading={isCustomerLoading}
-                    renderInput={(params) => {
-                      console.log('📝 Autocomplete renderInput, customerOptions length:', customerOptions.length);
-                      console.log('📝 Current customerOptions:', customerOptions);
-                      return (
-                        <TextField
-                          {...params}
-                          id="customer-autocomplete"
-                          name="customer"
-                          label={t('orders.customer') + ' *'}
-                          required
-                          fullWidth
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {isCustomerLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                <BareTooltip title={t('orders.addNewCustomer') || 'Pridať nového zákazníka'}>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => setNewCustomerDialog(true)}
-                                    sx={{ mr: 1, color: '#ff9f43' }}
-                                  >
-                                    <AddIcon />
-                                  </IconButton>
-                                </BareTooltip>
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: '#ff9f43',
-                              },
-                            },
-                            '& .MuiInputLabel-root.Mui-focused': {
-                              color: '#ff9f43',
-                            },
-                          }}
-                        />
-                      );
-                    }}
-                    renderOption={(props, option: Customer) => (
-                         <Box component="li" {...props}>
-                           <Box>
-                             <Typography variant="body1" fontWeight={500}>
-                               {option.company}
-                             </Typography>
-                             <Typography variant="body2" color="text.secondary">
-                               {option.contactName} {option.contactSurname} • {option.city}
-                             </Typography>
-                           </Box>
-                         </Box>
-                       )}
-                     />
-                   </Grid>
-                   
-                   <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    id="contact-person"
-                    name="contactPerson"
-                    label={t('orders.contactPerson') || 'Kontaktná osoba'}
-                    value={formData.kontaktnaOsoba || ''}
-                    onChange={handleInputChange('kontaktnaOsoba')}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <PhoneIcon sx={{ color: 'text.secondary' }} />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-                
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    id="customer-payment-terms"
-                    name="customerPaymentTerms"
-                    label="Splatnosť zákazníka (dni)"
-                    type="number"
-                    value={formData.customerPaymentTermDays || 30}
-                    InputProps={{
-                      readOnly: true,
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <AccessTimeIcon sx={{ color: 'text.secondary' }} />
-                        </InputAdornment>
-                      ),
-                    }}
-                    helperText="Automaticky načítané zo zákazníka"
-                    sx={{
-                      '& input[type=number]': {
-                        '-moz-appearance': 'textfield',
-                      },
-                      '& input[type=number]::-webkit-outer-spin-button': {
-                        '-webkit-appearance': 'none',
-                        margin: 0,
-                      },
-                      '& input[type=number]::-webkit-inner-spin-button': {
-                        '-webkit-appearance': 'none',
-                        margin: 0,
-                      },
-                    }}
-                  />
-                </Grid>
-                
-                {/* Identifikačné číslo zákazníka */}
-                {formData.zakaznikData && formData.customerId && (
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      fullWidth
-                      id="customer-id"
-                      name="customerId"
-                      label="Identifikačné číslo zákazníka"
-                      value={formData.customerId || ''}
-                      InputProps={{
-                        readOnly: true,
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <BusinessIcon sx={{ color: 'text.secondary' }} />
-                          </InputAdornment>
-                        ),
-                      }}
-                      helperText="Automaticky pridelené systémom"
-                      sx={{
-                        '& .MuiInputBase-input': {
-                          fontWeight: 600,
-                          fontFamily: 'monospace',
-                          fontSize: '1.1rem',
-                          color: '#ff9f43'
-                        }
-                      }}
-                    />
-                  </Grid>
-                )}
-              </Grid>
-            </CardContent>
-          </StyledCard>
-        </Grid>
-
-        {/* Order Details */}
-        <Grid item xs={12}>
-          <StyledCard>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <EuroIcon sx={{ color: '#ff9f43', mr: 1 }} />
-                <Typography variant="subtitle1" fontWeight={600}>
-                  {t('orders.orderDetails') || 'Detaily objednávky'}
-                </Typography>
-              </Box>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <TextField
-                    fullWidth
-                    id="customer-price"
-                    name="customerPrice"
-                    label={t('orders.customerPrice') + ' *'}
-                    type="text"
-                    value={formData.suma || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Povolíme len čísla, bodku a čiarku pre ceny
-                      const cleanValue = value.replace(/[^0-9.,]/g, '').replace(',', '.');
-                      setFormData(prev => ({ ...prev, suma: cleanValue }));
-                    }}
-                    onKeyPress={(e) => {
-                      // Povolíme len číslice, bodku a čiarku pre ceny
-                      const allowedKeys = /[0-9.,]/;
-                      const specialKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-                      
-                      if (!allowedKeys.test(e.key) && !specialKeys.includes(e.key)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    required
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">€</InputAdornment>,
-                    }}
-                    placeholder="napr. 150,50 alebo 1200.00"
-                  />
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth>
-                    <InputLabel id="currency-label">{t('orders.currency') || 'Mena'}</InputLabel>
-                    <Select
-                      id="currency-select"
-                      name="currency"
-                      labelId="currency-label"
-                      value={formData.mena || 'EUR'}
-                      label={t('orders.currency') || 'Mena'}
-                      onChange={handleInputChange('mena')}
-                    >
-                      <MenuItem value="EUR">EUR</MenuItem>
-                      <MenuItem value="CZK">CZK</MenuItem>
-                      <MenuItem value="USD">USD</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                
-
-                {/* Identifikačné číslo zákazníka */}
-                {formData.zakaznikData && formData.customerId && (
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      fullWidth
-                      id="customer-id"
-                      name="customerId"
-                      label="Identifikačné číslo zákazníka"
-                      value={formData.customerId || ""}
-                      InputProps={{
-                        readOnly: true
-                      }}
-                      helperText="Automaticky pridelené systémom"
-                    />
-                  </Grid>
-                )}
-
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    id="internal-note"
-                    name="internalNote"
-                    label={t('orders.internalNote') || 'Interná poznámka'}
-                    value={formData.internaPoznamka || ''}
-                    onChange={handleInputChange('internaPoznamka')}
-                    multiline
-                    rows={2}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </StyledCard>
-        </Grid>
-      </Grid>
-    </Box>
-  );
 
   const renderCargoStep = () => (
     <Box>
