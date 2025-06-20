@@ -379,7 +379,9 @@ const SecondaryButton = styled(GradientButton)({
 });
 
 // Testimonial section
-const TestimonialCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const TestimonialCard = styled(Card, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '30px',
   backgroundColor: isDarkMode ? 'rgba(35, 35, 66, 0.7)' : 'rgba(255, 255, 255, 0.9)',
   borderRadius: '16px',
@@ -403,7 +405,9 @@ const TestimonialCard = styled(Card)<{ isDarkMode: boolean }>(({ isDarkMode }) =
 }));
 
 // Benefit list
-const StyledListItem = styled(ListItem)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const StyledListItem = styled(ListItem, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   padding: '16px 0',
   minHeight: '120px', // Nastavím rovnakú minimálnu výšku pre všetky komponenty
   alignItems: 'flex-start',
@@ -433,7 +437,9 @@ const StyledListItem = styled(ListItem)<{ isDarkMode: boolean }>(({ isDarkMode }
 }));
 
 // Footer styled components
-const FooterSection = styled(Box)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const FooterSection = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   background: isDarkMode 
     ? 'linear-gradient(135deg, rgba(16, 14, 60, 0.95) 0%, rgba(26, 26, 46, 0.95) 100%)' 
     : 'linear-gradient(135deg, rgba(248, 249, 250, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)',
@@ -464,7 +470,9 @@ const FooterGrid = styled(Grid)(() => ({
   }
 }));
 
-const FooterTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const FooterTitle = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   fontSize: '1.3rem',
   fontWeight: 700,
   marginBottom: '20px',
@@ -482,7 +490,9 @@ const FooterTitle = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode })
   }
 }));
 
-const FooterText = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const FooterText = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
   marginBottom: '8px',
   fontSize: '0.95rem',
@@ -492,7 +502,9 @@ const FooterText = styled(Typography)<{ isDarkMode: boolean }>(({ isDarkMode }) 
   gap: '10px',
 }));
 
-const ContactButton = styled(Button)<{ isDarkMode: boolean }>(({ _isDarkMode }) => ({
+const ContactButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ _isDarkMode }) => ({
   marginTop: '15px',
   padding: '10px 25px',
   borderRadius: '8px',
@@ -521,7 +533,9 @@ const MapContainer = styled(Box)(() => ({
   border: '1px solid rgba(255, 255, 255, 0.1)',
 }));
 
-const LegalLink = styled(Button)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+const LegalLink = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode',
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
   textTransform: 'none',
   fontSize: '0.9rem',
