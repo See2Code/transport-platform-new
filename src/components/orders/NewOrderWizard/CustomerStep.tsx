@@ -171,14 +171,14 @@ const CustomerStep: React.FC<CustomerStepProps> = ({
                     helperText="Automaticky načítané zo zákazníka"
                     sx={{
                       '& input[type=number]': {
-                        '-moz-appearance': 'textfield',
+                        MozAppearance: 'textfield',
                       },
                       '& input[type=number]::-webkit-outer-spin-button': {
-                        '-webkit-appearance': 'none',
+                        WebkitAppearance: 'none',
                         margin: 0,
                       },
                       '& input[type=number]::-webkit-inner-spin-button': {
-                        '-webkit-appearance': 'none',
+                        WebkitAppearance: 'none',
                         margin: 0,
                       },
                     }}

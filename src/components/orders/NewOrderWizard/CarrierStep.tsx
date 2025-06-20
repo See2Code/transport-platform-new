@@ -226,7 +226,7 @@ const CarrierStep: React.FC<CarrierStepProps> = ({
                         name="carrierPaymentTermDays"
                         label="Splatnosť dopravcu (dni)"
                         type="number"
-                        value={formData.carrierPaymentTermDays || 60}
+                        value={formData.carrierPaymentTermDays ?? ''}
                         onChange={handleCarrierPaymentTermsChange}
                         onKeyPress={(e) => {
                           // Povolíme len číslice pre dni splatnosti (bez desatinných miest)
@@ -265,19 +265,19 @@ const CarrierStep: React.FC<CarrierStepProps> = ({
                         }}
                         inputProps={{ min: 1, max: 365 }}
                         autoFocus
-                        sx={{
-                          '& input[type=number]': {
-                            '-moz-appearance': 'textfield',
-                          },
-                          '& input[type=number]::-webkit-outer-spin-button': {
-                            '-webkit-appearance': 'none',
-                            margin: 0,
-                          },
-                          '& input[type=number]::-webkit-inner-spin-button': {
-                            '-webkit-appearance': 'none',
-                            margin: 0,
-                          },
-                        }}
+                                          sx={{
+                    '& input[type=number]': {
+                      MozAppearance: 'textfield',
+                    },
+                    '& input[type=number]::-webkit-outer-spin-button': {
+                      WebkitAppearance: 'none',
+                      margin: 0,
+                    },
+                    '& input[type=number]::-webkit-inner-spin-button': {
+                      WebkitAppearance: 'none',
+                      margin: 0,
+                    },
+                  }}
                       />
                     ) : (
                       <TextField

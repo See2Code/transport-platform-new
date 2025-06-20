@@ -35,15 +35,16 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useThemeMode } from '../../../contexts/ThemeContext';
 
 // Types
-import { OrderFormData, GoodsItem } from '../../../types/orders';
+import { OrderFormData } from '../../../types/orders';
 import { Customer } from '../../../types/customers';
 import { Carrier } from '../../../types/carriers';
 import DialogHandlers from './DialogHandlers';
-
+import { validateStep } from './ValidationUtils';
+import { useLocationHandlers } from './LocationHandlers';
 
 import BareTooltip from './BareTooltip';
 import { StyledStepper } from './StyledComponents';
-import { emptyGoodsItem, emptyLoadingPlace, emptyUnloadingPlace, NewOrderWizardProps } from './types';
+import { emptyLoadingPlace, emptyUnloadingPlace, NewOrderWizardProps } from './types';
 import CustomerStep from './CustomerStep';
 import CargoStep from './CargoStep';
 import CarrierStep from './CarrierStep';
@@ -122,6 +123,9 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const [newCustomerDialog, setNewCustomerDialog] = useState(false);
   const [newCarrierDialog, setNewCarrierDialog] = useState(false);
   const [expandedLocationCards, setExpandedLocationCards] = useState<{ [key: string]: boolean }>({});
+  
+  // Location handlers
+  const locationHandlers = useLocationHandlers({ setFormData, expandedLocationCards, setExpandedLocationCards });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showValidationAlert, setShowValidationAlert] = useState(false);
 
@@ -566,7 +570,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
 
   // Handle functions
   const handleNext = () => {
-    const validation = validateStep(activeStep);
+    const validation = validateStep(activeStep, formData);
     
     if (!validation.isValid) {
       setValidationErrors(validation.errors);
@@ -699,164 +703,17 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     }));
   };
 
-  const addLocation = (type: 'loading' | 'unloading') => {
-    const newLocation = type === 'loading' ? { ...emptyLoadingPlace } : { ...emptyUnloadingPlace };
-    newLocation.id = crypto.randomUUID();
-    // Nebudeme už automaticky vyplňovať názov firmy z vybraného zákazníka
-    
-    setFormData(prev => ({
-      ...prev,
-      [`${type}Places`]: [...(prev[`${type}Places` as keyof typeof prev] as any[]), newLocation]
-    }));
-  };
-
-  const removeLocation = (type: 'loading' | 'unloading', index: number) => {
-    setFormData(prev => {
-      const places = [...(prev[`${type}Places` as keyof typeof prev] as any[])];
-      places.splice(index, 1);
-      return {
-        ...prev,
-        [`${type}Places`]: places
-      };
-    });
-  };
-
-  const duplicateLocation = (type: 'loading' | 'unloading', index: number) => {
-    setFormData(prev => {
-      const places = [...(prev[`${type}Places` as keyof typeof prev] as any[])];
-      const locationToDuplicate = { ...places[index] };
-      locationToDuplicate.id = crypto.randomUUID();
-      locationToDuplicate.goods = locationToDuplicate.goods.map((item: GoodsItem) => ({
-        ...item,
-        id: crypto.randomUUID()
-      }));
-      places.splice(index + 1, 0, locationToDuplicate);
-      return {
-        ...prev,
-        [`${type}Places`]: places
-      };
-    });
-  };
-
-  const updateLocation = (type: 'loading' | 'unloading', index: number, field: string, value: any) => {
-    setFormData(prev => {
-      const places = [...(prev[`${type}Places` as keyof typeof prev] as any[])];
-      places[index] = { ...places[index], [field]: value };
-      return {
-        ...prev,
-        [`${type}Places`]: places
-      };
-    });
-  };
-
-  const addGoods = (type: 'loading' | 'unloading', locationIndex: number) => {
-    const newGoods = { ...emptyGoodsItem };
-    newGoods.id = crypto.randomUUID();
-    
-    setFormData(prev => {
-      const places = [...(prev[`${type}Places` as keyof typeof prev] as any[])];
-      places[locationIndex].goods = [...places[locationIndex].goods, newGoods];
-      
-      // Automatické kopírovanie tovaru z nakládky do vykládky
-      // Len ak má užívateľ jednu nakládku a jednu vykládku
-      const updatedFormData = {
-        ...prev,
-        [`${type}Places`]: places
-      };
-      
-      if (type === 'loading' && 
-          prev.loadingPlaces?.length === 1 && 
-          prev.unloadingPlaces?.length === 1 &&
-          prev.unloadingPlaces[0].goods?.length === 0) {
-        // Skopírujeme všetky tovary z nakládky do vykládky
-        const loadingGoods = places[locationIndex].goods;
-        const unloadingPlaces = [...prev.unloadingPlaces];
-        unloadingPlaces[0].goods = loadingGoods.map((goods: GoodsItem) => ({
-          ...goods,
-          id: crypto.randomUUID() // Nové ID pre kopiu
-        }));
-        updatedFormData.unloadingPlaces = unloadingPlaces;
-      }
-      
-      return updatedFormData;
-    });
-  };
-
-  const removeGoods = (type: 'loading' | 'unloading', locationIndex: number, goodsIndex: number) => {
-    setFormData(prev => {
-      const places = [...(prev[`${type}Places` as keyof typeof prev] as any[])];
-      places[locationIndex].goods.splice(goodsIndex, 1);
-      
-      const updatedFormData = {
-        ...prev,
-        [`${type}Places`]: places
-      };
-      
-      // Automatické kopírovanie zmien tovaru z nakládky do vykládky
-      // Len ak má užívateľ jednu nakládku a jednu vykládku
-      if (type === 'loading' && 
-          prev.loadingPlaces?.length === 1 && 
-          prev.unloadingPlaces?.length === 1) {
-        // Skopírujeme všetky tovary z nakládky do vykládky
-        const loadingGoods = places[locationIndex].goods;
-        const unloadingPlaces = [...prev.unloadingPlaces];
-        unloadingPlaces[0].goods = loadingGoods.map((goods: GoodsItem) => ({
-          ...goods,
-          id: crypto.randomUUID() // Nové ID pre kopiu
-        }));
-        updatedFormData.unloadingPlaces = unloadingPlaces;
-      }
-      
-      return updatedFormData;
-    });
-  };
-
-  const updateGoods = (
-    type: 'loading' | 'unloading', 
-    locationIndex: number, 
-    goodsIndex: number, 
-    field: string, 
-    value: any
-  ) => {
-    setFormData(prev => {
-      const places = [...(prev[`${type}Places` as keyof typeof prev] as any[])];
-      places[locationIndex].goods[goodsIndex] = {
-        ...places[locationIndex].goods[goodsIndex],
-        [field]: value
-      };
-      
-      const updatedFormData = {
-        ...prev,
-        [`${type}Places`]: places
-      };
-      
-      // Automatické kopírovanie zmien tovaru z nakládky do vykládky
-      // Len ak má užívateľ jednu nakládku a jednu vykládku
-      if (type === 'loading' && 
-          prev.loadingPlaces?.length === 1 && 
-          prev.unloadingPlaces?.length === 1 &&
-          prev.unloadingPlaces[0].goods?.length > 0) {
-        // Skopírujeme všetky tovary z nakládky do vykládky
-        const loadingGoods = places[locationIndex].goods;
-        const unloadingPlaces = [...prev.unloadingPlaces];
-        unloadingPlaces[0].goods = loadingGoods.map((goods: GoodsItem) => ({
-          ...goods,
-          id: crypto.randomUUID() // Nové ID pre kopiu
-        }));
-        updatedFormData.unloadingPlaces = unloadingPlaces;
-      }
-      
-      return updatedFormData;
-    });
-  };
-
-  const toggleLocationCard = (type: 'loading' | 'unloading', index: number) => {
-    const key = `${type}-${index}`;
-    setExpandedLocationCards(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
+  // Location handlers are now in useLocationHandlers hook
+  const {
+    addLocation,
+    removeLocation,
+    duplicateLocation,
+    updateLocation,
+    addGoods,
+    removeGoods,
+    updateGoods,
+    toggleLocationCard
+  } = locationHandlers;
 
   const calculateProfit = () => {
     const customerPrice = parseFloat(formData.suma || '0');
@@ -864,67 +721,13 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
     return customerPrice - carrierPrice;
   };
 
-  const validateStep = (step: number): { isValid: boolean; errors: string[] } => {
-    const errors: string[] = [];
-
-    switch (step) {
-      case 0:
-        if (!formData.zakaznikData) {
-          errors.push('Vyberte zákazníka');
-        }
-        if (!formData.suma || parseFloat(formData.suma) <= 0) {
-          errors.push('Zadajte platnú cenu pre zákazníka');
-        }
-        break;
-      
-      case 1:
-        if (!formData.loadingPlaces?.length) {
-          errors.push('Pridajte aspoň jedno miesto nakládky');
-        } else {
-          formData.loadingPlaces.forEach((place, index) => {
-            if (!place.city) errors.push(`Nakládka #${index + 1}: Zadajte mesto`);
-            if (!place.street) errors.push(`Nakládka #${index + 1}: Zadajte ulicu`);
-            // Kontaktná osoba je teraz nepovinná
-            if (!place.dateTime) errors.push(`Nakládka #${index + 1}: Zadajte dátum a čas`);
-            if (!place.goods?.length || !place.goods.some(g => g.name)) {
-              errors.push(`Nakládka #${index + 1}: Zadajte aspoň jeden tovar`);
-            }
-          });
-        }
-
-        if (!formData.unloadingPlaces?.length) {
-          errors.push('Pridajte aspoň jedno miesto vykládky');
-        } else {
-          formData.unloadingPlaces.forEach((place, index) => {
-            if (!place.city) errors.push(`Vykládka #${index + 1}: Zadajte mesto`);
-            if (!place.street) errors.push(`Vykládka #${index + 1}: Zadajte ulicu`);
-            // Kontaktná osoba je teraz nepovinná
-            if (!place.dateTime) errors.push(`Vykládka #${index + 1}: Zadajte dátum a čas`);
-            if (!place.goods?.length || !place.goods.some(g => g.name)) {
-              errors.push(`Vykládka #${index + 1}: Zadajte aspoň jeden tovar`);
-            }
-          });
-        }
-        break;
-      
-      case 2:
-        if (!formData.carrierCompany) {
-          errors.push('Vyberte dopravcu');
-        }
-        break;
-      
-      default:
-        break;
-    }
-
-    return { isValid: errors.length === 0, errors };
-  };
+  // validateStep is now imported from ValidationUtils
 
   const handleSubmit = async () => {
     if (!userData?.companyID) return;
     
     // Validácia posledného kroku pred odoslaním
-    const validation = validateStep(2);
+    const validation = validateStep(2, formData);
     if (!validation.isValid) {
       setValidationErrors(validation.errors);
       setShowValidationAlert(true);
@@ -1186,7 +989,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   const renderStepContent = (step: number) => {
     switch (step) {
       case 0:
-        return (
+                      return (
           <CustomerStep
             formData={formData}
             customerOptions={customerOptions}
@@ -1197,7 +1000,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           />
         );
       case 1:
-        return (
+    return (
           <CargoStep
             formData={formData}
             savedLocations={savedLocations}
@@ -1214,7 +1017,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
           />
         );
       case 2:
-        return (
+    return (
           <CarrierStep
             formData={formData}
             carriers={carriers}
@@ -1281,7 +1084,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
   };
 
   const handleCarrierPaymentTermsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(event.target.value) || 60;
+    const value = event.target.value === '' ? undefined : parseInt(event.target.value);
     setFormData(prev => ({
       ...prev,
       carrierPaymentTermDays: value
@@ -1692,7 +1495,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
             <Step key={step.label}>
               <StepLabel
                 icon={step.icon}
-                error={activeStep > index && !validateStep(index).isValid}
+                error={activeStep > index && !validateStep(index, formData).isValid}
               >
                 {step.label}
               </StepLabel>
@@ -1754,7 +1557,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={isSubmitting || !validateStep(activeStep).isValid}
+                disabled={isSubmitting || !validateStep(activeStep, formData).isValid}
                 sx={{
                   backgroundColor: '#ff9f43',
                   color: '#ffffff',
@@ -1771,7 +1574,7 @@ const NewOrderWizard: React.FC<NewOrderWizardProps> = ({
               <Button
                 variant="contained"
                 onClick={handleNext}
-                disabled={!validateStep(activeStep).isValid}
+                disabled={!validateStep(activeStep, formData).isValid}
                 sx={{
                   backgroundColor: '#ff9f43',
                   color: '#ffffff',

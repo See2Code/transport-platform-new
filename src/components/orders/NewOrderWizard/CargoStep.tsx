@@ -15,6 +15,9 @@ import {
   alpha
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { sk } from 'date-fns/locale';
 
 // Icons
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
@@ -211,12 +214,14 @@ const CargoStep: React.FC<CargoStepProps> = ({
               
               {/* Date and Time */}
               <Grid item xs={12} sm={6}>
-                <DateTimePicker
-                  label={type === 'loading' ? 'Dátum a čas nakládky *' : 'Dátum a čas vykládky *'}
-                  value={place.dateTime}
-                  onChange={(newValue) => updateLocation(type, index, 'dateTime', newValue)}
-                  slotProps={{ textField: { fullWidth: true, required: true } }}
-                />
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={sk}>
+                  <DateTimePicker
+                    label={type === 'loading' ? 'Dátum a čas nakládky *' : 'Dátum a čas vykládky *'}
+                    value={place.dateTime}
+                    onChange={(newValue) => updateLocation(type, index, 'dateTime', newValue)}
+                    slotProps={{ textField: { fullWidth: true, required: true } }}
+                  />
+                </LocalizationProvider>
               </Grid>
               
               {/* Contact Person Name */}
@@ -339,14 +344,14 @@ const CargoStep: React.FC<CargoStepProps> = ({
                           placeholder="napr. 1 alebo 2,5"
                           sx={{
                             '& input[type=number]': {
-                              '-moz-appearance': 'textfield',
+                              MozAppearance: 'textfield',
                             },
                             '& input[type=number]::-webkit-outer-spin-button': {
-                              '-webkit-appearance': 'none',
+                              WebkitAppearance: 'none',
                               margin: 0,
                             },
                             '& input[type=number]::-webkit-inner-spin-button': {
-                              '-webkit-appearance': 'none',
+                              WebkitAppearance: 'none',
                               margin: 0,
                             },
                           }}
@@ -405,14 +410,14 @@ const CargoStep: React.FC<CargoStepProps> = ({
                           placeholder="napr. 0,5 alebo 1,2"
                           sx={{
                             '& input[type=number]': {
-                              '-moz-appearance': 'textfield',
+                              MozAppearance: 'textfield',
                             },
                             '& input[type=number]::-webkit-outer-spin-button': {
-                              '-webkit-appearance': 'none',
+                              WebkitAppearance: 'none',
                               margin: 0,
                             },
                             '& input[type=number]::-webkit-inner-spin-button': {
-                              '-webkit-appearance': 'none',
+                              WebkitAppearance: 'none',
                               margin: 0,
                             },
                           }}
