@@ -73,7 +73,9 @@ const defaultCenter = {
     lng: 19.699024
 };
 
-const libraries: Libraries = ['places'];
+// Google Maps libraries konštanta mimo komponentu pre lepšiu performanciu
+// Obsahuje všetky libraries potrebné v aplikácii
+const libraries: Libraries = ['places', 'marker'];
 
 // Zjednotené konštanty pre časové prahy medzi webom a iOS aplikáciou
 const ONLINE_STATUS_THRESHOLD = 5 * 60 * 1000; // 5 minút - pod touto hranicou je stav "Online"
@@ -563,9 +565,9 @@ const VehicleMap: React.FC = () => {
     const [saveRouteDialog, setSaveRouteDialog] = useState<{ open: boolean; routeName: string; routeNotes: string; vehicleId: string | null; }>({ open: false, routeName: "", routeNotes: "", vehicleId: null });
 
     const { isLoaded } = useJsApiLoader({
+        id: 'google-map-script',
         googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
-        libraries,
-        id: 'script-loader'
+        libraries
     });
 
     // --- Icon Definitions ---

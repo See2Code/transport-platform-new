@@ -5,7 +5,9 @@ import { Box, Typography, GlobalStyles } from '@mui/material';
 import { Vehicle } from '../../types/vehicle';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 
-const libraries: ("places" | "geometry" | "drawing" | "visualization" | "marker")[] = ["places", "marker"];
+// Google Maps libraries konštanta mimo komponentu pre lepšiu performanciu
+// Obsahuje všetky libraries potrebné v aplikácii
+const libraries: ("places" | "marker")[] = ["places", "marker"];
 
 const darkMapStyle: google.maps.MapTypeStyle[] = [
     {
@@ -246,7 +248,7 @@ const hideGoogleMapCloseButton = {
 
 const VehicleTracker = forwardRef<VehicleTrackerRef, VehicleTrackerProps>((props, ref) => {
     const { isLoaded } = useJsApiLoader({
-        id: 'script-loader',
+        id: 'google-map-script',
         googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
         libraries
     });

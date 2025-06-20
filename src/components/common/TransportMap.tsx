@@ -10,7 +10,9 @@ interface TransportMapProps {
   onDirectionsChange?: (directions: google.maps.DirectionsResult | null, distance?: string, duration?: string) => void;
 }
 
-const libraries: Libraries = ['places'];
+// Google Maps libraries konštanta mimo komponentu pre lepšiu performanciu
+// Obsahuje všetky libraries potrebné v aplikácii
+const libraries: Libraries = ['places', 'marker'];
 
 const mapContainerStyle = {
   width: '100%',
@@ -227,6 +229,7 @@ export default function TransportMap({ origin, destination, isThumbnail = false,
   const { isDarkMode } = useThemeMode();
 
   const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
     libraries,
     version: "weekly"

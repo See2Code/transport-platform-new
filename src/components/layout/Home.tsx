@@ -56,7 +56,8 @@ import { useThemeMode } from '../../contexts/ThemeContext';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 
 // Google Maps libraries konštanta mimo komponentu pre lepšiu performanciu
-const GOOGLE_MAPS_LIBRARIES: ("marker")[] = ['marker'];
+// Obsahuje všetky libraries potrebné v aplikácii
+const GOOGLE_MAPS_LIBRARIES: ("places" | "marker")[] = ['places', 'marker'];
 
 // Flag icons - rovnaké ako v Navbar.tsx
 const SKFlagIcon = () => (

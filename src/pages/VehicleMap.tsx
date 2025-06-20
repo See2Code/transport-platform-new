@@ -33,7 +33,9 @@ const VehicleItem = styled(Paper)(({ theme }) => ({
   },
 }));
 
-const libraries: ("places" | "drawing" | "geometry" | "visualization")[] = ["places"];
+// Google Maps libraries konštanta mimo komponentu pre lepšiu performanciu
+// Obsahuje všetky libraries potrebné v aplikácii
+const libraries: ("places" | "marker")[] = ["places", "marker"];
 
 const VehicleMap: React.FC = () => {
   const { vehicles, loading, error } = useVehicleTracking();
