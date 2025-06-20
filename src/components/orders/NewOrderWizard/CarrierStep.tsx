@@ -22,6 +22,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PersonIcon from '@mui/icons-material/Person';
+import EuroIcon from '@mui/icons-material/Euro';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import SummaryIcon from '@mui/icons-material/Summarize';
 
 import { Carrier } from '../../../types/carriers';
 import { OrderFormData } from '../../../types/orders';
@@ -320,110 +325,243 @@ const CarrierStep: React.FC<CarrierStepProps> = ({
         <Grid item xs={12}>
           <StyledCard>
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={600} mb={2}>
-                Súhrn objednávky
-              </Typography>
+              <Box display="flex" alignItems="center" mb={3}>
+                <SummaryIcon sx={{ color: '#ff9f43', mr: 1 }} />
+                <Typography variant="h6" fontWeight={600} sx={{ color: '#ff9f43' }}>
+                  Súhrn objednávky
+                </Typography>
+              </Box>
               
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Zákazník
-                    </Typography>
-                    <Typography variant="body1" fontWeight={500}>
-                      {formData.zakaznik || 'Nevybraný'}
+              <Grid container spacing={3}>
+                {/* Customer Section */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ 
+                    p: 3, 
+                    background: 'linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, rgba(46, 204, 113, 0.05) 100%)',
+                    borderRadius: 2,
+                    border: '1px solid rgba(46, 204, 113, 0.2)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ position: 'absolute', top: -10, right: -10, opacity: 0.1 }}>
+                      <PersonIcon sx={{ fontSize: 60, color: '#2ecc71' }} />
+                    </Box>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <PersonIcon sx={{ color: '#2ecc71', mr: 1, fontSize: 20 }} />
+                      <Typography variant="subtitle2" color="#2ecc71" fontWeight={600} textTransform="uppercase" letterSpacing={0.5}>
+                        Zákazník
+                      </Typography>
+                    </Box>
+                    <Typography variant="h6" fontWeight={600} mb={0.5}>
+                      {formData.zakaznik || 'Nevybraný zákazník'}
                     </Typography>
                     {formData.kontaktnaOsoba && (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                        <PhoneIcon sx={{ fontSize: 16, mr: 0.5 }} />
                         {formData.kontaktnaOsoba}
                       </Typography>
                     )}
                   </Box>
                 </Grid>
                 
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Dopravca
-                    </Typography>
-                    <Typography variant="body1" fontWeight={500}>
-                      {formData.carrierCompany || 'Nevybraný'}
+                {/* Carrier Section */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ 
+                    p: 3, 
+                    background: 'linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(52, 152, 219, 0.05) 100%)',
+                    borderRadius: 2,
+                    border: '1px solid rgba(52, 152, 219, 0.2)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ position: 'absolute', top: -10, right: -10, opacity: 0.1 }}>
+                      <LocalShippingIcon sx={{ fontSize: 60, color: '#3498db' }} />
+                    </Box>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <LocalShippingIcon sx={{ color: '#3498db', mr: 1, fontSize: 20 }} />
+                      <Typography variant="subtitle2" color="#3498db" fontWeight={600} textTransform="uppercase" letterSpacing={0.5}>
+                        Dopravca
+                      </Typography>
+                    </Box>
+                    <Typography variant="h6" fontWeight={600} mb={0.5}>
+                      {formData.carrierCompany || 'Nevybraný dopravca'}
                     </Typography>
                     {formData.carrierContact && (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                        <PhoneIcon sx={{ fontSize: 16, mr: 0.5 }} />
                         {formData.carrierContact}
                       </Typography>
                     )}
                   </Box>
                 </Grid>
                 
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Cena zákazníka
-                    </Typography>
-                    <Typography variant="body1" fontWeight={500}>
-                      {formData.suma ? `${formData.suma} €` : 'Nezadaná'}
-                    </Typography>
-                  </Box>
+                {/* Financial Summary */}
+                <Grid item xs={12}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ 
+                        p: 2.5, 
+                        background: 'linear-gradient(135deg, rgba(155, 89, 182, 0.1) 0%, rgba(155, 89, 182, 0.05) 100%)',
+                        borderRadius: 2,
+                        border: '1px solid rgba(155, 89, 182, 0.2)',
+                        textAlign: 'center'
+                      }}>
+                        <EuroIcon sx={{ color: '#9b59b6', fontSize: 24, mb: 1 }} />
+                        <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                          Cena zákazníka
+                        </Typography>
+                        <Typography variant="h5" fontWeight={700} color="#9b59b6">
+                          {formData.suma ? `${formData.suma} €` : '0 €'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ 
+                        p: 2.5, 
+                        background: 'linear-gradient(135deg, rgba(230, 126, 34, 0.1) 0%, rgba(230, 126, 34, 0.05) 100%)',
+                        borderRadius: 2,
+                        border: '1px solid rgba(230, 126, 34, 0.2)',
+                        textAlign: 'center'
+                      }}>
+                        <LocalShippingIcon sx={{ color: '#e67e22', fontSize: 24, mb: 1 }} />
+                        <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                          Cena dopravcu
+                        </Typography>
+                        <Typography variant="h5" fontWeight={700} color="#e67e22">
+                          {formData.carrierPrice ? `${formData.carrierPrice} €` : '0 €'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ 
+                        p: 2.5, 
+                        background: profit >= 0 
+                          ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.15) 0%, rgba(46, 204, 113, 0.05) 100%)'
+                          : 'linear-gradient(135deg, rgba(231, 76, 60, 0.15) 0%, rgba(231, 76, 60, 0.05) 100%)',
+                        borderRadius: 2,
+                        border: profit >= 0 
+                          ? '2px solid rgba(46, 204, 113, 0.3)'
+                          : '2px solid rgba(231, 76, 60, 0.3)',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                        <TrendingUpIcon sx={{ color: profitColor, fontSize: 24, mb: 1 }} />
+                        <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                          {profit >= 0 ? 'Zisk' : 'Strata'}
+                        </Typography>
+                        <Typography variant="h5" fontWeight={700} color={profitColor}>
+                          {profit !== 0 ? `${profit.toFixed(2)} €` : '0.00 €'}
+                        </Typography>
+                        {profit > 0 && (
+                          <Box sx={{ 
+                            position: 'absolute', 
+                            top: 0, 
+                            right: 0, 
+                            width: '100%', 
+                            height: '100%',
+                            background: 'linear-gradient(45deg, transparent 0%, rgba(46, 204, 113, 0.1) 100%)',
+                            pointerEvents: 'none'
+                          }} />
+                        )}
+                      </Box>
+                    </Grid>
+                  </Grid>
                 </Grid>
                 
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Cena dopravcu
-                    </Typography>
-                    <Typography variant="body1" fontWeight={500}>
-                      {formData.carrierPrice ? `${formData.carrierPrice} €` : 'Nezadaná'}
-                    </Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Zisk
-                    </Typography>
-                    <Typography 
-                      variant="body1" 
-                      fontWeight={600}
-                      sx={{ color: profitColor }}
-                    >
-                      {profit !== 0 ? `${profit.toFixed(2)} €` : '0.00 €'}
-                    </Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Miesta nakládky
-                    </Typography>
-                    <Typography variant="body1">
-                      {formData.loadingPlaces?.length || 0} míst
-                    </Typography>
-                    {formData.loadingPlaces?.map((place, index) => (
-                      <Typography key={index} variant="body2" color="text.secondary">
-                        {place.city || 'Nezadané'}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Miesta vykládky
-                    </Typography>
-                    <Typography variant="body1">
-                      {formData.unloadingPlaces?.length || 0} míst
-                    </Typography>
-                    {formData.unloadingPlaces?.map((place, index) => (
-                      <Typography key={index} variant="body2" color="text.secondary">
-                        {place.city || 'Nezadané'}
-                      </Typography>
-                    ))}
-                  </Box>
+                {/* Route Summary */}
+                <Grid item xs={12}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ 
+                        p: 2.5, 
+                        background: 'linear-gradient(135deg, rgba(46, 204, 113, 0.08) 0%, rgba(46, 204, 113, 0.03) 100%)',
+                        borderRadius: 2,
+                        border: '1px solid rgba(46, 204, 113, 0.15)'
+                      }}>
+                        <Box display="flex" alignItems="center" mb={1.5}>
+                          <LocationOnIcon sx={{ color: '#2ecc71', mr: 1 }} />
+                          <Typography variant="subtitle2" color="#2ecc71" fontWeight={600}>
+                            Miesta nakládky ({formData.loadingPlaces?.length || 0})
+                          </Typography>
+                        </Box>
+                        <Box sx={{ maxHeight: 100, overflow: 'auto' }}>
+                          {formData.loadingPlaces?.map((place, index) => (
+                            <Box key={index} sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              mb: 0.5,
+                              p: 1,
+                              backgroundColor: 'rgba(46, 204, 113, 0.05)',
+                              borderRadius: 1,
+                              border: '1px solid rgba(46, 204, 113, 0.1)'
+                            }}>
+                              <Box sx={{ 
+                                width: 6, 
+                                height: 6, 
+                                borderRadius: '50%', 
+                                backgroundColor: '#2ecc71', 
+                                mr: 1 
+                              }} />
+                              <Typography variant="body2" color="text.primary">
+                                {place.city || 'Nezadané mesto'}
+                              </Typography>
+                            </Box>
+                          )) || (
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              Žiadne miesta nakládky
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ 
+                        p: 2.5, 
+                        background: 'linear-gradient(135deg, rgba(231, 76, 60, 0.08) 0%, rgba(231, 76, 60, 0.03) 100%)',
+                        borderRadius: 2,
+                        border: '1px solid rgba(231, 76, 60, 0.15)'
+                      }}>
+                        <Box display="flex" alignItems="center" mb={1.5}>
+                          <LocationOnIcon sx={{ color: '#e74c3c', mr: 1 }} />
+                          <Typography variant="subtitle2" color="#e74c3c" fontWeight={600}>
+                            Miesta vykládky ({formData.unloadingPlaces?.length || 0})
+                          </Typography>
+                        </Box>
+                        <Box sx={{ maxHeight: 100, overflow: 'auto' }}>
+                          {formData.unloadingPlaces?.map((place, index) => (
+                            <Box key={index} sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              mb: 0.5,
+                              p: 1,
+                              backgroundColor: 'rgba(231, 76, 60, 0.05)',
+                              borderRadius: 1,
+                              border: '1px solid rgba(231, 76, 60, 0.1)'
+                            }}>
+                              <Box sx={{ 
+                                width: 6, 
+                                height: 6, 
+                                borderRadius: '50%', 
+                                backgroundColor: '#e74c3c', 
+                                mr: 1 
+                              }} />
+                              <Typography variant="body2" color="text.primary">
+                                {place.city || 'Nezadané mesto'}
+                              </Typography>
+                            </Box>
+                          )) || (
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              Žiadne miesta vykládky
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </Grid>
+                  </Grid>
                 </Grid>
 
                 {/* Dispatcher Section */}
