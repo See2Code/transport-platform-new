@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Box,
@@ -53,7 +53,10 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeMode } from '../../contexts/ThemeContext';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
+
+// Google Maps libraries konštanta mimo komponentu pre lepšiu performanciu
+const GOOGLE_MAPS_LIBRARIES: ("marker")[] = ['marker'];
 
 // Flag icons - rovnaké ako v Navbar.tsx
 const SKFlagIcon = () => (
@@ -559,11 +562,13 @@ function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const { toggleTheme } = useThemeMode();
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   // Google Maps loader - len ak máme API kľúč
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   // Language change function - rovnaká ako v Navbar.tsx
@@ -599,6 +604,47 @@ function Home() {
       setActiveIndex(1);
     }
   }, [isDarkMode]);
+
+  // Effect pre vytvorenie AdvancedMarkerElement pre mapu v footeri
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current) return;
+
+    // Vytvoríme marker element
+    const markerElement = document.createElement('div');
+    markerElement.innerHTML = `
+      <div style="
+        width: 32px; 
+        height: 32px; 
+        background: linear-gradient(135deg, #FF9F43 0%, #FE8A71 100%); 
+        border: 3px solid white; 
+        border-radius: 50%; 
+        box-shadow: 0 4px 12px rgba(255, 159, 67, 0.4), 0 2px 4px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      ">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      </div>
+    `;
+
+    // Vytvoríme AdvancedMarkerElement
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position: { lat: 48.3069, lng: 18.0876 },
+      map: mapRef.current,
+      content: markerElement,
+      title: "AESA Group - Palánok 4605/5, 949 01 Nitra"
+    });
+
+    // Cleanup funkcia
+    return () => {
+      if (marker) {
+        marker.map = null;
+      }
+    };
+  }, [isLoaded]);
 
   const handlePrevImage = () => {
     setActiveIndex((prevIndex) => 
@@ -1659,16 +1705,11 @@ function Home() {
                         scrollwheel: false,
                         draggable: true,
                       }}
+                      onLoad={map => {
+                        mapRef.current = map;
+                      }}
                     >
-                      <Marker
-                        position={{ lat: 48.3069, lng: 18.0876 }}
-                        icon={{
-                          url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'%3E%3Cpath fill='%23ff9f43' d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/%3E%3C/svg%3E",
-                          scaledSize: new window.google.maps.Size(32, 32),
-                          anchor: new window.google.maps.Point(16, 32)
-                        }}
-                        title="AESA Group - Palánok 4605/5, 949 01 Nitra"
-                      />
+
                     </GoogleMap>
                   </MapContainer>
                 ) : (

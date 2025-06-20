@@ -5,7 +5,7 @@ import { Box, Typography, GlobalStyles } from '@mui/material';
 import { Vehicle } from '../../types/vehicle';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 
-const libraries: ("places" | "geometry" | "drawing" | "visualization")[] = ["places"];
+const libraries: ("places" | "geometry" | "drawing" | "visualization" | "marker")[] = ["places", "marker"];
 
 const darkMapStyle: google.maps.MapTypeStyle[] = [
     {
@@ -261,7 +261,7 @@ const VehicleTracker = forwardRef<VehicleTrackerRef, VehicleTrackerProps>((props
     } = props;
     
     const mapRef = useRef<google.maps.Map | null>(null);
-    const markersRef = useRef<{ [key: string]: google.maps.Marker }>({});
+    const markersRef = useRef<{ [key: string]: google.maps.marker.AdvancedMarkerElement }>({});
     const theme = useTheme();
 
     // Efekt pre inicializáciu mapy
@@ -297,7 +297,7 @@ const VehicleTracker = forwardRef<VehicleTrackerRef, VehicleTrackerProps>((props
             // Odstránime neaktívne markery
             Object.entries(markersRef.current).forEach(([id, marker]) => {
                 if (!activeVehicles.find(v => v.id === id)) {
-                    marker.setMap(null);
+                    marker.map = null;
                     delete markersRef.current[id];
                 }
             });
@@ -312,47 +312,69 @@ const VehicleTracker = forwardRef<VehicleTrackerRef, VehicleTrackerProps>((props
                 if (markersRef.current[vehicle.id]) {
                     // Plynulá animácia pohybu markeru
                     const marker = markersRef.current[vehicle.id];
-                    const currentPosition = marker.getPosition();
+                    const currentPosition = marker.position;
                     if (currentPosition) {
-                        const latDiff = position.lat - currentPosition.lat();
-                        const lngDiff = position.lng - currentPosition.lng();
+                        const currentLat = typeof currentPosition.lat === 'function' ? currentPosition.lat() : currentPosition.lat;
+                        const currentLng = typeof currentPosition.lng === 'function' ? currentPosition.lng() : currentPosition.lng;
+                        const latDiff = position.lat - currentLat;
+                        const lngDiff = position.lng - currentLng;
                         let step = 0;
                         const numSteps = 20;
 
                         const animate = () => {
                             step++;
                             if (step <= numSteps) {
-                                const newLat = currentPosition.lat() + (latDiff * step / numSteps);
-                                const newLng = currentPosition.lng() + (lngDiff * step / numSteps);
-                                marker.setPosition({ lat: newLat, lng: newLng });
+                                const newLat = currentLat + (latDiff * step / numSteps);
+                                const newLng = currentLng + (lngDiff * step / numSteps);
+                                marker.position = { lat: newLat, lng: newLng };
                                 requestAnimationFrame(animate);
                             }
                         };
 
                         requestAnimationFrame(animate);
                     } else {
-                        marker.setPosition(position);
+                        marker.position = position;
                     }
 
-                    // Aktualizujeme rotáciu markeru podľa heading
-                    if (vehicle.location.heading !== undefined) {
-                        const icon = marker.getIcon() as google.maps.Symbol;
-                        marker.setIcon({
-                            ...icon,
-                            rotation: vehicle.location.heading
-                        });
+                    // Pre AdvancedMarkerElement sa rotácia rieši cez CSS transform v content elemente
+                    // Aktualizujeme rotáciu ak je potrebné
+                    if (vehicle.location.heading !== undefined && marker.content) {
+                        const element = marker.content as HTMLElement;
+                        element.style.transform = `rotate(${vehicle.location.heading}deg)`;
                     }
                 } else {
-                    // Vytvoríme nový marker
-                    const marker = new google.maps.Marker({
+                    // Vytvoríme nový AdvancedMarkerElement s truck ikonou
+                    const markerElement = document.createElement('div');
+                    markerElement.innerHTML = `
+                        <div style="
+                            width: 32px; 
+                            height: 32px; 
+                            background: linear-gradient(135deg, #FF9F43 0%, #FE8A71 100%); 
+                            border: 3px solid white; 
+                            border-radius: 50%; 
+                            box-shadow: 0 4px 12px rgba(255, 159, 67, 0.4), 0 2px 4px rgba(0,0,0,0.2);
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            position: relative;
+                        " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                                <path d="M20,8h-3V4H3C2.45,4 2,4.45 2,5v11h2c0,1.66 1.34,3 3,3s3-1.34 3-3h4c0,1.66 1.34,3 3,3s3-1.34 3-3h2v-5L20,8z M7,17.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5 1.5-1.5s1.5,0.67 1.5,1.5S7.83,17.5 7,17.5z M17,17.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5 1.5-1.5s1.5,0.67 1.5,1.5S17.83,17.5 17,17.5z M18,10h1.5l1.5,2H18V10z"/>
+                            </svg>
+                        </div>
+                    `;
+
+                    const marker = new google.maps.marker.AdvancedMarkerElement({
                         position,
                         map: mapRef.current,
-                        icon: createVehicleIcon(),
-                        title: `${vehicle.driverName} (${vehicle.licensePlate || vehicle.vehicleId})`,
-                        animation: google.maps.Animation.DROP
+                        content: markerElement,
+                        title: `${vehicle.driverName} (${vehicle.licensePlate || vehicle.vehicleId})`
                     });
 
-                    marker.addListener('click', () => onMarkerClick(vehicle.id));
+                    // Pre AdvancedMarkerElement používame addEventListener namiesto addListener
+                    markerElement.addEventListener('click', () => onMarkerClick(vehicle.id));
                     markersRef.current[vehicle.id] = marker;
                 }
             });
@@ -380,11 +402,7 @@ const VehicleTracker = forwardRef<VehicleTrackerRef, VehicleTrackerProps>((props
         };
     }, [vehicles, hiddenVehicles, isLoaded, onMarkerClick]);
 
-    const createVehicleIcon = () => ({
-        url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23FF9F43' stroke='white' stroke-width='2'/%3E%3C/svg%3E",
-        scaledSize: new google.maps.Size(24, 24),
-        anchor: new google.maps.Point(12, 12)
-    });
+
 
     useImperativeHandle(ref, () => ({
         panToVehicle: (vehicle: Vehicle, offset?: { x: number; y: number }) => {
