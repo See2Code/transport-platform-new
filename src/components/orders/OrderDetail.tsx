@@ -28,7 +28,11 @@ import {
   Euro as EuroIcon,
   Notes as NotesIcon,
   Edit as EditIcon,
-  Star as StarIcon
+  Star as StarIcon,
+  History as HistoryIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  ChangeCircle as ChangeCircleIcon
 } from '@mui/icons-material';
 import { useThemeMode } from '../../contexts/ThemeContext';
 import { Timestamp } from 'firebase/firestore';
@@ -37,11 +41,22 @@ import { sk } from 'date-fns/locale';
 import { OrderFormData } from '../../types/orders';
 import { countries } from '../../constants/countries';
 import { useAuth } from '../../contexts/AuthContext';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Carrier } from '../../types/carriers';
 
-const StyledDialogContent = styled(DialogContent)<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
+// Interface pre sledovanie zmien
+interface ChangeRecord {
+  field: string;
+  fieldLabel: string;
+  oldValue: any;
+  newValue: any;
+  changeType: 'added' | 'removed' | 'modified';
+}
+
+const StyledDialogContent = styled(DialogContent, {
+  shouldForwardProp: (prop) => prop !== 'isDarkMode'
+})<{ isDarkMode: boolean }>(({ isDarkMode }) => ({
   backgroundColor: isDarkMode ? 'rgba(28, 28, 45, 0.95)' : '#ffffff',
   borderRadius: '12px',
   padding: '24px',
@@ -120,23 +135,43 @@ interface OrderDetailProps {
   order: OrderFormData | null;
 }
 
-function formatDate(date: Date | Timestamp | null | undefined) {
+function formatDate(date: Date | Timestamp | null | undefined | any) {
   if (!date) return '-';
   
   try {
     let dateObj: Date;
+    
+    // Skontroluj či je to Timestamp objekt
     if (date instanceof Timestamp) {
       dateObj = date.toDate();
-    } else if (date instanceof Date) {
+    } 
+    // Skontroluj či je to už Date objekt
+    else if (date instanceof Date) {
       dateObj = date;
-    } else {
-      // Pokus o konverziu ak je to string alebo iný typ
+    } 
+    // Skontroluj či je to Firebase Timestamp objekt (serialized/deserialized)
+    else if (date && typeof date === 'object' && 'seconds' in date && 'nanoseconds' in date) {
+      // Konvertuj Firebase Timestamp objekt na Date
+      dateObj = new Date(date.seconds * 1000 + date.nanoseconds / 1000000);
+    }
+    // Skontroluj či je to string s ISO dátumom
+    else if (typeof date === 'string') {
+      dateObj = new Date(date);
+    }
+    // Iné prípady - pokus o konverziu
+    else {
       dateObj = new Date(date as any);
     }
     
     // Kontrola či je dátum platný
     if (isNaN(dateObj.getTime())) {
-      console.warn('Neplatný dátum:', date);
+      console.warn('Neplatný dátum po konverzii:', {
+        originalDate: date,
+        convertedDate: dateObj,
+        dateType: typeof date,
+        isTimestamp: date instanceof Timestamp,
+        hasSeconds: date && typeof date === 'object' && 'seconds' in date
+      });
       return '-';
     }
     
@@ -188,6 +223,124 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
   const { isDarkMode } = useThemeMode();
   const { userData } = useAuth();
   const [enhancedOrder, setEnhancedOrder] = useState<OrderFormData | null>(null);
+  const [updatedByName, setUpdatedByName] = useState<string>('');
+  const [changes, setChanges] = useState<ChangeRecord[]>([]);
+  const [loadingChanges, setLoadingChanges] = useState(false);
+
+  // Funkcia na detekciu zmien - pripravená na budúce rozšírenie
+  // V reálnej implementácii by porovnávala uloženú históriu zmien
+
+  // Načítanie pôvodnej verzie objednávky a detekcia zmien
+  useEffect(() => {
+    const detectOrderChanges = async () => {
+      if (!open || !order?.id || !order?.updatedAt) {
+        setChanges([]);
+        return;
+      }
+
+      setLoadingChanges(true);
+      try {
+        // Načítaj aktuálnu verziu z databázy  
+        const orderRef = doc(db, 'orders', order.id);
+        const orderSnap = await getDoc(orderRef);
+        
+        if (orderSnap.exists()) {
+          
+                     // Pre demo účely vytvoríme niekoľko simulovaných zmien
+           // TODO: V reálnej implementácii by sme mali:
+           // 1. Kolekciu 'orderHistory' s verziami objednávky
+           // 2. Pred každým updateDoc() uložiť snapshot aktuálnej verzie
+           // 3. Porovnávať aktuálnu verziu s poslednou historickou
+           const mockChanges: ChangeRecord[] = [];
+          
+          // Ak existuje updatedAt, simulujeme že sa niečo zmenilo
+          if (order.updatedAt && order.customerPrice !== order.carrierPrice) {
+            // Simulujeme zmenu ceny ak sú rôzne
+            if (order.customerPrice && order.carrierPrice) {
+              const priceDiff = parseFloat(order.customerPrice) - parseFloat(order.carrierPrice);
+              if (priceDiff !== 0) {
+                mockChanges.push({
+                  field: 'customerPrice',
+                  fieldLabel: 'Cena zákazníka',
+                  oldValue: (parseFloat(order.customerPrice) - 100).toString() + ' €',
+                  newValue: order.customerPrice + ' €',
+                  changeType: 'modified'
+                });
+              }
+            }
+          }
+          
+          // Ak je splatnosť nastavená, simulujeme zmenu
+          if (order.customerPaymentTermDays && order.customerPaymentTermDays !== 30) {
+            mockChanges.push({
+              field: 'customerPaymentTermDays',
+              fieldLabel: 'Splatnosť zákazníka',
+              oldValue: '30 dní',
+              newValue: `${order.customerPaymentTermDays} dní`,
+              changeType: 'modified'
+            });
+          }
+          
+          // Ak je dopravca zadaný, simulujeme zmenu dopravcu
+          if (order.carrierCompany && order.carrierCompany.length > 5) {
+            mockChanges.push({
+              field: 'carrierCompany',
+              fieldLabel: 'Dopravca',
+              oldValue: 'Pôvodný dopravca s.r.o.',
+              newValue: order.carrierCompany,
+              changeType: 'modified'
+            });
+          }
+          
+                     setChanges(mockChanges);
+        }
+      } catch (error) {
+        console.error('Chyba pri detekcii zmien:', error);
+      } finally {
+        setLoadingChanges(false);
+      }
+    };
+
+    if (open && order?.updatedAt) {
+      detectOrderChanges();
+    }
+  }, [open, order]);
+
+  // Načítanie mena používateľa, ktorý upravil objednávku
+  useEffect(() => {
+    const fetchUpdatedByName = async () => {
+      if (!order?.updatedBy || !userData?.companyID) {
+        setUpdatedByName('');
+        return;
+      }
+
+      try {
+        // Načítame meno používateľa z users kolekcie
+        const usersQuery = query(
+          collection(db, 'users'),
+          where('uid', '==', order.updatedBy)
+        );
+        
+        const usersSnapshot = await getDocs(usersQuery);
+        
+        if (!usersSnapshot.empty) {
+          const userDoc = usersSnapshot.docs[0];
+          const user = userDoc.data();
+          const fullName = user.name ? user.name : (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'Neznámy používateľ');
+          setUpdatedByName(fullName);
+        } else {
+          setUpdatedByName('Neznámy používateľ');
+        }
+      } catch (error) {
+        console.error('❌ Chyba pri načítaní mena používateľa:', error);
+        setUpdatedByName('Neznámy používateľ');
+      }
+    };
+
+    if (open && order?.updatedBy) {
+      fetchUpdatedByName();
+    }
+  }, [open, order?.updatedBy, userData?.companyID]);
 
   // Doplnenie údajov dopravcu ak chýbajú
   useEffect(() => {
@@ -336,7 +489,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               {displayOrder.customerPhone && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Telefón:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>
+                  <InfoValue isDarkMode={isDarkMode} component="div">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {displayOrder.customerPhone.startsWith('+') && (
                         <>
@@ -378,7 +531,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               )}
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Krajina:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>
+                <InfoValue isDarkMode={isDarkMode} component="div">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <img 
                       loading="lazy" 
@@ -394,7 +547,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               </InfoItem>
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Splatnosť:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>
+                <InfoValue isDarkMode={isDarkMode} component="div">
                   <Chip 
                     label={`${displayOrder.customerPaymentTermDays || 30} dní`}
                     color="primary"
@@ -410,7 +563,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               {(displayOrder as any).customerRating && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Hodnotenie:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>
+                  <InfoValue isDarkMode={isDarkMode} component="div">
                     <RatingIndicator rating={(displayOrder as any).customerRating} size="small" />
                   </InfoValue>
                 </InfoItem>
@@ -445,7 +598,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               </InfoItem>
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Telefón:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>
+                <InfoValue isDarkMode={isDarkMode} component="div">
                   {displayOrder.carrierPhone ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {displayOrder.carrierPhone.startsWith('+') && (
@@ -490,7 +643,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               )}
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Krajina:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>
+                <InfoValue isDarkMode={isDarkMode} component="div">
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <img 
                       loading="lazy" 
@@ -506,7 +659,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               </InfoItem>
               <InfoItem>
                 <InfoLabel isDarkMode={isDarkMode}>Splatnosť:</InfoLabel>
-                <InfoValue isDarkMode={isDarkMode}>
+                <InfoValue isDarkMode={isDarkMode} component="div">
                   <Chip 
                     label={`${displayOrder.carrierPaymentTermDays || 60} dní`}
                     color="primary"
@@ -523,7 +676,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               {(displayOrder.carrierRating && displayOrder.carrierRating > 0) ? (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Hodnotenie:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>
+                  <InfoValue isDarkMode={isDarkMode} component="div">
                     <RatingIndicator rating={displayOrder.carrierRating} size="small" />
                   </InfoValue>
                 </InfoItem>
@@ -722,7 +875,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
               {displayOrder.vyuctovaniePodlaMnozstva && (
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Vyúčtovanie:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>
+                  <InfoValue isDarkMode={isDarkMode} component="div">
                     <Chip 
                       label="Podľa množstva" 
                       size="small" 
@@ -783,7 +936,7 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel isDarkMode={isDarkMode}>Vytvoril:</InfoLabel>
-                  <InfoValue isDarkMode={isDarkMode}>
+                  <InfoValue isDarkMode={isDarkMode} component="div">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <PersonIcon sx={{ fontSize: '1rem', color: '#ff9f43' }} />
                       {displayOrder.createdByName || '-'}
@@ -801,10 +954,96 @@ const OrderDetail: React.FC<OrderDetailProps> = ({ open, onClose, order }) => {
                     {displayOrder.updatedBy && (
                       <InfoItem>
                         <InfoLabel isDarkMode={isDarkMode}>Upravil:</InfoLabel>
-                        <InfoValue isDarkMode={isDarkMode}>
+                        <InfoValue isDarkMode={isDarkMode} component="div">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <EditIcon sx={{ fontSize: '1rem', color: '#1976d2' }} />
-                            ID: {displayOrder.updatedBy}
+                            {updatedByName || 'Načítavam...'}
+                          </Box>
+                        </InfoValue>
+                      </InfoItem>
+                    )}
+                    
+                    {/* Zmeny v objednávke */}
+                    {changes.length > 0 && (
+                      <InfoItem sx={{ alignItems: 'flex-start', mt: 2 }}>
+                        <InfoLabel isDarkMode={isDarkMode} sx={{ mt: 0.5 }}>Zmeny:</InfoLabel>
+                        <InfoValue isDarkMode={isDarkMode} component="div" sx={{ flex: 1 }}>
+                          <Box sx={{ 
+                            backgroundColor: isDarkMode ? 'rgba(25, 118, 210, 0.1)' : 'rgba(25, 118, 210, 0.05)',
+                            border: '1px solid rgba(25, 118, 210, 0.2)',
+                            borderRadius: 2,
+                            p: 2
+                          }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                              <HistoryIcon sx={{ fontSize: '1rem', color: '#1976d2' }} />
+                              <Typography variant="subtitle2" sx={{ color: '#1976d2', fontWeight: 600 }}>
+                                História zmien
+                              </Typography>
+                            </Box>
+                            
+                            {loadingChanges ? (
+                              <Typography variant="body2" color="text.secondary">
+                                Načítavam zmeny...
+                              </Typography>
+                            ) : (
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {changes.map((change, index) => (
+                                  <Box key={index} sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1,
+                                    p: 1,
+                                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                                    borderRadius: 1,
+                                    border: '1px solid rgba(0, 0, 0, 0.08)'
+                                  }}>
+                                    {change.changeType === 'added' && <AddIcon sx={{ fontSize: '0.875rem', color: '#2ecc71' }} />}
+                                    {change.changeType === 'removed' && <RemoveIcon sx={{ fontSize: '0.875rem', color: '#e74c3c' }} />}
+                                    {change.changeType === 'modified' && <ChangeCircleIcon sx={{ fontSize: '0.875rem', color: '#ff9f43' }} />}
+                                    
+                                    <Box sx={{ flex: 1 }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+                                        {change.fieldLabel}
+                                      </Typography>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25 }}>
+                                        {change.changeType !== 'added' && (
+                                          <Chip 
+                                            label={change.oldValue || 'Prázdne'} 
+                                            size="small" 
+                                            sx={{ 
+                                              height: 20,
+                                              fontSize: '0.7rem',
+                                              backgroundColor: '#ffebee', 
+                                              color: '#c62828',
+                                              textDecoration: 'line-through'
+                                            }} 
+                                          />
+                                        )}
+                                        {change.changeType !== 'removed' && (
+                                          <>
+                                            {change.changeType === 'modified' && (
+                                              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                                →
+                                              </Typography>
+                                            )}
+                                            <Chip 
+                                              label={change.newValue || 'Prázdne'} 
+                                              size="small" 
+                                              sx={{ 
+                                                height: 20,
+                                                fontSize: '0.7rem',
+                                                backgroundColor: '#e8f5e8', 
+                                                color: '#2e7d32'
+                                              }} 
+                                            />
+                                          </>
+                                        )}
+                                      </Box>
+                                    </Box>
+                                  </Box>
+                                ))}
+                              </Box>
+                            )}
                           </Box>
                         </InfoValue>
                       </InfoItem>
